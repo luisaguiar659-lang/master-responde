@@ -25,7 +25,7 @@ jobs:
       - name: Extrair projeto
         run: |
           mkdir projeto
-          unzip -q master-responde-v1.8.7.zip -d projeto
+          unzip -q master-responde-v1.8.8.zip -d projeto
       - name: Compilar APK
         working-directory: projeto/master-responde-android-native
         run: gradle :app:assembleDebug --stacktrace
