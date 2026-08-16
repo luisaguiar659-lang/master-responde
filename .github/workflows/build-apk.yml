@@ -1,3 +1,4 @@
+
 name: Build MASTER RESPONDE APK
 
 on:
@@ -22,20 +23,43 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - name: Validar assinatura
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "ERRO: configure os 4 GitHub Secrets de assinatura antes de compilar."
+            exit 1
+          fi
+
       - name: Extrair projeto
         run: |
           mkdir projeto
           unzip -q master-responde-v1.17.2.zip -d projeto
-      - name: Compilar APK
+
+      - name: Preparar chave de assinatura
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/master-responde-release.jks"
+
+      - name: Compilar APK release
         working-directory: projeto/master-responde-android-native
-        run: gradle :app:assembleDebug --stacktrace
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/master-responde-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --stacktrace
 
       - name: Preparar APK
-        run: |
-          cp projeto/master-responde-android-native/app/build/outputs/apk/debug/app-debug.apk MASTER-RESPONDE.apk
+        run: cp projeto/master-responde-android-native/app/build/outputs/apk/release/app-release.apk MASTER-RESPONDE-v1.17.2.apk
 
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-APK
-          path: MASTER-RESPONDE.apk
+          name: MASTER-RESPONDE-v1.17.2
+          path: MASTER-RESPONDE-v1.17.2.apk
