@@ -38,7 +38,7 @@ jobs:
       - name: Extrair projeto
         run: |
           mkdir projeto
-          unzip -q master-responde-v1.17.2.zip -d projeto
+          unzip -q master-responde-v1.17.3.zip -d projeto
 
       - name: Preparar chave de assinatura
         env:
