@@ -37,7 +37,7 @@ jobs:
       - name: Extrair projeto
         run: |
           mkdir -p projeto
-          unzip -q MASTER-RESPONDE-v1.17.8-FIX-CAPTURA-SIGMA.zip -d projeto
+          unzip -q MASTER-RESPONDE-v1.17.9-FIX-CLIPBOARD-SIGMA.zip -d projeto
 
       - name: Preparar chave de assinatura
         env:
@@ -46,7 +46,7 @@ jobs:
           echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/master-responde-release.jks"
 
       - name: Compilar APK release
-        working-directory: projeto/master-responde-v1.17.8
+        working-directory: projeto/master-responde-v1.17.9
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/master-responde-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -56,10 +56,10 @@ jobs:
 
       - name: Preparar APK
         run: |
-          cp projeto/master-responde-v1.17.8/app/build/outputs/apk/release/app-release.apk MASTER-RESPONDE-v1.17.8.apk
+          cp projeto/master-responde-v1.17.9/app/build/outputs/apk/release/app-release.apk MASTER-RESPONDE-v1.17.9.apk
 
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v1.17.8
-          path: MASTER-RESPONDE-v1.17.8.apk
+          name: MASTER-RESPONDE-v1.17.9
+          path: MASTER-RESPONDE-v1.17.9.apk
