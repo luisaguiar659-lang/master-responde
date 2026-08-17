@@ -37,7 +37,12 @@ jobs:
       - name: Extrair projeto
         run: |
           mkdir -p projeto
-          unzip -q MASTER-RESPONDE-v1.17.10-MOTOR-ANTIGO-TESTE.zip -d projeto
+          unzip -q MASTER-RESPONDE-v1.17.11-MOTOR-ANTIGO-COMPILACAO-FIX.zip -d projeto
+
+      - name: Verificar projeto extraído
+        run: |
+          echo "=== Estrutura do projeto ==="
+          find projeto -maxdepth 3 -type f | head -100
 
       - name: Preparar chave de assinatura
         env:
@@ -46,20 +51,35 @@ jobs:
           echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/master-responde-release.jks"
 
       - name: Compilar APK release
-        working-directory: projeto/master-responde-v1.17.10
+        working-directory: projeto/master-responde-v1.17.11
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/master-responde-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle :app:assembleRelease --stacktrace
+        run: |
+          gradle :app:assembleRelease --stacktrace
+
+      - name: Localizar APK gerado
+        run: |
+          echo "=== APKs encontrados ==="
+          find projeto -type f -name "*.apk" -print
 
       - name: Preparar APK
         run: |
-          cp projeto/master-responde-v1.17.10/app/build/outputs/apk/release/app-release.apk MASTER-RESPONDE-v1.17.10.apk
+          APK=$(find projeto/master-responde-v1.17.11/app/build/outputs/apk/release -type f -name "*.apk" | head -1)
+
+          if [ -z "$APK" ]; then
+            echo "ERRO: APK release não encontrado."
+            exit 1
+          fi
+
+          echo "APK encontrado: $APK"
+          cp "$APK" MASTER-RESPONDE-v1.17.11.apk
 
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v1.17.10
-          path: MASTER-RESPONDE-v1.17.10.apk
+          name: MASTER-RESPONDE-v1.17.11
+          path: MASTER-RESPONDE-v1.17.11.apk
+          if-no-files-found: error
