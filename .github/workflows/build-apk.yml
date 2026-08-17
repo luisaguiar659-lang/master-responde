@@ -37,7 +37,7 @@ jobs:
       - name: Extrair projeto
         run: |
           mkdir -p projeto
-          unzip -q MASTER-RESPONDE-v1.17.8-FIX-COPIAR.zip -d projeto
+          unzip -q MASTER-RESPONDE-v1.17.8-FIX-CAPTURA-SIGMA.zip -d projeto
 
       - name: Preparar chave de assinatura
         env:
