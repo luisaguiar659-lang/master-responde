@@ -46,7 +46,7 @@ jobs:
           echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/master-responde-release.jks"
 
       - name: Compilar APK release
-        working-directory: projeto/master-responde-v1.17.7
+        working-directory: projeto/master-responde-v1.17.8
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/master-responde-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -56,10 +56,10 @@ jobs:
 
       - name: Preparar APK
         run: |
-          cp projeto/master-responde-v1.17.7/app/build/outputs/apk/release/app-release.apk MASTER-RESPONDE-v1.17.7.apk
+          cp projeto/master-responde-v1.17.8/app/build/outputs/apk/release/app-release.apk MASTER-RESPONDE-v1.17.8.apk
 
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v1.17.7
-          path: MASTER-RESPONDE-v1.17.7.apk
+          name: MASTER-RESPONDE-v1.17.8
+          path: MASTER-RESPONDE-v1.17.8.apk
