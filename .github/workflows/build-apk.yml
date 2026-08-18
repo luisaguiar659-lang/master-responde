@@ -39,7 +39,7 @@ jobs:
 
       - name: Localizar ZIP da versão
         run: |
-          ZIP="MASTER-RESPONDE-v1.17.14-MULTI-CONTATOS.zip"
+          ZIP="MASTER-RESPONDE-v1.17.15-COMPILACAO-FIX.zip"
 
           if [ ! -f "$ZIP" ]; then
             echo "ERRO: arquivo $ZIP não encontrado na raiz do repositório."
@@ -55,10 +55,7 @@ jobs:
         run: |
           rm -rf projeto
           mkdir -p projeto
-
-          unzip -q MASTER-RESPONDE-v1.17.14-MULTI-CONTATOS.zip -d projeto
-
-          echo "Projeto extraído."
+          unzip -q MASTER-RESPONDE-v1.17.15-COMPILACAO-FIX.zip -d projeto
 
       - name: Verificar projeto extraído
         run: |
@@ -108,15 +105,10 @@ jobs:
             exit 1
           fi
 
-          echo "Keystore preparada."
-
       - name: Verificar Gradle
         working-directory: ${{ steps.project.outputs.dir }}
         run: |
-          echo "=== Diretório atual ==="
           pwd
-
-          echo "=== Arquivos ==="
           ls -la
 
           if [ -f "./gradlew" ]; then
@@ -155,9 +147,7 @@ jobs:
             | head -1)
 
           if [ -z "$APK" ]; then
-            echo "Nenhum APK assinado encontrado."
-
-            echo "Tentando localizar qualquer APK release..."
+            echo "Nenhum APK assinado encontrado. Tentando localizar qualquer APK release..."
 
             APK=$(find projeto \
               -type f \
@@ -175,14 +165,13 @@ jobs:
 
           echo "APK encontrado: $APK"
 
-          cp "$APK" MASTER-RESPONDE-v1.17.14.apk
-
-          ls -lh MASTER-RESPONDE-v1.17.14.apk
+          cp "$APK" MASTER-RESPONDE-v1.17.15.apk
+          ls -lh MASTER-RESPONDE-v1.17.15.apk
 
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v1.17.14
-          path: MASTER-RESPONDE-v1.17.14.apk
+          name: MASTER-RESPONDE-v1.17.15
+          path: MASTER-RESPONDE-v1.17.15.apk
           if-no-files-found: error
           retention-days: 30
