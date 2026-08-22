@@ -1,0 +1,35 @@
+diff -ruN mr207/app/build.gradle mr208/app/build.gradle
+--- mr207/app/build.gradle	2026-08-22 18:42:38.036182118 +0000
++++ mr208/app/build.gradle	2026-08-22 20:30:00.000000000 +0000
+@@ -10,8 +10,8 @@
+         applicationId 'com.masterresponde.app'
+         minSdk 26
+         targetSdk 35
+-        versionCode 68
+-        versionName '2.0.7'
++        versionCode 69
++        versionName '2.0.8'
+     }
+ 
+     compileOptions {
+diff -ruN mr207/app/src/main/java/com/masterresponde/app/NotificationAccessService.java mr208/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
+--- mr207/app/src/main/java/com/masterresponde/app/NotificationAccessService.java	2026-08-22 18:42:38.036182118 +0000
++++ mr208/app/src/main/java/com/masterresponde/app/NotificationAccessService.java	2026-08-22 20:30:00.000000000 +0000
+@@ -39,6 +39,8 @@
+ 
+     private final Handler handler = new Handler(Looper.getMainLooper());
+ 
++    private static final String WHATSAPP_BUSINESS = "com.whatsapp.w4b";
++
+     private static volatile NotificationAccessService activeInstance;
+ 
+@@
+     @Override
+     public void onNotificationPosted(StatusBarNotification sbn) {
++        // Regra absoluta do MASTER RESPONDE: somente WhatsApp Business.
++        // Nunca processar, responder ou executar menus vindos do WhatsApp normal.
++        if (sbn == null
++                || !WHATSAPP_BUSINESS.equals(sbn.getPackageName())) {
++            return;
++        }
++
