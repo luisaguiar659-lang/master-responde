@@ -1,0 +1,177 @@
++            return false;
++        }
++
++        return true;
++    }
++
++    private String cleanIncoming(
++            String raw,
++            SharedPreferences prefs
++    ) {
++        if (raw == null) return "";
++
++        String value = raw
++                .replace('\u00a0', ' ')
++                .replace("\u200e", "")
++                .replace("\u200f", "")
++                .trim();
++
++        if (value.isEmpty()) return "";
++
++        String normalizedValue = normalize(value);
++
++        // O comando principal de grupo precisa continuar no começo da string.
++        // Em contentDescription o WhatsApp pode prefixar o remetente e sufixar
++        // horário/status. Recortamos a partir de @infor (ou comando configurado).
++        String groupTrigger =
++                MessageSettings.normalizedSingleTrigger(
++                        prefs,
++                        MessageSettings.KEY_GROUP_TRIGGER,
++                        MessageSettings.DEFAULT_GROUP_TRIGGER
++                );
++
++        if (!groupTrigger.isEmpty()) {
++            int triggerAt = normalizedValue.indexOf(groupTrigger);
++            if (triggerAt >= 0) {
++                return stripAccessibilityMetadata(
++                        normalizedValue.substring(triggerAt)
++                );
++            }
++        }
++
++        String exact = findConfiguredExactMessage(
++                normalizedValue,
++                prefs
++        );
++
++        if (!exact.isEmpty()) {
++            return exact;
++        }
++
++        // Descrições de acessibilidade frequentemente vêm em linhas:
++        // remetente / mensagem / horário. Escolhemos de baixo para cima a
++        // última linha que pareça conteúdo real.
++        String[] lines = value.split("[\\r\\n]+");
++        if (lines.length > 1) {
++            for (int i = lines.length - 1; i >= 0; i--) {
++                String line = stripAccessibilityMetadata(lines[i]);
++                if (looksLikeMessageText(line)) {
++                    return line;
++                }
++            }
++        }
++
++        return stripAccessibilityMetadata(value);
++    }
++
++    private String findConfiguredExactMessage(
++            String normalizedRaw,
++            SharedPreferences prefs
++    ) {
++        if (normalizedRaw == null || normalizedRaw.isEmpty()) {
++            return "";
++        }
++
++        String[][] configured = new String[][]{
++                {
++                        MessageSettings.KEY_DIAGNOSTIC_TRIGGER,
++                        MessageSettings.DEFAULT_DIAGNOSTIC_TRIGGER
++                },
++                {
++                        MessageSettings.KEY_TEST_TRIGGERS,
++                        MessageSettings.DEFAULT_TEST_TRIGGERS
++                },
++                {
++                        MessageSettings.KEY_RESELLER_TRIGGERS,
++                        MessageSettings.DEFAULT_RESELLER_TRIGGERS
++                },
++                {
++                        MessageSettings.KEY_RESELLER_CANCEL_TRIGGER,
++                        MessageSettings.DEFAULT_RESELLER_CANCEL_TRIGGER
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_0,
++                        MessageSettings.DEFAULT_GROUP_OPTION_0
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_1,
++                        MessageSettings.DEFAULT_GROUP_OPTION_1
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_2,
++                        MessageSettings.DEFAULT_GROUP_OPTION_2
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_3,
++                        MessageSettings.DEFAULT_GROUP_OPTION_3
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_4,
++                        MessageSettings.DEFAULT_GROUP_OPTION_4
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_5,
++                        MessageSettings.DEFAULT_GROUP_OPTION_5
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_6,
++                        MessageSettings.DEFAULT_GROUP_OPTION_6
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_7,
++                        MessageSettings.DEFAULT_GROUP_OPTION_7
++                },
++                {
++                        MessageSettings.KEY_GROUP_OPTION_8,
++                        MessageSettings.DEFAULT_GROUP_OPTION_8
++                }
++        };
++
++        for (String[] pair : configured) {
++            String text = MessageSettings.getText(
++                    prefs,
++                    pair[0],
++                    pair[1]
++            );
++
++            String match = findStandaloneConfiguredValue(
++                    normalizedRaw,
++                    text
++            );
++
++            if (!match.isEmpty()) {
++                return match;
++            }
++        }
++
++        // Regras privadas marcadas como "exact" também precisam sobreviver a
++        // descrições como "João, oi, 14:32".
++        try {
++            JSONArray rules = new JSONArray(
++                    prefs.getString("text_rules", "[]")
++            );
++
++            for (int i = 0; i < rules.length(); i++) {
++                JSONObject rule = rules.optJSONObject(i);
++                if (rule == null || !rule.optBoolean("exact", false)) {
++                    continue;
++                }
++
++                String trigger = normalize(
++                        rule.optString("trigger", "")
++                );
++
++                if (!trigger.isEmpty()
++                        && containsStandalone(
++                        normalizedRaw,
++                        trigger
++                )) {
++                    return trigger;
++                }
++            }
++        } catch (Exception ignored) {
++        }
++
++        return "";
++    }
++
