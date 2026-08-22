@@ -1,0 +1,153 @@
+diff -ruN orig_src/app/build.gradle new_src/app/build.gradle
+--- orig_src/app/build.gradle	2026-08-22 17:35:18.000000000 +0000
++++ new_src/app/build.gradle	2026-08-22 18:05:18.607029622 +0000
+@@ -10,8 +10,8 @@
+         applicationId 'com.masterresponde.app'
+         minSdk 26
+         targetSdk 35
+-        versionCode 65
+-        versionName '2.0.4'
++        versionCode 66
++        versionName '2.0.5'
+     }
+ 
+     compileOptions {
+diff -ruN orig_src/app/src/main/java/com/masterresponde/app/MainActivity.java new_src/app/src/main/java/com/masterresponde/app/MainActivity.java
+--- orig_src/app/src/main/java/com/masterresponde/app/MainActivity.java	2026-08-22 17:38:01.000000000 +0000
++++ new_src/app/src/main/java/com/masterresponde/app/MainActivity.java	2026-08-22 18:05:18.607163812 +0000
+@@ -731,7 +731,7 @@
+ 
+         heroText.addView(
+                 text(
+-                        "Dashboard v2.0.4",
++                        "Dashboard v2.0.5",
+                         14,
+                         Color.rgb(
+                                 255,
+diff -ruN orig_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java new_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+--- orig_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 17:38:22.000000000 +0000
++++ new_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 18:05:18.606654255 +0000
+@@ -1012,28 +1012,43 @@
+             return;
+         }
+ 
+-        CharSequence existing = input.getText();
+-
+-        // Não apaga um rascunho digitado manualmente pelo usuário.
+-        if (existing != null
+-                && existing.toString().trim().length() > 0) {
++        String existing = readRealDraftText(input);
++        String normalizedExisting = normalize(existing);
++        String normalizedReply = normalize(message);
++
++        // WhatsApp/WhatsApp Business podem expor o placeholder (ex.: "Mensagem")
++        // como texto do EditText pela Acessibilidade. Isso não é um rascunho real.
++        // Também pode acontecer de uma tentativa anterior já ter preenchido a
++        // autoresposta e só o clique em Enviar ter falhado. Nesse caso, não
++        // bloqueamos: apenas tentamos enviar o conteúdo que já está no campo.
++        boolean replyAlreadyInField =
++                !normalizedExisting.isEmpty()
++                        && normalizedExisting.equals(normalizedReply);
++
++        // Preserva somente um rascunho realmente digitado pelo usuário.
++        if (!normalizedExisting.isEmpty()
++                && !replyAlreadyInField) {
+             updateReplyStatus(
+                     "Chat aberto: resposta não enviada porque há texto digitado"
+             );
+             return;
+         }
+ 
+-        Bundle args = new Bundle();
+-        args.putCharSequence(
+-                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+-                message
+-        );
++        boolean filled = replyAlreadyInField;
+ 
+-        boolean filled =
+-                input.performAction(
+-                        AccessibilityNodeInfo.ACTION_SET_TEXT,
+-                        args
+-                );
++        if (!filled) {
++            Bundle args = new Bundle();
++            args.putCharSequence(
++                    AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
++                    message
++            );
++
++            filled =
++                    input.performAction(
++                            AccessibilityNodeInfo.ACTION_SET_TEXT,
++                            args
++                    );
++        }
+ 
+         if (!filled) {
+             filled = pasteIntoInput(
+@@ -1075,6 +1090,64 @@
+         );
+     }
+ 
++    private String readRealDraftText(
++            AccessibilityNodeInfo input
++    ) {
++        if (input == null) return "";
++
++        String text =
++                input.getText() == null
++                        ? ""
++                        : input.getText().toString().trim();
++
++        if (text.isEmpty()) {
++            return "";
++        }
++
++        String normalizedText = normalize(text);
++
++        CharSequence hintValue = null;
++        try {
++            hintValue = input.getHintText();
++        } catch (Throwable ignored) {
++        }
++
++        String hint =
++                hintValue == null
++                        ? ""
++                        : hintValue.toString().trim();
++
++        if (!hint.isEmpty()
++                && normalizedText.equals(normalize(hint))) {
++            return "";
++        }
++
++        if (isEmptyMessagePlaceholder(normalizedText)) {
++            return "";
++        }
++
++        return text;
++    }
++
++    private boolean isEmptyMessagePlaceholder(
++            String normalizedText
++    ) {
++        if (normalizedText == null
++                || normalizedText.trim().isEmpty()) {
++            return true;
++        }
++
++        String value = normalizedText.trim();
++
++        return value.equals("mensagem")
++                || value.equals("message")
++                || value.equals("digite uma mensagem")
++                || value.equals("digitar uma mensagem")
++                || value.equals("type a message")
++                || value.equals("escreva uma mensagem")
++                || value.equals("write a message");
++    }
++
+     private AccessibilityNodeInfo findSendButton(
+             AccessibilityNodeInfo root
+     ) {
