@@ -9,6 +9,7 @@ on:
       - ".github/workflows/main.yml"
       - "patches/v2.0.4/**"
       - "patches/v2.0.5/**"
+      - "patches/v2.0.6/**"
 
 jobs:
   build:
@@ -86,6 +87,15 @@ jobs:
           grep -n "versionName '2.0.5'" app/build.gradle
           grep -n "readRealDraftText" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
           grep -n "replyAlreadyInField" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+
+      - name: Aplicar correção v2.0.6 — ignorar eco do próprio bot
+        run: |
+          cat patches/v2.0.6/*.patch > "$RUNNER_TEMP/master-responde-v2.0.6.patch"
+          cd projeto
+          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.6.patch"
+          grep -n "versionName '2.0.6'" app/build.gradle
+          grep -n "AUTO_REPLY_ECHO_MS" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+          grep -n "resposta do próprio bot ignorada" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
 
       - name: Detectar diretório Gradle
         id: project
@@ -165,7 +175,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.0.5
+          name: MASTER-RESPONDE-v2.0.6
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
