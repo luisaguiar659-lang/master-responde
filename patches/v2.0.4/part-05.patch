@@ -1,0 +1,210 @@
++    private String findStandaloneConfiguredValue(
++            String normalizedRaw,
++            String configured
++    ) {
++        if (configured == null || configured.trim().isEmpty()) {
++            return "";
++        }
++
++        for (String line : configured.split("[\\n;]+")) {
++            String trigger = normalize(line);
++
++            if (!trigger.isEmpty()
++                    && containsStandalone(
++                    normalizedRaw,
++                    trigger
++            )) {
++                return trigger;
++            }
++        }
++
++        return "";
++    }
++
++    private boolean containsStandalone(
++            String text,
++            String token
++    ) {
++        int from = 0;
++
++        while (from <= text.length() - token.length()) {
++            int at = text.indexOf(token, from);
++            if (at < 0) return false;
++
++            int beforeIndex = at - 1;
++            int afterIndex = at + token.length();
++
++            boolean beforeOk =
++                    beforeIndex < 0
++                            || !Character.isLetterOrDigit(
++                            text.charAt(beforeIndex)
++                    );
++
++            boolean afterOk =
++                    afterIndex >= text.length()
++                            || !Character.isLetterOrDigit(
++                            text.charAt(afterIndex)
++                    );
++
++            if (beforeOk && afterOk) {
++                return true;
++            }
++
++            from = at + 1;
++        }
++
++        return false;
++    }
++
++    private String stripAccessibilityMetadata(String value) {
++        if (value == null) return "";
++
++        String cleaned = value
++                .replace('\u00a0', ' ')
++                .replace("\u200e", "")
++                .replace("\u200f", "")
++                .trim();
++
++        cleaned = cleaned.replaceAll(
++                "(?i)[,;·•\\s-]*(?:\\d{1,2}:\\d{2}(?:\\s*[ap]m)?)(?:\\s*[,;·•-]?\\s*(?:lida|read|entregue|delivered))?\\s*$",
++                ""
++        );
++
++        cleaned = cleaned.replaceAll(
++                "(?i)[,;·•\\s-]+(?:lida|read|entregue|delivered)\\s*$",
++                ""
++        );
++
++        return cleaned.trim();
++    }
++
+     private boolean isLikelyOutgoing(
+             AccessibilityNodeInfo node
+     ) {
+@@ -641,6 +1036,13 @@
+                 );
+ 
+         if (!filled) {
++            filled = pasteIntoInput(
++                    input,
++                    message
++            );
++        }
++
++        if (!filled) {
+             updateReplyStatus(
+                     "Chat aberto: não foi possível preencher a mensagem"
+             );
+@@ -678,7 +1080,9 @@
+     ) {
+         String[] ids = new String[]{
+                 WHATSAPP_BUSINESS + ":id/send",
+-                WHATSAPP_BUSINESS + ":id/send_button"
++                WHATSAPP_BUSINESS + ":id/send_button",
++                WHATSAPP + ":id/send",
++                WHATSAPP + ":id/send_button"
+         };
+ 
+         for (String id : ids) {
+@@ -756,7 +1160,94 @@
+             current = current.getParent();
+         }
+ 
+-        return false;
++        Rect bounds = new Rect();
++        node.getBoundsInScreen(bounds);
++
++        if (bounds.width() <= 0 || bounds.height() <= 0) {
++            return false;
++        }
++
++        try {
++            Path path = new Path();
++            path.moveTo(
++                    bounds.exactCenterX(),
++                    bounds.exactCenterY()
++            );
++
++            GestureDescription gesture =
++                    new GestureDescription.Builder()
++                            .addStroke(
++                                    new GestureDescription.StrokeDescription(
++                                            path,
++                                            0L,
++                                            80L
++                                    )
++                            )
++                            .build();
++
++            return dispatchGesture(
++                    gesture,
++                    null,
++                    null
++            );
++
++        } catch (Throwable ignored) {
++            return false;
++        }
++    }
++
++    private boolean pasteIntoInput(
++            AccessibilityNodeInfo input,
++            String message
++    ) {
++        if (input == null
++                || message == null
++                || message.trim().isEmpty()) {
++            return false;
++        }
++
++        try {
++            ClipboardManager clipboard =
++                    (ClipboardManager) getSystemService(
++                            Context.CLIPBOARD_SERVICE
++                    );
++
++            if (clipboard == null) {
++                return false;
++            }
++
++            clipboard.setPrimaryClip(
++                    ClipData.newPlainText(
++                            "MASTER RESPONDE",
++                            message
++                    )
++            );
++
++            input.performAction(
++                    AccessibilityNodeInfo.ACTION_FOCUS
++            );
++
++            return input.performAction(
++                    AccessibilityNodeInfo.ACTION_PASTE
++            );
++
++        } catch (Throwable ignored) {
++            return false;
++        }
++    }
++
++    private void updateDetectionStatus(String status) {
++        getSharedPreferences("master_responde", MODE_PRIVATE)
++                .edit()
++                .putString(
++                        "accessibility_last_status",
++                        status == null ? "" : status
++                )
++                .putLong(
++                        "accessibility_last_event",
++                        System.currentTimeMillis()
++                )
++                .apply();
+     }
+ 
+     private void updateReplyStatus(String status) {
+@@ -805,6 +1296,11 @@
+         return false;
+     }
+ 
++    private static boolean isWhatsAppPackage(String packageName) {
++        return WHATSAPP_BUSINESS.equals(packageName)
