@@ -10,6 +10,7 @@ on:
       - "patches/v2.0.4/**"
       - "patches/v2.0.5/**"
       - "patches/v2.0.6/**"
+      - "patches/v2.0.7/**"
 
 jobs:
   build:
@@ -97,6 +98,15 @@ jobs:
           grep -n "AUTO_REPLY_ECHO_MS" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
           grep -n "resposta do próprio bot ignorada" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
 
+      - name: Aplicar correção v2.0.7 — envio robusto e fila
+        run: |
+          cat patches/v2.0.7/*.patch > "$RUNNER_TEMP/master-responde-v2.0.7.patch"
+          cd projeto
+          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.7.patch"
+          grep -n "versionName '2.0.7'" app/build.gradle
+          grep -n "SEND_MAX_ATTEMPTS" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+          grep -n "pendingReplies" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -175,7 +185,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.0.6
+          name: MASTER-RESPONDE-v2.0.7
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
