@@ -1,0 +1,130 @@
++        }
++
++        for (int i = 0; i < node.getChildCount(); i++) {
++            AccessibilityNodeInfo found =
++                    findSendButtonRecursive(
++                            node.getChild(i)
++                    );
++
++            if (found != null) {
++                return found;
++            }
++        }
++
++        return null;
++    }
++
++    private boolean performClick(
++            AccessibilityNodeInfo node
++    ) {
++        AccessibilityNodeInfo current = node;
++
++        for (int i = 0; i < 5 && current != null; i++) {
++            if (current.isClickable()
++                    && current.performAction(
++                    AccessibilityNodeInfo.ACTION_CLICK
++            )) {
++                return true;
++            }
++
++            current = current.getParent();
++        }
++
++        return false;
++    }
++
++    private void updateReplyStatus(String status) {
++        getSharedPreferences("master_responde", MODE_PRIVATE)
++                .edit()
++                .putString(
++                        "accessibility_last_status",
++                        status
++                )
++                .putLong(
++                        "accessibility_last_reply",
++                        System.currentTimeMillis()
++                )
++                .apply();
++    }
++
++    public static boolean isEnabled(Context context) {
++        if (context == null) return false;
++
++        String enabled =
++                Settings.Secure.getString(
++                        context.getContentResolver(),
++                        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
++                );
++
++        if (enabled == null || enabled.trim().isEmpty()) {
++            return false;
++        }
++
++        String full =
++                context.getPackageName()
++                        + "/"
++                        + WhatsAppAccessibilityService.class.getName();
++
++        String shortName =
++                context.getPackageName()
++                        + "/.WhatsAppAccessibilityService";
++
++        for (String item : enabled.split(":")) {
++            if (full.equalsIgnoreCase(item)
++                    || shortName.equalsIgnoreCase(item)) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    private static String normalize(String value) {
++        if (value == null) return "";
++
++        return Normalizer.normalize(
++                        value,
++                        Normalizer.Form.NFD
++                )
++                .replaceAll("\\p{M}", "")
++                .toLowerCase(Locale.ROOT)
++                .trim();
++    }
++
++    private static class MessageCandidate {
++        final AccessibilityNodeInfo node;
++        final String text;
++        final Rect bounds;
++
++        MessageCandidate(
++                AccessibilityNodeInfo node,
++                String text,
++                Rect bounds
++        ) {
++            this.node = node;
++            this.text = text;
++            this.bounds = bounds;
++        }
++    }
++}
+diff -ruN orig_src/app/src/main/res/values/strings.xml new_src/app/src/main/res/values/strings.xml
+--- orig_src/app/src/main/res/values/strings.xml	2026-08-18 04:12:28.000000000 +0000
++++ new_src/app/src/main/res/values/strings.xml	2026-08-22 17:08:18.000000000 +0000
+@@ -1,3 +1,4 @@
+ <resources>
+     <string name="app_name">MASTER RESPONDE</string>
++    <string name="accessibility_service_description">Permite ao MASTER RESPONDE detectar novas mensagens e responder quando uma conversa do WhatsApp Business estiver aberta.</string>
+ </resources>
+diff -ruN orig_src/app/src/main/res/xml/accessibility_service_config.xml new_src/app/src/main/res/xml/accessibility_service_config.xml
+--- orig_src/app/src/main/res/xml/accessibility_service_config.xml	1970-01-01 00:00:00.000000000 +0000
++++ new_src/app/src/main/res/xml/accessibility_service_config.xml	2026-08-22 17:07:07.000000000 +0000
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
++    android:accessibilityEventTypes="typeWindowContentChanged|typeViewTextChanged|typeWindowStateChanged"
++    android:accessibilityFeedbackType="feedbackGeneric"
++    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
++    android:canRetrieveWindowContent="true"
++    android:description="@string/accessibility_service_description"
++    android:notificationTimeout="120"
++    android:packageNames="com.whatsapp.w4b" />
