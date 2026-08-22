@@ -1,0 +1,389 @@
+diff -ruN mr206/app/build.gradle mr207_py/app/build.gradle
+--- mr206/app/build.gradle	2026-08-22 18:18:05.000000000 +0000
++++ mr207_py/app/build.gradle	2026-08-22 18:42:38.036182118 +0000
+@@ -10,8 +10,8 @@
+         applicationId 'com.masterresponde.app'
+         minSdk 26
+         targetSdk 35
+-        versionCode 67
+-        versionName '2.0.6'
++        versionCode 68
++        versionName '2.0.7'
+     }
+ 
+     compileOptions {
+diff -ruN mr206/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java mr207_py/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+--- mr206/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 18:18:05.000000000 +0000
++++ mr207_py/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 18:42:31.934985092 +0000
+@@ -20,7 +20,9 @@
+ import org.json.JSONObject;
+ 
+ import java.text.Normalizer;
++import java.util.ArrayDeque;
+ import java.util.ArrayList;
++import java.util.Deque;
+ import java.util.List;
+ import java.util.Locale;
+ 
+@@ -32,6 +34,10 @@
+     private static final long LOCAL_DUPLICATE_MS = 1800L;
+     private static final long GROUP_MEMORY_MS = 10L * 60L * 1000L;
+     private static final long AUTO_REPLY_ECHO_MS = 30_000L;
++    private static final long SEND_INITIAL_DELAY_MS = 500L;
++    private static final long SEND_RETRY_DELAY_MS = 400L;
++    private static final long SEND_CONFIRM_DELAY_MS = 550L;
++    private static final int SEND_MAX_ATTEMPTS = 8;
+ 
+     private static volatile WhatsAppAccessibilityService activeInstance;
+ 
+@@ -41,6 +47,8 @@
+     private long lastFingerprintAt = 0L;
+ 
+     private final List<RecentAutoReply> recentAutoReplies = new ArrayList<>();
++    private final Deque<PendingReply> pendingReplies = new ArrayDeque<>();
++    private boolean replySendInProgress = false;
+ 
+     private final Runnable inspectRunnable = this::inspectOpenConversation;
+ 
+@@ -981,7 +989,7 @@
+         }
+ 
+         service.handler.post(
+-                () -> service.sendReplyNow(
++                () -> service.enqueueReply(
+                         expectedConversation,
+                         message
+                 )
+@@ -990,6 +998,60 @@
+         return true;
+     }
+ 
++    private void enqueueReply(
++            String expectedConversation,
++            String message
++    ) {
++        pendingReplies.addLast(
++                new PendingReply(
++                        expectedConversation == null
++                                ? ""
++                                : expectedConversation,
++                        message
++                )
++        );
++
++        if (replySendInProgress) {
++            updateReplyStatus(
++                    "Chat aberto: resposta aguardando na fila ("
++                            + pendingReplies.size()
++                            + ")"
++            );
++            return;
++        }
++
++        processNextReply();
++    }
++
++    private void processNextReply() {
++        if (replySendInProgress) {
++            return;
++        }
++
++        PendingReply next =
++                pendingReplies.pollFirst();
++
++        if (next == null) {
++            return;
++        }
++
++        replySendInProgress = true;
++
++        sendReplyNow(
++                next.expectedConversation,
++                next.message
++        );
++    }
++
++    private void finishReplyAndContinue() {
++        replySendInProgress = false;
++
++        handler.postDelayed(
++                this::processNextReply,
++                250L
++        );
++    }
++
+     private void sendReplyNow(
+             String expectedConversation,
+             String message
+@@ -1001,6 +1063,7 @@
+             updateReplyStatus(
+                     "Chat aberto: tela do WhatsApp indisponível"
+             );
++            finishReplyAndContinue();
+             return;
+         }
+ 
+@@ -1015,6 +1078,7 @@
+             updateReplyStatus(
+                     "Chat aberto: conversa mudou antes da resposta"
+             );
++            finishReplyAndContinue();
+             return;
+         }
+ 
+@@ -1025,6 +1089,7 @@
+             updateReplyStatus(
+                     "Chat aberto: campo de mensagem não encontrado"
+             );
++            finishReplyAndContinue();
+             return;
+         }
+ 
+@@ -1032,26 +1097,18 @@
+         String normalizedExisting = normalize(existing);
+         String normalizedReply = normalize(message);
+ 
+-        // Registra a autoresposta antes de preencher o campo. Assim, os
+-        // eventos gerados pelo ACTION_SET_TEXT/clique em Enviar já podem ser
+-        // reconhecidos como eco do próprio bot e não retornam ao motor.
+         rememberAutoReply(message);
+ 
+-        // WhatsApp/WhatsApp Business podem expor o placeholder (ex.: "Mensagem")
+-        // como texto do EditText pela Acessibilidade. Isso não é um rascunho real.
+-        // Também pode acontecer de uma tentativa anterior já ter preenchido a
+-        // autoresposta e só o clique em Enviar ter falhado. Nesse caso, não
+-        // bloqueamos: apenas tentamos enviar o conteúdo que já está no campo.
+         boolean replyAlreadyInField =
+                 !normalizedExisting.isEmpty()
+                         && normalizedExisting.equals(normalizedReply);
+ 
+-        // Preserva somente um rascunho realmente digitado pelo usuário.
+         if (!normalizedExisting.isEmpty()
+                 && !replyAlreadyInField) {
+             updateReplyStatus(
+                     "Chat aberto: resposta não enviada porque há texto digitado"
+             );
++            finishReplyAndContinue();
+             return;
+         }
+ 
+@@ -1082,32 +1139,171 @@
+             updateReplyStatus(
+                     "Chat aberto: não foi possível preencher a mensagem"
+             );
++            finishReplyAndContinue();
+             return;
+         }
+ 
++        updateReplyStatus(
++                "Chat aberto: resposta preenchida; aguardando botão Enviar"
++        );
++
+         handler.postDelayed(
+-                () -> {
+-                    AccessibilityNodeInfo freshRoot =
+-                            getRootInActiveWindow();
+-
+-                    AccessibilityNodeInfo sendButton =
+-                            freshRoot == null
+-                                    ? null
+-                                    : findSendButton(freshRoot);
+-
+-                    if (sendButton == null
+-                            || !performClick(sendButton)) {
+-                        updateReplyStatus(
+-                                "Chat aberto: botão Enviar não encontrado"
+-                        );
+-                        return;
+-                    }
++                () -> attemptSendReply(
++                        expectedConversation,
++                        message,
++                        1
++                ),
++                SEND_INITIAL_DELAY_MS
++        );
++    }
+ 
+-                    updateReplyStatus(
+-                            "Chat aberto: autoresposta enviada"
+-                    );
+-                },
+-                120L
++    private void attemptSendReply(
++            String expectedConversation,
++            String message,
++            int attempt
++    ) {
++        AccessibilityNodeInfo freshRoot =
++                getRootInActiveWindow();
++
++        if (freshRoot == null) {
++            retrySendOrFail(
++                    expectedConversation,
++                    message,
++                    attempt,
++                    "Chat aberto: aguardando tela do WhatsApp para enviar"
++            );
++            return;
++        }
++
++        String actualConversation =
++                findConversationTitle(freshRoot);
++
++        if (!expectedConversation.isEmpty()
++                && !actualConversation.isEmpty()
++                && !normalize(expectedConversation).equals(
++                normalize(actualConversation)
++        )) {
++            updateReplyStatus(
++                    "Chat aberto: conversa mudou durante o envio"
++            );
++            finishReplyAndContinue();
++            return;
++        }
++
++        AccessibilityNodeInfo sendButton =
++                findSendButton(freshRoot);
++
++        if (sendButton == null
++                || !performClick(sendButton)) {
++            retrySendOrFail(
++                    expectedConversation,
++                    message,
++                    attempt,
++                    "Chat aberto: aguardando botão Enviar"
++            );
++            return;
++        }
++
++        handler.postDelayed(
++                () -> confirmReplySent(
++                        expectedConversation,
++                        message,
++                        attempt
++                ),
++                SEND_CONFIRM_DELAY_MS
++        );
++    }
++
++    private void confirmReplySent(
++            String expectedConversation,
++            String message,
++            int attempt
++    ) {
++        AccessibilityNodeInfo root =
++                getRootInActiveWindow();
++
++        if (root == null) {
++            retrySendOrFail(
++                    expectedConversation,
++                    message,
++                    attempt,
++                    "Chat aberto: confirmando envio"
++            );
++            return;
++        }
++
++        AccessibilityNodeInfo input =
++                findInput(root);
++
++        if (input == null) {
++            updateReplyStatus(
++                    "Chat aberto: autoresposta enviada"
++            );
++            finishReplyAndContinue();
++            return;
++        }
++
++        String current =
++                normalize(
++                        readRealDraftText(input)
++                );
++
++        String expected =
++                normalize(message);
++
++        if (current.isEmpty()
++                || !current.equals(expected)) {
++            updateReplyStatus(
++                    pendingReplies.isEmpty()
++                            ? "Chat aberto: autoresposta enviada"
++                            : "Chat aberto: autoresposta enviada; processando fila ("
++                            + pendingReplies.size()
++                            + ")"
++            );
++            finishReplyAndContinue();
++            return;
++        }
++
++        retrySendOrFail(
++                expectedConversation,
++                message,
++                attempt,
++                "Chat aberto: envio ainda não confirmado; tentando novamente"
++        );
++    }
++
++    private void retrySendOrFail(
++            String expectedConversation,
++            String message,
++            int attempt,
++            String status
++    ) {
++        if (attempt >= SEND_MAX_ATTEMPTS) {
++            updateReplyStatus(
++                    "Chat aberto: falha ao enviar após "
++                            + SEND_MAX_ATTEMPTS
++                            + " tentativas"
++            );
++            finishReplyAndContinue();
++            return;
++        }
++
++        updateReplyStatus(
++                status
++                        + " ("
++                        + attempt
++                        + "/"
++                        + SEND_MAX_ATTEMPTS
++                        + ")"
++        );
++
++        handler.postDelayed(
++                () -> attemptSendReply(
++                        expectedConversation,
++                        message,
++                        attempt + 1
++                ),
++                SEND_RETRY_DELAY_MS
+         );
+     }
+ 
+@@ -1472,6 +1668,26 @@
+                 .trim();
+     }
+ 
++    private static class PendingReply {
++        final String expectedConversation;
++        final String message;
++
++        PendingReply(
++                String expectedConversation,
++                String message
++        ) {
++            this.expectedConversation =
++                    expectedConversation == null
++                            ? ""
++                            : expectedConversation;
++
++            this.message =
++                    message == null
++                            ? ""
++                            : message;
++        }
++    }
++
+     private static class RecentAutoReply {
+         final long createdAt;
+         final List<String> fragments = new ArrayList<>();
