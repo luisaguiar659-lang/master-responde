@@ -1,0 +1,158 @@
+         // Evita tratar mensagens digitadas pelo próprio usuário como entrada.
+         if (isLikelyOutgoing(candidate.node)) {
++            updateDetectionStatus("Chat aberto: última mensagem é de saída; aguardando entrada");
+             return;
+         }
+ 
+-        String incoming = candidate.text.trim();
+-        String normalizedIncoming = normalize(incoming);
+-
+         SharedPreferences prefs =
+                 getSharedPreferences("master_responde", MODE_PRIVATE);
+ 
++        String incoming = cleanIncoming(candidate.text, prefs);
++        String normalizedIncoming = normalize(incoming);
++
++        if (normalizedIncoming.isEmpty()) {
++            updateDetectionStatus("Chat aberto: conteúdo da mensagem ficou vazio após leitura");
++            return;
++        }
++
+         boolean group = isLikelyGroupConversation(
+                 root,
+                 conversation,
+@@ -157,10 +194,12 @@
+ 
+         prefs.edit()
+                 .putLong("accessibility_last_event", now)
++                .putString("accessibility_last_message", incoming)
++                .putString("accessibility_last_conversation", conversation)
+                 .putString(
+                         "accessibility_last_status",
+                         dispatched
+-                                ? "Chat aberto: mensagem encaminhada ao motor"
++                                ? "Chat aberto: mensagem detectada e enviada ao motor"
+                                 : "Chat aberto: motor de notificações não conectado"
+                 )
+                 .apply();
+@@ -229,7 +268,10 @@
+         String[] ids = new String[]{
+                 WHATSAPP_BUSINESS + ":id/conversation_row_contact_name",
+                 WHATSAPP_BUSINESS + ":id/sender_name",
+-                WHATSAPP_BUSINESS + ":id/message_sender_name"
++                WHATSAPP_BUSINESS + ":id/message_sender_name",
++                WHATSAPP + ":id/conversation_row_contact_name",
++                WHATSAPP + ":id/sender_name",
++                WHATSAPP + ":id/message_sender_name"
+         };
+ 
+         int screenHeight =
+@@ -248,14 +290,14 @@
+             if (nodes == null) continue;
+ 
+             for (AccessibilityNodeInfo node : nodes) {
+-                if (node == null || node.getText() == null) continue;
++                if (node == null) continue;
+ 
+                 Rect r = new Rect();
+                 node.getBoundsInScreen(r);
+ 
+                 if (r.top > screenHeight * 0.18f
+                         && r.bottom < screenHeight * 0.90f
+-                        && !node.getText().toString().trim().isEmpty()) {
++                        && !nodeValue(node).isEmpty()) {
+                     return true;
+                 }
+             }
+@@ -270,7 +312,10 @@
+         String[] ids = new String[]{
+                 WHATSAPP_BUSINESS + ":id/entry",
+                 WHATSAPP_BUSINESS + ":id/entry_field",
+-                WHATSAPP_BUSINESS + ":id/message_input"
++                WHATSAPP_BUSINESS + ":id/message_input",
++                WHATSAPP + ":id/entry",
++                WHATSAPP + ":id/entry_field",
++                WHATSAPP + ":id/message_input"
+         };
+ 
+         for (String id : ids) {
+@@ -298,15 +343,9 @@
+     ) {
+         if (node == null) return null;
+ 
+-        if (node.isEditable()) {
+-            String className =
+-                    node.getClassName() == null
+-                            ? ""
+-                            : node.getClassName().toString();
+-
+-            if (className.contains("EditText")) {
+-                return node;
+-            }
++        if (node.isEditable()
++                && node.isVisibleToUser()) {
++            return node;
+         }
+ 
+         for (int i = 0; i < node.getChildCount(); i++) {
+@@ -330,7 +369,11 @@
+                 WHATSAPP_BUSINESS + ":id/conversation_contact_name",
+                 WHATSAPP_BUSINESS + ":id/toolbar_title",
+                 WHATSAPP_BUSINESS + ":id/conversation_name",
+-                WHATSAPP_BUSINESS + ":id/contact_name"
++                WHATSAPP_BUSINESS + ":id/contact_name",
++                WHATSAPP + ":id/conversation_contact_name",
++                WHATSAPP + ":id/toolbar_title",
++                WHATSAPP + ":id/conversation_name",
++                WHATSAPP + ":id/contact_name"
+         };
+ 
+         for (String id : ids) {
+@@ -344,9 +387,9 @@
+             if (nodes == null) continue;
+ 
+             for (AccessibilityNodeInfo node : nodes) {
+-                if (node == null || node.getText() == null) continue;
++                if (node == null) continue;
+ 
+-                String text = node.getText().toString().trim();
++                String text = nodeValue(node);
+                 if (!text.isEmpty()) {
+                     return text;
+                 }
+@@ -357,10 +400,7 @@
+         collectTopTextNodes(root, topText);
+ 
+         for (AccessibilityNodeInfo node : topText) {
+-            String text =
+-                    node.getText() == null
+-                            ? ""
+-                            : node.getText().toString().trim();
++            String text = nodeValue(node);
+ 
+             String normalized = normalize(text);
+ 
+@@ -389,8 +429,9 @@
+                         .getDisplayMetrics()
+                         .heightPixels;
+ 
+-        if (node.getText() != null
+-                && !node.getText().toString().trim().isEmpty()) {
++        String value = nodeValue(node);
++
++        if (!value.isEmpty()) {
+             Rect r = new Rect();
+             node.getBoundsInScreen(r);
+ 
+@@ -419,7 +460,10 @@
+         String[] ids = new String[]{
+                 WHATSAPP_BUSINESS + ":id/message_text",
+                 WHATSAPP_BUSINESS + ":id/conversation_text_row",
+-                WHATSAPP_BUSINESS + ":id/caption"
++                WHATSAPP_BUSINESS + ":id/caption",
++                WHATSAPP + ":id/message_text",
++                WHATSAPP + ":id/conversation_text_row",
++                WHATSAPP + ":id/caption"
+         };
+ 
+         for (String id : ids) {
