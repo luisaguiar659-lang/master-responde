@@ -1,0 +1,161 @@
+diff -ruN new_src/app/build.gradle v204_src/app/build.gradle
+--- new_src/app/build.gradle	2026-08-22 17:08:56.000000000 +0000
++++ v204_src/app/build.gradle	2026-08-22 17:35:18.526731205 +0000
+@@ -10,8 +10,8 @@
+         applicationId 'com.masterresponde.app'
+         minSdk 26
+         targetSdk 35
+-        versionCode 64
+-        versionName '2.0.3'
++        versionCode 65
++        versionName '2.0.4'
+     }
+ 
+     compileOptions {
+diff -ruN new_src/app/src/main/java/com/masterresponde/app/MainActivity.java v204_src/app/src/main/java/com/masterresponde/app/MainActivity.java
+--- new_src/app/src/main/java/com/masterresponde/app/MainActivity.java	2026-08-22 17:08:52.000000000 +0000
++++ v204_src/app/src/main/java/com/masterresponde/app/MainActivity.java	2026-08-22 17:38:01.378924019 +0000
+@@ -731,7 +731,7 @@
+ 
+         heroText.addView(
+                 text(
+-                        "Dashboard v2.0.3",
++                        "Dashboard v2.0.4",
+                         14,
+                         Color.rgb(
+                                 255,
+@@ -1288,9 +1288,34 @@
+                     );
+ 
+             if (enabled && connected) {
+-                activeChatStatus.setText(
+-                        "● Ativo"
+-                );
++                String lastStatus =
++                        prefs.getString(
++                                "accessibility_last_status",
++                                ""
++                        );
++
++                long lastEvent =
++                        prefs.getLong(
++                                "accessibility_last_event",
++                                0L
++                        );
++
++                if (lastEvent > 0L
++                        && System.currentTimeMillis() - lastEvent < 5L * 60L * 1000L
++                        && lastStatus != null
++                        && !lastStatus.trim().isEmpty()) {
++                    activeChatStatus.setText(
++                            "● Ativo\n"
++                                    + lastStatus.replace(
++                                    "Chat aberto: ",
++                                    ""
++                            )
++                    );
++                } else {
++                    activeChatStatus.setText(
++                            "● Ativo • aguardando mensagem"
++                    );
++                }
+ 
+                 activeChatStatus.setTextColor(
+                         Color.rgb(
+diff -ruN new_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java v204_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+--- new_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 17:08:17.000000000 +0000
++++ v204_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 17:38:22.040792972 +0000
+@@ -1,8 +1,12 @@
+ package com.masterresponde.app;
+ 
+ import android.accessibilityservice.AccessibilityService;
++import android.accessibilityservice.GestureDescription;
++import android.content.ClipData;
++import android.content.ClipboardManager;
+ import android.content.Context;
+ import android.content.SharedPreferences;
++import android.graphics.Path;
+ import android.graphics.Rect;
+ import android.os.Bundle;
+ import android.os.Handler;
+@@ -12,6 +16,9 @@
+ import android.view.accessibility.AccessibilityEvent;
+ import android.view.accessibility.AccessibilityNodeInfo;
+ 
++import org.json.JSONArray;
++import org.json.JSONObject;
++
+ import java.text.Normalizer;
+ import java.util.ArrayList;
+ import java.util.List;
+@@ -20,6 +27,7 @@
+ public class WhatsAppAccessibilityService extends AccessibilityService {
+ 
+     private static final String WHATSAPP_BUSINESS = "com.whatsapp.w4b";
++    private static final String WHATSAPP = "com.whatsapp";
+     private static final long INSPECT_DELAY_MS = 180L;
+     private static final long LOCAL_DUPLICATE_MS = 1800L;
+     private static final long GROUP_MEMORY_MS = 10L * 60L * 1000L;
+@@ -51,7 +59,7 @@
+ 
+         CharSequence packageName = event.getPackageName();
+         if (packageName == null
+-                || !WHATSAPP_BUSINESS.contentEquals(packageName)) {
++                || !isWhatsAppPackage(packageName.toString())) {
+             return;
+         }
+ 
+@@ -62,6 +70,17 @@
+             return;
+         }
+ 
++        prefs.edit()
++                .putLong(
++                        "accessibility_last_event",
++                        System.currentTimeMillis()
++                )
++                .putString(
++                        "accessibility_last_status",
++                        "Chat aberto: evento recebido do WhatsApp"
++                )
++                .apply();
++
+         handler.removeCallbacks(inspectRunnable);
+         handler.postDelayed(inspectRunnable, INSPECT_DELAY_MS);
+     }
+@@ -88,15 +107,26 @@
+ 
+     private void inspectOpenConversation() {
+         AccessibilityNodeInfo root = getRootInActiveWindow();
+-        if (root == null) return;
++        if (root == null) {
++            updateDetectionStatus("Chat aberto: tela do WhatsApp indisponível");
++            return;
++        }
++
++        CharSequence rootPackage = root.getPackageName();
++        if (rootPackage == null
++                || !isWhatsAppPackage(rootPackage.toString())) {
++            return;
++        }
+ 
+         AccessibilityNodeInfo input = findInput(root);
+         if (input == null) {
++            updateDetectionStatus("Chat aberto: campo de mensagem não encontrado");
+             return;
+         }
+ 
+         String conversation = findConversationTitle(root);
+         if (conversation.isEmpty()) {
++            updateDetectionStatus("Chat aberto: nome da conversa não encontrado");
+             return;
+         }
+ 
+@@ -108,20 +138,27 @@
+ 
+         if (candidate == null
+                 || candidate.text.trim().isEmpty()) {
++            updateDetectionStatus("Chat aberto: nenhuma bolha de mensagem detectada");
+             return;
+         }
+ 
