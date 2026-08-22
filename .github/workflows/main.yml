@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/main.yml"
       - "patches/v2.0.4/**"
+      - "patches/v2.0.5/**"
 
 jobs:
   build:
@@ -76,6 +77,15 @@ jobs:
           grep -n "versionName '2.0.4'" app/build.gradle
           grep -n "contentDescription" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
           grep -n "canPerformGestures=\"true\"" app/src/main/res/xml/accessibility_service_config.xml
+
+      - name: Aplicar correção v2.0.5 — campo de resposta
+        run: |
+          cat patches/v2.0.5/*.patch > "$RUNNER_TEMP/master-responde-v2.0.5.patch"
+          cd projeto
+          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.5.patch"
+          grep -n "versionName '2.0.5'" app/build.gradle
+          grep -n "readRealDraftText" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+          grep -n "replyAlreadyInField" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
 
       - name: Detectar diretório Gradle
         id: project
@@ -155,7 +165,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.0.4
+          name: MASTER-RESPONDE-v2.0.5
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
