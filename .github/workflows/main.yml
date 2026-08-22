@@ -37,9 +37,9 @@ jobs:
             exit 1
           fi
 
-      - name: Localizar ZIP da versão
+      - name: Localizar ZIP do projeto
         run: |
-          ZIP="MASTER-RESPONDE-v1.17.16-FIX-REGRA-APOS-TESTE.zip"
+          ZIP="MASTER-RESPONDE-RAIZ.zip"
 
           if [ ! -f "$ZIP" ]; then
             echo "ERRO: arquivo $ZIP não encontrado na raiz do repositório."
@@ -51,7 +51,7 @@ jobs:
         run: |
           rm -rf projeto
           mkdir -p projeto
-          unzip -q MASTER-RESPONDE-v1.17.16-FIX-REGRA-APOS-TESTE.zip -d projeto
+          unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto
 
       - name: Detectar diretório Gradle
         id: project
@@ -63,6 +63,7 @@ jobs:
 
           if [ -z "$SETTINGS" ]; then
             echo "ERRO: settings.gradle/settings.gradle.kts não encontrado."
+            find projeto -maxdepth 3 -type f | sort
             exit 1
           fi
 
@@ -72,6 +73,7 @@ jobs:
           if [ ! -f "$PROJECT_DIR/app/build.gradle" ] && \
              [ ! -f "$PROJECT_DIR/app/build.gradle.kts" ]; then
             echo "ERRO: módulo app não encontrado."
+            find "$PROJECT_DIR" -maxdepth 3 -type f | sort
             exit 1
           fi
 
@@ -123,13 +125,13 @@ jobs:
             exit 1
           fi
 
-          cp "$APK" MASTER-RESPONDE-v1.17.16.apk
-          ls -lh MASTER-RESPONDE-v1.17.16.apk
+          cp "$APK" MASTER-RESPONDE.apk
+          ls -lh MASTER-RESPONDE.apk
 
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v1.17.16
-          path: MASTER-RESPONDE-v1.17.16.apk
+          name: MASTER-RESPONDE
+          path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
