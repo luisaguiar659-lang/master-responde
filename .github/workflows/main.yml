@@ -3,19 +3,15 @@ name: Build MASTER RESPONDE APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - ".github/workflows/main.yml"
-      - "patches/v2.0.4/**"
-      - "patches/v2.0.5/**"
-      - "patches/v2.0.6/**"
-      - "patches/v2.0.7/**"
+      - "MASTER-RESPONDE-RAIZ.zip"
+      - "patches/**"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,98 +34,40 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_B64" ] || \
-             [ -z "$STORE_PASSWORD" ] || \
-             [ -z "$KEY_ALIAS" ] || \
-             [ -z "$KEY_PASSWORD" ]; then
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
             echo "ERRO: configure os 4 GitHub Secrets de assinatura antes de compilar."
-            exit 1
-          fi
-
-      - name: Localizar ZIP do projeto
-        run: |
-          ZIP="MASTER-RESPONDE-RAIZ.zip"
-
-          if [ ! -f "$ZIP" ]; then
-            echo "ERRO: arquivo $ZIP não encontrado na raiz do repositório."
-            find . -maxdepth 2 -type f | sort
             exit 1
           fi
 
       - name: Extrair projeto
         run: |
+          test -f MASTER-RESPONDE-RAIZ.zip
           rm -rf projeto
           mkdir -p projeto
           unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto
 
-      - name: Aplicar correção v2.0.3 — chat aberto
+      - name: Aplicar correções v2.0.3 até v2.0.8
         run: |
-          cat patches/v2.0.3/part-*.patch > "$RUNNER_TEMP/master-responde-v2.0.3.patch"
-          cd projeto
-          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.3.patch"
-          grep -n "versionName '2.0.3'" app/build.gradle
-          test -f app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
-          test -f app/src/main/res/xml/accessibility_service_config.xml
-
-      - name: Aplicar correção v2.0.4 — detecção reforçada
-        run: |
-          cat patches/v2.0.4/part-*.patch > "$RUNNER_TEMP/master-responde-v2.0.4.patch"
-          cd projeto
-          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.4.patch"
-          grep -n "versionName '2.0.4'" app/build.gradle
-          grep -n "contentDescription" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
-          grep -n "canPerformGestures=\"true\"" app/src/main/res/xml/accessibility_service_config.xml
-
-      - name: Aplicar correção v2.0.5 — campo de resposta
-        run: |
-          cat patches/v2.0.5/*.patch > "$RUNNER_TEMP/master-responde-v2.0.5.patch"
-          cd projeto
-          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.5.patch"
-          grep -n "versionName '2.0.5'" app/build.gradle
-          grep -n "readRealDraftText" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
-          grep -n "replyAlreadyInField" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
-
-      - name: Aplicar correção v2.0.6 — ignorar eco do próprio bot
-        run: |
-          cat patches/v2.0.6/*.patch > "$RUNNER_TEMP/master-responde-v2.0.6.patch"
-          cd projeto
-          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.6.patch"
-          grep -n "versionName '2.0.6'" app/build.gradle
-          grep -n "AUTO_REPLY_ECHO_MS" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
-          grep -n "resposta do próprio bot ignorada" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
-
-      - name: Aplicar correção v2.0.7 — envio robusto e fila
-        run: |
-          cat patches/v2.0.7/*.patch > "$RUNNER_TEMP/master-responde-v2.0.7.patch"
-          cd projeto
-          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.7.patch"
-          grep -n "versionName '2.0.7'" app/build.gradle
-          grep -n "SEND_MAX_ATTEMPTS" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
-          grep -n "pendingReplies" app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+          cat patches/v2.0.3/part-*.patch > "$RUNNER_TEMP/v203.patch"
+          (cd projeto && patch -p1 --forward --batch < "$RUNNER_TEMP/v203.patch")
+          cat patches/v2.0.4/part-*.patch > "$RUNNER_TEMP/v204.patch"
+          (cd projeto && patch -p1 --forward --batch < "$RUNNER_TEMP/v204.patch")
+          for v in v2.0.5 v2.0.6 v2.0.7 v2.0.8; do
+            cat patches/$v/*.patch > "$RUNNER_TEMP/$v.patch"
+            (cd projeto && patch -p1 --forward --batch < "$RUNNER_TEMP/$v.patch")
+          done
+          grep -n "versionName '2.0.8'" projeto/app/build.gradle
+          grep -n 'WHATSAPP_BUSINESS = "com.whatsapp.w4b"' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
 
       - name: Detectar diretório Gradle
         id: project
         shell: bash
         run: |
-          SETTINGS=$(find projeto \
-            \( -name "settings.gradle" -o -name "settings.gradle.kts" \) \
-            -type f | head -1)
-
-          if [ -z "$SETTINGS" ]; then
-            echo "ERRO: settings.gradle/settings.gradle.kts não encontrado."
-            find projeto -maxdepth 3 -type f | sort
-            exit 1
-          fi
-
+          SETTINGS=$(find projeto \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -type f | head -1)
+          test -n "$SETTINGS"
           PROJECT_DIR=$(dirname "$SETTINGS")
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-
-          if [ ! -f "$PROJECT_DIR/app/build.gradle" ] && \
-             [ ! -f "$PROJECT_DIR/app/build.gradle.kts" ]; then
-            echo "ERRO: módulo app não encontrado."
-            find "$PROJECT_DIR" -maxdepth 3 -type f | sort
-            exit 1
-          fi
+          test -f "$PROJECT_DIR/app/build.gradle" || test -f "$PROJECT_DIR/app/build.gradle.kts"
 
       - name: Preparar chave de assinatura
         env:
@@ -137,11 +75,7 @@ jobs:
         run: |
           KEYSTORE="$RUNNER_TEMP/master-responde-release.jks"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
-
-          if [ ! -s "$KEYSTORE" ]; then
-            echo "ERRO: falha ao gerar o arquivo de assinatura."
-            exit 1
-          fi
+          test -s "$KEYSTORE"
 
       - name: Compilar APK release
         working-directory: ${{ steps.project.outputs.dir }}
@@ -151,7 +85,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -f "./gradlew" ]; then
+          if [ -f ./gradlew ]; then
             chmod +x ./gradlew
             ./gradlew :app:assembleRelease --stacktrace --no-daemon
           else
@@ -160,32 +94,18 @@ jobs:
 
       - name: Preparar APK final
         run: |
-          APK=$(find projeto \
-            -type f \
-            -path "*/app/build/outputs/apk/release/*.apk" \
-            ! -name "*unsigned*" \
-            | head -1)
-
+          APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1)
           if [ -z "$APK" ]; then
-            APK=$(find projeto \
-              -type f \
-              -path "*/app/build/outputs/apk/release/*.apk" \
-              | head -1)
+            APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1)
           fi
-
-          if [ -z "$APK" ]; then
-            echo "ERRO: APK release não encontrado."
-            find projeto -path "*build/outputs*" -type f -print || true
-            exit 1
-          fi
-
+          test -n "$APK"
           cp "$APK" MASTER-RESPONDE.apk
           ls -lh MASTER-RESPONDE.apk
 
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.0.7
+          name: MASTER-RESPONDE-v2.0.8
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
