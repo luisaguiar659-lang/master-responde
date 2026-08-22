@@ -53,6 +53,15 @@ jobs:
           mkdir -p projeto
           unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto
 
+      - name: Aplicar correção v2.0.3 — chat aberto
+        run: |
+          cat patches/v2.0.3/part-*.patch > "$RUNNER_TEMP/master-responde-v2.0.3.patch"
+          cd projeto
+          patch -p1 --forward --batch < "$RUNNER_TEMP/master-responde-v2.0.3.patch"
+          grep -n "versionName '2.0.3'" app/build.gradle
+          test -f app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+          test -f app/src/main/res/xml/accessibility_service_config.xml
+
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -131,7 +140,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE
+          name: MASTER-RESPONDE-v2.0.3
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
