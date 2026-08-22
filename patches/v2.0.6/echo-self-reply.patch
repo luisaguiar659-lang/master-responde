@@ -1,0 +1,164 @@
+diff -ruN mr205_orig/app/build.gradle mr205/app/build.gradle
+--- mr205_orig/app/build.gradle	2026-08-22 18:05:18.000000000 +0000
++++ mr205/app/build.gradle	2026-08-22 18:18:05.906452754 +0000
+@@ -10,8 +10,8 @@
+         applicationId 'com.masterresponde.app'
+         minSdk 26
+         targetSdk 35
+-        versionCode 66
+-        versionName '2.0.5'
++        versionCode 67
++        versionName '2.0.6'
+     }
+ 
+     compileOptions {
+diff -ruN mr205_orig/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java mr205/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+--- mr205_orig/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 18:05:18.000000000 +0000
++++ mr205/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 18:18:05.906308850 +0000
+@@ -31,6 +31,7 @@
+     private static final long INSPECT_DELAY_MS = 180L;
+     private static final long LOCAL_DUPLICATE_MS = 1800L;
+     private static final long GROUP_MEMORY_MS = 10L * 60L * 1000L;
++    private static final long AUTO_REPLY_ECHO_MS = 30_000L;
+ 
+     private static volatile WhatsAppAccessibilityService activeInstance;
+ 
+@@ -39,6 +40,8 @@
+     private String lastFingerprint = "";
+     private long lastFingerprintAt = 0L;
+ 
++    private final List<RecentAutoReply> recentAutoReplies = new ArrayList<>();
++
+     private final Runnable inspectRunnable = this::inspectOpenConversation;
+ 
+     @Override
+@@ -154,6 +157,19 @@
+         String incoming = cleanIncoming(candidate.text, prefs);
+         String normalizedIncoming = normalize(incoming);
+ 
++        // Quando o próprio MASTER RESPONDE envia uma mensagem, o WhatsApp
++        // dispara novos eventos de acessibilidade. Em algumas versões do
++        // WhatsApp Business a bolha de saída ocupa quase toda a largura e não
++        // dá para distinguir entrada/saída apenas pela posição. Sem esta
++        // memória, a resposta do bot volta para o motor como se fosse uma nova
++        // mensagem e pode gerar "Opção não reconhecida" em loop.
++        if (isRecentAutoReplyEcho(candidate.text)) {
++            updateDetectionStatus(
++                    "Chat aberto: resposta do próprio bot ignorada"
++            );
++            return;
++        }
++
+         if (normalizedIncoming.isEmpty()) {
+             updateDetectionStatus("Chat aberto: conteúdo da mensagem ficou vazio após leitura");
+             return;
+@@ -1016,6 +1032,11 @@
+         String normalizedExisting = normalize(existing);
+         String normalizedReply = normalize(message);
+ 
++        // Registra a autoresposta antes de preencher o campo. Assim, os
++        // eventos gerados pelo ACTION_SET_TEXT/clique em Enviar já podem ser
++        // reconhecidos como eco do próprio bot e não retornam ao motor.
++        rememberAutoReply(message);
++
+         // WhatsApp/WhatsApp Business podem expor o placeholder (ex.: "Mensagem")
+         // como texto do EditText pela Acessibilidade. Isso não é um rascunho real.
+         // Também pode acontecer de uma tentativa anterior já ter preenchido a
+@@ -1090,6 +1111,71 @@
+         );
+     }
+ 
++    private void rememberAutoReply(String message) {
++        if (message == null || message.trim().isEmpty()) {
++            return;
++        }
++
++        long now = System.currentTimeMillis();
++        pruneRecentAutoReplies(now);
++
++        RecentAutoReply entry = new RecentAutoReply(now);
++        entry.add(normalize(message));
++
++        for (String line : message.split("[\r\n]+")) {
++            entry.add(normalize(line));
++        }
++
++        recentAutoReplies.add(entry);
++
++        // O motor pode mandar várias partes em sequência. Guardar as últimas
++        // seis já cobre esse caso sem deixar a memória crescer.
++        while (recentAutoReplies.size() > 6) {
++            recentAutoReplies.remove(0);
++        }
++    }
++
++    private boolean isRecentAutoReplyEcho(String rawCandidate) {
++        String raw = normalize(rawCandidate);
++        if (raw.isEmpty()) return false;
++
++        long now = System.currentTimeMillis();
++        pruneRecentAutoReplies(now);
++
++        for (int i = recentAutoReplies.size() - 1; i >= 0; i--) {
++            RecentAutoReply entry = recentAutoReplies.get(i);
++
++            for (String fragment : entry.fragments) {
++                if (fragment.isEmpty()) continue;
++
++                if (raw.equals(fragment)) {
++                    return true;
++                }
++
++                // ContentDescription pode juntar mensagem + horário/status.
++                // Só usamos comparação parcial para trechos razoavelmente
++                // longos, evitando confundir um novo "@infor" do cliente
++                // com uma frase do menu que também contém "@infor".
++                if (fragment.length() >= 12
++                        && raw.length() >= 12
++                        && (raw.contains(fragment)
++                        || fragment.contains(raw))) {
++                    return true;
++                }
++            }
++        }
++
++        return false;
++    }
++
++    private void pruneRecentAutoReplies(long now) {
++        for (int i = recentAutoReplies.size() - 1; i >= 0; i--) {
++            if (now - recentAutoReplies.get(i).createdAt > AUTO_REPLY_ECHO_MS) {
++                recentAutoReplies.remove(i);
++            }
++        }
++    }
++
+     private String readRealDraftText(
+             AccessibilityNodeInfo input
+     ) {
+@@ -1386,6 +1472,25 @@
+                 .trim();
+     }
+ 
++    private static class RecentAutoReply {
++        final long createdAt;
++        final List<String> fragments = new ArrayList<>();
++
++        RecentAutoReply(long createdAt) {
++            this.createdAt = createdAt;
++        }
++
++        void add(String value) {
++            if (value == null) return;
++
++            String normalized = value.trim();
++            if (normalized.isEmpty()) return;
++            if (!fragments.contains(normalized)) {
++                fragments.add(normalized);
++            }
++        }
++    }
++
+     private static class MessageCandidate {
+         final AccessibilityNodeInfo node;
+         final String text;
