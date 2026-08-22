@@ -1,0 +1,181 @@
+@@ -433,25 +477,37 @@
+             if (nodes == null) continue;
+ 
+             for (AccessibilityNodeInfo node : nodes) {
+-                addCandidate(node, inputTop, candidates);
++                addCandidate(node, inputTop, candidates, true);
+             }
+         }
+ 
+-        if (candidates.isEmpty()) {
+-            collectMessageLikeNodes(
+-                    root,
+-                    inputTop,
+-                    candidates
+-            );
+-        }
++        // WhatsApp muda os IDs internos com frequência. Mesmo que os IDs
++        // conhecidos existam, percorremos a árvore inteira e aceitamos também
++        // contentDescription. Em builds recentes, várias bolhas não expõem o
++        // corpo em getText(), somente na descrição de acessibilidade.
++        collectMessageLikeNodes(
++                root,
++                inputTop,
++                candidates
++        );
+ 
+         MessageCandidate latest = null;
+ 
+         for (MessageCandidate candidate : candidates) {
+-            if (latest == null
+-                    || candidate.bounds.bottom > latest.bounds.bottom
+-                    || (candidate.bounds.bottom == latest.bounds.bottom
+-                    && candidate.bounds.right > latest.bounds.right)) {
++            if (latest == null) {
++                latest = candidate;
++                continue;
++            }
++
++            int bottomDelta =
++                    candidate.bounds.bottom - latest.bounds.bottom;
++
++            if (bottomDelta > 6
++                    || (Math.abs(bottomDelta) <= 6
++                    && candidate.quality > latest.quality)
++                    || (Math.abs(bottomDelta) <= 6
++                    && candidate.quality == latest.quality
++                    && candidate.bounds.width() < latest.bounds.width())) {
+                 latest = candidate;
+             }
+         }
+@@ -471,11 +527,22 @@
+                         ? ""
+                         : node.getViewIdResourceName().toLowerCase(Locale.ROOT);
+ 
+-        if (node.getText() != null
+-                && (id.contains("message")
+-                || id.contains("conversation_text")
+-                || id.contains("caption"))) {
+-            addCandidate(node, inputTop, result);
++        boolean knownMessageId =
++                id.contains("message")
++                        || id.contains("conversation_text")
++                        || id.contains("caption")
++                        || id.contains("bubble")
++                        || id.contains("row_text");
++
++        if (knownMessageId
++                || node.getText() != null
++                || node.getContentDescription() != null) {
++            addCandidate(
++                    node,
++                    inputTop,
++                    result,
++                    knownMessageId
++            );
+         }
+ 
+         for (int i = 0; i < node.getChildCount(); i++) {
+@@ -490,11 +557,12 @@
+     private void addCandidate(
+             AccessibilityNodeInfo node,
+             int inputTop,
+-            List<MessageCandidate> result
++            List<MessageCandidate> result,
++            boolean knownMessageId
+     ) {
+-        if (node == null || node.getText() == null) return;
++        if (node == null || !node.isVisibleToUser()) return;
+ 
+-        String text = node.getText().toString().trim();
++        String text = nodeValue(node);
+         if (text.isEmpty()) return;
+ 
+         Rect r = new Rect();
+@@ -505,18 +573,345 @@
+                         .getDisplayMetrics()
+                         .heightPixels;
+ 
++        if (r.width() <= 0 || r.height() <= 0) return;
+         if (r.bottom <= screenHeight * 0.16f) return;
+         if (inputTop > 0 && r.bottom >= inputTop) return;
++        if (!looksLikeMessageText(text)) return;
++
++        int quality = 0;
++
++        if (knownMessageId) {
++            quality += 6;
++        }
++
++        if (node.getText() != null
++                && !node.getText().toString().trim().isEmpty()) {
++            quality += 5;
++        }
++
++        if (node.getContentDescription() != null
++                && !node.getContentDescription().toString().trim().isEmpty()) {
++            quality += 3;
++        }
++
++        if (node.getChildCount() == 0) {
++            quality += 2;
++        }
+ 
+         result.add(
+                 new MessageCandidate(
+                         node,
+                         text,
+-                        r
++                        r,
++                        quality
+                 )
+         );
+     }
+ 
++    private String nodeValue(AccessibilityNodeInfo node) {
++        if (node == null) return "";
++
++        if (node.getText() != null) {
++            String text = node.getText().toString().trim();
++            if (!text.isEmpty()) {
++                return text;
++            }
++        }
++
++        if (node.getContentDescription() != null) {
++            String description =
++                    node.getContentDescription()
++                            .toString()
++                            .trim();
++
++            if (!description.isEmpty()) {
++                return description;
++            }
++        }
++
++        return "";
++    }
++
++    private boolean looksLikeMessageText(String value) {
++        String n = normalize(value);
++        if (n.isEmpty()) return false;
++
++        if (n.matches("^[0-2]?\\d:[0-5]\\d(?:\\s*[ap]m)?$")) {
++            return false;
++        }
++
++        if (n.equals("hoje")
++                || n.equals("today")
++                || n.equals("ontem")
++                || n.equals("yesterday")
++                || n.equals("online")
++                || n.equals("digitando")
++                || n.equals("typing")
++                || n.equals("mensagem")
++                || n.equals("message")
++                || n.equals("enviar")
++                || n.equals("send")
++                || n.equals("lida")
++                || n.equals("read")
++                || n.equals("entregue")
++                || n.equals("delivered")) {
