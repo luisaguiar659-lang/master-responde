@@ -1,0 +1,215 @@
++    private AccessibilityNodeInfo findEditableRecursive(
++            AccessibilityNodeInfo node
++    ) {
++        if (node == null) return null;
++
++        if (node.isEditable()) {
++            String className =
++                    node.getClassName() == null
++                            ? ""
++                            : node.getClassName().toString();
++
++            if (className.contains("EditText")) {
++                return node;
++            }
++        }
++
++        for (int i = 0; i < node.getChildCount(); i++) {
++            AccessibilityNodeInfo found =
++                    findEditableRecursive(
++                            node.getChild(i)
++                    );
++
++            if (found != null) {
++                return found;
++            }
++        }
++
++        return null;
++    }
++
++    private String findConversationTitle(
++            AccessibilityNodeInfo root
++    ) {
++        String[] ids = new String[]{
++                WHATSAPP_BUSINESS + ":id/conversation_contact_name",
++                WHATSAPP_BUSINESS + ":id/toolbar_title",
++                WHATSAPP_BUSINESS + ":id/conversation_name",
++                WHATSAPP_BUSINESS + ":id/contact_name"
++        };
++
++        for (String id : ids) {
++            List<AccessibilityNodeInfo> nodes;
++            try {
++                nodes = root.findAccessibilityNodeInfosByViewId(id);
++            } catch (Throwable ignored) {
++                nodes = null;
++            }
++
++            if (nodes == null) continue;
++
++            for (AccessibilityNodeInfo node : nodes) {
++                if (node == null || node.getText() == null) continue;
++
++                String text = node.getText().toString().trim();
++                if (!text.isEmpty()) {
++                    return text;
++                }
++            }
++        }
++
++        List<AccessibilityNodeInfo> topText = new ArrayList<>();
++        collectTopTextNodes(root, topText);
++
++        for (AccessibilityNodeInfo node : topText) {
++            String text =
++                    node.getText() == null
++                            ? ""
++                            : node.getText().toString().trim();
++
++            String normalized = normalize(text);
++
++            if (text.isEmpty()
++                    || normalized.equals("whatsapp business")
++                    || normalized.equals("online")
++                    || normalized.contains("digitando")
++                    || normalized.contains("typing")) {
++                continue;
++            }
++
++            return text;
++        }
++
++        return "";
++    }
++
++    private void collectTopTextNodes(
++            AccessibilityNodeInfo node,
++            List<AccessibilityNodeInfo> result
++    ) {
++        if (node == null) return;
++
++        int screenHeight =
++                getResources()
++                        .getDisplayMetrics()
++                        .heightPixels;
++
++        if (node.getText() != null
++                && !node.getText().toString().trim().isEmpty()) {
++            Rect r = new Rect();
++            node.getBoundsInScreen(r);
++
++            if (r.top >= 0
++                    && r.bottom > 0
++                    && r.bottom < screenHeight * 0.20f) {
++                result.add(node);
++            }
++        }
++
++        for (int i = 0; i < node.getChildCount(); i++) {
++            collectTopTextNodes(
++                    node.getChild(i),
++                    result
++            );
++        }
++    }
++
++    private MessageCandidate findLatestMessage(
++            AccessibilityNodeInfo root,
++            int inputTop
++    ) {
++        List<MessageCandidate> candidates =
++                new ArrayList<>();
++
++        String[] ids = new String[]{
++                WHATSAPP_BUSINESS + ":id/message_text",
++                WHATSAPP_BUSINESS + ":id/conversation_text_row",
++                WHATSAPP_BUSINESS + ":id/caption"
++        };
++
++        for (String id : ids) {
++            List<AccessibilityNodeInfo> nodes;
++            try {
++                nodes = root.findAccessibilityNodeInfosByViewId(id);
++            } catch (Throwable ignored) {
++                nodes = null;
++            }
++
++            if (nodes == null) continue;
++
++            for (AccessibilityNodeInfo node : nodes) {
++                addCandidate(node, inputTop, candidates);
++            }
++        }
++
++        if (candidates.isEmpty()) {
++            collectMessageLikeNodes(
++                    root,
++                    inputTop,
++                    candidates
++            );
++        }
++
++        MessageCandidate latest = null;
++
++        for (MessageCandidate candidate : candidates) {
++            if (latest == null
++                    || candidate.bounds.bottom > latest.bounds.bottom
++                    || (candidate.bounds.bottom == latest.bounds.bottom
++                    && candidate.bounds.right > latest.bounds.right)) {
++                latest = candidate;
++            }
++        }
++
++        return latest;
++    }
++
++    private void collectMessageLikeNodes(
++            AccessibilityNodeInfo node,
++            int inputTop,
++            List<MessageCandidate> result
++    ) {
++        if (node == null) return;
++
++        String id =
++                node.getViewIdResourceName() == null
++                        ? ""
++                        : node.getViewIdResourceName().toLowerCase(Locale.ROOT);
++
++        if (node.getText() != null
++                && (id.contains("message")
++                || id.contains("conversation_text")
++                || id.contains("caption"))) {
++            addCandidate(node, inputTop, result);
++        }
++
++        for (int i = 0; i < node.getChildCount(); i++) {
++            collectMessageLikeNodes(
++                    node.getChild(i),
++                    inputTop,
++                    result
++            );
++        }
++    }
++
++    private void addCandidate(
++            AccessibilityNodeInfo node,
++            int inputTop,
++            List<MessageCandidate> result
++    ) {
++        if (node == null || node.getText() == null) return;
++
++        String text = node.getText().toString().trim();
++        if (text.isEmpty()) return;
++
++        Rect r = new Rect();
++        node.getBoundsInScreen(r);
++
++        int screenHeight =
++                getResources()
++                        .getDisplayMetrics()
++                        .heightPixels;
++
++        if (r.bottom <= screenHeight * 0.16f) return;
++        if (inputTop > 0 && r.bottom >= inputTop) return;
++
