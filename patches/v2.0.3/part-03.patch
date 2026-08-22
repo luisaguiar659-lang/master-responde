@@ -1,0 +1,207 @@
+--- orig_src/app/src/main/java/com/masterresponde/app/NotificationAccessService.java	2026-08-22 07:31:39.000000000 +0000
++++ new_src/app/src/main/java/com/masterresponde/app/NotificationAccessService.java	2026-08-22 17:08:34.000000000 +0000
+@@ -39,12 +39,101 @@
+ 
+     private final Handler handler = new Handler(Looper.getMainLooper());
+ 
++    private static volatile NotificationAccessService activeInstance;
+ 
++    public static boolean dispatchAccessibilityMessage(
++            android.content.Context context,
++            String conversation,
++            String incoming,
++            boolean isGroup,
++            long eventTime
++    ) {
++        NotificationAccessService service = activeInstance;
++
++        if (service == null
++                || incoming == null
++                || incoming.trim().isEmpty()) {
++            return false;
++        }
++
++        service.handler.post(
++                () -> service.handleAccessibilityMessage(
++                        conversation,
++                        incoming,
++                        isGroup,
++                        eventTime
++                )
++        );
++
++        return true;
++    }
++
++    private void handleAccessibilityMessage(
++            String conversation,
++            String incoming,
++            boolean isGroup,
++            long eventTime
++    ) {
++        SharedPreferences prefs =
++                getSharedPreferences(
++                        "master_responde",
++                        MODE_PRIVATE
++                );
++
++        if (!prefs.getBoolean("bot_enabled", false)) {
++            return;
++        }
++
++        String normalizedIncoming =
++                normalize(incoming);
++
++        if (normalizedIncoming.isEmpty()) {
++            return;
++        }
++
++        Notification notification =
++                ActiveChatNotification.create(
++                        this,
++                        conversation,
++                        incoming,
++                        isGroup,
++                        eventTime
++                );
++
++        String notificationKey =
++                "access|"
++                        + Integer.toHexString(
++                        ((conversation == null ? "" : conversation)
++                                + "|"
++                                + eventTime).hashCode()
++                );
++
++        if (isGroup) {
++            handleGroup(
++                    notification,
++                    notificationKey,
++                    normalizedIncoming,
++                    "access|" + eventTime,
++                    "",
++                    prefs
++            );
++        } else {
++            handlePrivate(
++                    notification,
++                    notificationKey,
++                    normalizedIncoming,
++                    "access|" + eventTime,
++                    prefs
++            );
++        }
++    }
+ 
+     @Override
+     public void onCreate() {
+         super.onCreate();
+ 
++        activeInstance = this;
++
+         ensurePromotionsCategory();
+ 
+         BackgroundRuntime.markListenerConnected(
+@@ -188,6 +277,10 @@
+                 false
+         );
+ 
++        if (activeInstance == this) {
++            activeInstance = null;
++        }
++
+         handler.removeCallbacksAndMessages(
+                 null
+         );
+diff -ruN orig_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java new_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+--- orig_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	1970-01-01 00:00:00.000000000 +0000
++++ new_src/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java	2026-08-22 17:08:17.000000000 +0000
+@@ -0,0 +1,835 @@
++package com.masterresponde.app;
++
++import android.accessibilityservice.AccessibilityService;
++import android.content.Context;
++import android.content.SharedPreferences;
++import android.graphics.Rect;
++import android.os.Bundle;
++import android.os.Handler;
++import android.os.Looper;
++import android.provider.Settings;
++import android.text.TextUtils;
++import android.view.accessibility.AccessibilityEvent;
++import android.view.accessibility.AccessibilityNodeInfo;
++
++import java.text.Normalizer;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Locale;
++
++public class WhatsAppAccessibilityService extends AccessibilityService {
++
++    private static final String WHATSAPP_BUSINESS = "com.whatsapp.w4b";
++    private static final long INSPECT_DELAY_MS = 180L;
++    private static final long LOCAL_DUPLICATE_MS = 1800L;
++    private static final long GROUP_MEMORY_MS = 10L * 60L * 1000L;
++
++    private static volatile WhatsAppAccessibilityService activeInstance;
++
++    private final Handler handler = new Handler(Looper.getMainLooper());
++
++    private String lastFingerprint = "";
++    private long lastFingerprintAt = 0L;
++
++    private final Runnable inspectRunnable = this::inspectOpenConversation;
++
++    @Override
++    protected void onServiceConnected() {
++        super.onServiceConnected();
++        activeInstance = this;
++
++        getSharedPreferences("master_responde", MODE_PRIVATE)
++                .edit()
++                .putBoolean("accessibility_engine_connected", true)
++                .putLong("accessibility_engine_last_connected", System.currentTimeMillis())
++                .apply();
++    }
++
++    @Override
++    public void onAccessibilityEvent(AccessibilityEvent event) {
++        if (event == null) return;
++
++        CharSequence packageName = event.getPackageName();
++        if (packageName == null
++                || !WHATSAPP_BUSINESS.contentEquals(packageName)) {
++            return;
++        }
++
++        SharedPreferences prefs =
++                getSharedPreferences("master_responde", MODE_PRIVATE);
++
++        if (!prefs.getBoolean("bot_enabled", false)) {
++            return;
++        }
++
++        handler.removeCallbacks(inspectRunnable);
++        handler.postDelayed(inspectRunnable, INSPECT_DELAY_MS);
++    }
++
++    @Override
++    public void onInterrupt() {
++    }
++
++    @Override
++    public void onDestroy() {
++        handler.removeCallbacksAndMessages(null);
++
++        if (activeInstance == this) {
++            activeInstance = null;
++        }
++
++        getSharedPreferences("master_responde", MODE_PRIVATE)
++                .edit()
++                .putBoolean("accessibility_engine_connected", false)
++                .apply();
++
++        super.onDestroy();
++    }
++
