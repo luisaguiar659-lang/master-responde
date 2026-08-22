@@ -1,0 +1,207 @@
++    private void inspectOpenConversation() {
++        AccessibilityNodeInfo root = getRootInActiveWindow();
++        if (root == null) return;
++
++        AccessibilityNodeInfo input = findInput(root);
++        if (input == null) {
++            return;
++        }
++
++        String conversation = findConversationTitle(root);
++        if (conversation.isEmpty()) {
++            return;
++        }
++
++        Rect inputRect = new Rect();
++        input.getBoundsInScreen(inputRect);
++
++        MessageCandidate candidate =
++                findLatestMessage(root, inputRect.top);
++
++        if (candidate == null
++                || candidate.text.trim().isEmpty()) {
++            return;
++        }
++
++        // Evita tratar mensagens digitadas pelo próprio usuário como entrada.
++        if (isLikelyOutgoing(candidate.node)) {
++            return;
++        }
++
++        String incoming = candidate.text.trim();
++        String normalizedIncoming = normalize(incoming);
++
++        SharedPreferences prefs =
++                getSharedPreferences("master_responde", MODE_PRIVATE);
++
++        boolean group = isLikelyGroupConversation(
++                root,
++                conversation,
++                normalizedIncoming,
++                prefs
++        );
++
++        String fingerprint =
++                normalize(conversation)
++                        + "|"
++                        + normalizedIncoming
++                        + "|"
++                        + candidate.bounds.bottom;
++
++        long now = System.currentTimeMillis();
++
++        if (fingerprint.equals(lastFingerprint)
++                && now - lastFingerprintAt < LOCAL_DUPLICATE_MS) {
++            return;
++        }
++
++        lastFingerprint = fingerprint;
++        lastFingerprintAt = now;
++
++        boolean dispatched =
++                NotificationAccessService.dispatchAccessibilityMessage(
++                        this,
++                        conversation,
++                        incoming,
++                        group,
++                        now
++                );
++
++        prefs.edit()
++                .putLong("accessibility_last_event", now)
++                .putString(
++                        "accessibility_last_status",
++                        dispatched
++                                ? "Chat aberto: mensagem encaminhada ao motor"
++                                : "Chat aberto: motor de notificações não conectado"
++                )
++                .apply();
++    }
++
++    private boolean isLikelyGroupConversation(
++            AccessibilityNodeInfo root,
++            String conversation,
++            String incoming,
++            SharedPreferences prefs
++    ) {
++        String groupTrigger =
++                MessageSettings.normalizedSingleTrigger(
++                        prefs,
++                        MessageSettings.KEY_GROUP_TRIGGER,
++                        MessageSettings.DEFAULT_GROUP_TRIGGER
++                );
++
++        if (!groupTrigger.isEmpty()
++                && (groupTrigger.equals(incoming)
++                || incoming.startsWith(groupTrigger + " "))) {
++            rememberGroupConversation(prefs, conversation);
++            return true;
++        }
++
++        String memoryKey =
++                "access_group_"
++                        + Integer.toHexString(
++                        normalize(conversation).hashCode()
++                );
++
++        long rememberedAt =
++                prefs.getLong(memoryKey, 0L);
++
++        if (rememberedAt > 0L
++                && System.currentTimeMillis() - rememberedAt < GROUP_MEMORY_MS) {
++            return true;
++        }
++
++        if (hasLikelyGroupSenderLabel(root)) {
++            rememberGroupConversation(prefs, conversation);
++            return true;
++        }
++
++        return false;
++    }
++
++    private void rememberGroupConversation(
++            SharedPreferences prefs,
++            String conversation
++    ) {
++        prefs.edit()
++                .putLong(
++                        "access_group_"
++                                + Integer.toHexString(
++                                normalize(conversation).hashCode()
++                        ),
++                        System.currentTimeMillis()
++                )
++                .apply();
++    }
++
++    private boolean hasLikelyGroupSenderLabel(
++            AccessibilityNodeInfo root
++    ) {
++        String[] ids = new String[]{
++                WHATSAPP_BUSINESS + ":id/conversation_row_contact_name",
++                WHATSAPP_BUSINESS + ":id/sender_name",
++                WHATSAPP_BUSINESS + ":id/message_sender_name"
++        };
++
++        int screenHeight =
++                getResources()
++                        .getDisplayMetrics()
++                        .heightPixels;
++
++        for (String id : ids) {
++            List<AccessibilityNodeInfo> nodes;
++            try {
++                nodes = root.findAccessibilityNodeInfosByViewId(id);
++            } catch (Throwable ignored) {
++                nodes = null;
++            }
++
++            if (nodes == null) continue;
++
++            for (AccessibilityNodeInfo node : nodes) {
++                if (node == null || node.getText() == null) continue;
++
++                Rect r = new Rect();
++                node.getBoundsInScreen(r);
++
++                if (r.top > screenHeight * 0.18f
++                        && r.bottom < screenHeight * 0.90f
++                        && !node.getText().toString().trim().isEmpty()) {
++                    return true;
++                }
++            }
++        }
++
++        return false;
++    }
++
++    private AccessibilityNodeInfo findInput(
++            AccessibilityNodeInfo root
++    ) {
++        String[] ids = new String[]{
++                WHATSAPP_BUSINESS + ":id/entry",
++                WHATSAPP_BUSINESS + ":id/entry_field",
++                WHATSAPP_BUSINESS + ":id/message_input"
++        };
++
++        for (String id : ids) {
++            List<AccessibilityNodeInfo> nodes;
++            try {
++                nodes = root.findAccessibilityNodeInfosByViewId(id);
++            } catch (Throwable ignored) {
++                nodes = null;
++            }
++
++            if (nodes != null) {
++                for (AccessibilityNodeInfo node : nodes) {
++                    if (node != null && node.isEditable()) {
++                        return node;
++                    }
++                }
++            }
++        }
++
++        return findEditableRecursive(root);
++    }
++
