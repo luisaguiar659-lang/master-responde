@@ -1,0 +1,42 @@
++                || WHATSAPP.equals(packageName);
++    }
++
+     private static String normalize(String value) {
+         if (value == null) return "";
+ 
+@@ -821,15 +1317,18 @@
+         final AccessibilityNodeInfo node;
+         final String text;
+         final Rect bounds;
++        final int quality;
+ 
+         MessageCandidate(
+                 AccessibilityNodeInfo node,
+                 String text,
+-                Rect bounds
++                Rect bounds,
++                int quality
+         ) {
+             this.node = node;
+             this.text = text;
+             this.bounds = bounds;
++            this.quality = quality;
+         }
+     }
+ }
+diff -ruN new_src/app/src/main/res/xml/accessibility_service_config.xml v204_src/app/src/main/res/xml/accessibility_service_config.xml
+--- new_src/app/src/main/res/xml/accessibility_service_config.xml	2026-08-22 17:07:07.000000000 +0000
++++ v204_src/app/src/main/res/xml/accessibility_service_config.xml	2026-08-22 17:35:18.526857283 +0000
+@@ -1,9 +1,10 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+-    android:accessibilityEventTypes="typeWindowContentChanged|typeViewTextChanged|typeWindowStateChanged"
++    android:accessibilityEventTypes="typeWindowContentChanged|typeViewTextChanged|typeWindowStateChanged|typeViewScrolled|typeViewFocused|typeViewClicked"
+     android:accessibilityFeedbackType="feedbackGeneric"
+     android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
+     android:canRetrieveWindowContent="true"
++    android:canPerformGestures="true"
+     android:description="@string/accessibility_service_description"
+     android:notificationTimeout="120"
+-    android:packageNames="com.whatsapp.w4b" />
++    android:packageNames="com.whatsapp.w4b,com.whatsapp" />
