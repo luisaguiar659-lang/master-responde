@@ -63,13 +63,16 @@ jobs:
       - name: Configurar gatilhos e intervalo de teste MasterFlix
         run: python3 patches/v2.1.0/add_masterflix_trigger_settings_and_test_cooldown.py
       - name: Tornar links e mensagens de revenda configuráveis
+        run: python3 patches/v2.1.0/add_masterflix_reseller_visible_settings.py
+      - name: Criar avisos automáticos em grupo
         run: |
-          python3 patches/v2.1.0/add_masterflix_reseller_visible_settings.py
-          grep -n "versionName '2.1.26'" projeto/app/build.gradle
-          grep -n 'LINK DE CADASTRO DA REVENDA' projeto/app/src/main/java/com/masterresponde/app/MasterflixAutomationSettingsActivity.java
-          grep -n 'LINK DO GRUPO DE SUPORTE' projeto/app/src/main/java/com/masterresponde/app/MasterflixAutomationSettingsActivity.java
-          grep -n 'reseller_signup_message' projeto/app/src/main/java/com/masterresponde/app/ResellerFlow.java
-          grep -n 'reseller_support_group_link' projeto/app/src/main/java/com/masterresponde/app/MessageSettings.java
+          python3 patches/v2.1.0/add_scheduled_group_broadcast.py
+          grep -n "versionName '2.1.27'" projeto/app/build.gradle
+          test -f projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
+          test -f projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
+          grep -n 'runScheduledGroupBroadcastIfDue' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'AVISOS AUTOMÁTICOS DO GRUPO' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
+          grep -n 'Avisos Automáticos' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -83,4 +86,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.26-MASTERFLIX-RESELLER-SETTINGS, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.27-SCHEDULED-GROUP-BROADCAST, path: MASTER-RESPONDE.apk, retention-days: 30}
