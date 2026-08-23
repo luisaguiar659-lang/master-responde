@@ -69,14 +69,16 @@ jobs:
       - name: Aplicar lista de grupos de suporte ao Motor 1
         run: python3 patches/v2.1.0/add_support_group_list_to_motor1.py
       - name: Criar botão liga desliga do Motor 1
+        run: python3 patches/v2.1.0/add_motor1_toggle_button.py
+      - name: Corrigir ciclo de envio dos grupos de suporte
         run: |
-          python3 patches/v2.1.0/add_motor1_toggle_button.py
-          grep -n "versionName '2.1.32'" projeto/app/build.gradle
-          grep -n 'MOTOR LIGADO' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          grep -n 'MOTOR DESLIGADO' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          grep -n 'SALVAR CONFIGURAÇÃO' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          grep -n 'toggleMotor' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          ! grep -q 'Ativar motor de avisos' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
+          python3 patches/v2.1.0/fix_support_group_cycle_delivery.py
+          grep -n "versionName '2.1.33'" projeto/app/build.gradle
+          grep -n 'retryWindowMillis' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
+          grep -n 'finishCycle' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
+          grep -n 'allScheduledSupportDone' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'sgb_cycle_started_at' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'postDelayed(this, 3000L)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -90,4 +92,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.32-MOTOR1-TOGGLE, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.33-SUPPORT-GROUP-CYCLE-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
