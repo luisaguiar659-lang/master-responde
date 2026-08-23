@@ -57,14 +57,16 @@ jobs:
       - name: Restaurar MasterFlix tela e login
         run: python3 patches/v2.1.0/restore_masterflix_ui.py
       - name: Restaurar geração automática de teste MasterFlix
+        run: python3 patches/v2.1.0/restore_masterflix_test_automation.py
+      - name: Restaurar fluxo de revenda MasterFlix
         run: |
-          python3 patches/v2.1.0/restore_masterflix_test_automation.py
-          grep -n "versionName '2.1.23'" projeto/app/build.gradle
-          test -f projeto/app/src/main/java/com/masterresponde/app/MasterflixBackgroundAutomation.java
-          test -f projeto/app/src/main/java/com/masterresponde/app/MasterflixDirectReply.java
-          grep -n 'MASTERFLIX TESTE COMPLETO 1H' projeto/app/src/main/java/com/masterresponde/app/MasterflixBackgroundAutomation.java
-          grep -n 'MasterflixTestTrigger.matches' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'Gerando seu teste, aguarde' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          python3 patches/v2.1.0/restore_masterflix_reseller_automation.py
+          grep -n "versionName '2.1.24'" projeto/app/build.gradle
+          test -f projeto/app/src/main/java/com/masterresponde/app/MasterflixResellerAutomation.java
+          test -f projeto/app/src/main/java/com/masterresponde/app/ResellerFlow.java
+          grep -n 'ResellerFlow.handle' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'WAITING_EMAIL' projeto/app/src/main/java/com/masterresponde/app/ResellerFlow.java
+          grep -n 'findReseller' projeto/app/src/main/java/com/masterresponde/app/MasterflixResellerAutomation.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -78,4 +80,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.23-MASTERFLIX-TEST, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.24-MASTERFLIX-RESELLER, path: MASTER-RESPONDE.apk, retention-days: 30}
