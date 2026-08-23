@@ -91,8 +91,15 @@ jobs:
           svc.write_text(text, encoding='utf-8')
           PY
 
-          grep -n "versionName '2.0.8'" projeto/app/build.gradle
-          grep -n 'WHATSAPP_BUSINESS = "com.whatsapp.w4b"' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
+      - name: Aplicar v2.0.9 — Dashboard Futurista Neon
+        run: |
+          python3 patches/v2.0.9/apply_v209.py
+          grep -n "versionName '2.0.9'" projeto/app/build.gradle
+          test -f projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          grep -n 'android:name=".NeonDashboardActivity"' projeto/app/src/main/AndroidManifest.xml
+          grep -n 'android:packageNames="com.whatsapp.w4b"' projeto/app/src/main/res/xml/accessibility_service_config.xml
+          ! grep -q 'android:packageNames="[^"]*com.whatsapp[,\"]' projeto/app/src/main/res/xml/accessibility_service_config.xml
+          ! grep -q 'WHATSAPP.equals(packageName)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
           grep -n '!WHATSAPP_BUSINESS.equals(sbn.getPackageName())' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
 
       - name: Detectar diretório Gradle
@@ -141,7 +148,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.0.8
+          name: MASTER-RESPONDE-v2.0.9-NEON
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
