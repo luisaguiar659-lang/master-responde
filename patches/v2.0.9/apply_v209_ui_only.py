@@ -35,7 +35,6 @@ for name in png_icons:
         raise SystemExit('ERRO: asset PNG ausente: ' + name)
     shutil.copyfile(src, res_drawable / name)
 
-# Remove somente conflito antigo de recurso, caso exista.
 old = res_drawable / 'mr_notifications.xml'
 if old.exists():
     old.unlink()
@@ -65,7 +64,7 @@ replace_once(
 )
 replace_once(
     'power=new PowerView();power.setOnClickListener(v->{prefs.edit().putBoolean("bot_enabled",!prefs.getBoolean("bot_enabled",false)).apply();refresh();});center.addView(power,new FrameLayout.LayoutParams(dp(100),dp(100),Gravity.CENTER));',
-    'power=asset(R.drawable.mr_power);power.setOnClickListener(v->{prefs.edit().putBoolean("bot_enabled",!prefs.getBoolean("bot_enabled",false)).apply();refresh();});center.addView(power,new FrameLayout.LayoutParams(dp(100),dp(100),Gravity.CENTER));',
+    'power=asset(R.drawable.mr_power);power.setOnClickListener(v->{prefs.edit().putBoolean("bot_enabled",!prefs.getBoolean("bot_enabled",false)).apply();BackgroundRuntime.requestListenerRebind(this);refresh();});center.addView(power,new FrameLayout.LayoutParams(dp(100),dp(100),Gravity.CENTER));',
     'power central'
 )
 replace_once(
@@ -90,11 +89,30 @@ if helper not in d:
         raise SystemExit('ERRO UI Neon: helper anchor ausente')
     d = d.replace(helper_anchor, helper + helper_anchor, 1)
 
-# O projeto original responde via NotificationListener + RemoteInput, sem AccessibilityService.
-# Para manter o visual do card, usamos o acesso às notificações como estado operacional.
+# O projeto original funciona por NotificationListener + RemoteInput.
+# O painel Neon deve reproduzir também a reconexão automática que existia na MainActivity original.
+old_refresh_prefix = 'private void refresh(){if(prefs==null)return;boolean on=prefs.getBoolean("bot_enabled",false),bi=isBusinessInstalled(),ac=WhatsAppAccessibilityService.isEnabled(this),no=isNotificationAccessEnabled();'
+new_refresh_prefix = 'private void refresh(){if(prefs==null)return;boolean on=prefs.getBoolean("bot_enabled",false),bi=isBusinessInstalled(),no=isNotificationAccessEnabled(),ac=prefs.getBoolean(BackgroundRuntime.KEY_LISTENER_CONNECTED,false);if(on&&no&&!ac){BackgroundRuntime.requestListenerRebind(this);}'
+if old_refresh_prefix in d:
+    d = d.replace(old_refresh_prefix, new_refresh_prefix, 1)
+else:
+    # compatibilidade caso a referência à acessibilidade já tenha sido trocada por uma revisão anterior
+    old_alt = 'private void refresh(){if(prefs==null)return;boolean on=prefs.getBoolean("bot_enabled",false),bi=isBusinessInstalled(),ac=isNotificationAccessEnabled(),no=isNotificationAccessEnabled();'
+    if old_alt not in d:
+        raise SystemExit('ERRO UI Neon: prefixo refresh original não encontrado')
+    d = d.replace(old_alt, new_refresh_prefix, 1)
+
+# ATIVAR BOT também força o rebind imediatamente.
 d = d.replace(
-    'ac=WhatsAppAccessibilityService.isEnabled(this),no=isNotificationAccessEnabled();',
-    'ac=isNotificationAccessEnabled(),no=isNotificationAccessEnabled();',
+    'prefs.edit().putBoolean("bot_enabled",true).apply();refresh();',
+    'prefs.edit().putBoolean("bot_enabled",true).apply();BackgroundRuntime.requestListenerRebind(this);refresh();',
+    1
+)
+
+# Mostra o estado REAL do listener, e não apenas a permissão concedida.
+d = d.replace(
+    'set(acc,ac?"ATIVA":"OFF",ac);set(notif,no?"ATIVAS":"OFF",no);set(engine,on?"ATIVO":"PAUSADO",on);',
+    'set(acc,ac?"ATIVA":"RECONECTANDO",ac);set(notif,no?"ATIVAS":"OFF",no);boolean engineOk=on&&no&&ac;set(engine,engineOk?"ATIVO":(on?"RECONECTANDO":"PAUSADO"),engineOk);',
     1
 )
 
@@ -148,4 +166,6 @@ if '!WHATSAPP_BUSINESS.equals(sbn.getPackageName())' not in listener_text:
     raise SystemExit('ERRO: filtro Business-only original ausente')
 if 'WhatsAppReply.send(' not in listener_text:
     raise SystemExit('ERRO: envio original via WhatsAppReply ausente')
-print('v2.0.9 UI Neon aplicada DIRETAMENTE sobre o projeto original; motor de respostas preservado byte-a-byte')
+if 'BackgroundRuntime.requestListenerRebind(this)' not in dash.read_text(encoding='utf-8'):
+    raise SystemExit('ERRO: reconexão automática do listener não entrou no Dashboard')
+print('v2.0.9 UI Neon aplicada sobre core original + reconexão automática restaurada')
