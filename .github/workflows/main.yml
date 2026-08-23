@@ -44,52 +44,37 @@ jobs:
       - name: Criar núcleo novo
         run: |
           python3 patches/v2.1.0/reset_clean_core.py
-          test -f projeto/app/src/main/java/com/masterresponde/app/AutomationEngine.java
-          test -f projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessGateway.java
       - name: Criar captura passiva do WhatsApp Business
         run: |
           python3 patches/v2.1.0/add_capture_only.py
           python3 patches/v2.1.0/fix_capture_dashboard.py
-          test -f projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'com.whatsapp.w4b' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'NotificationListenerService' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'capture_listener_connected' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
-          grep -n 'android.permission.BIND_NOTIFICATION_LISTENER_SERVICE' projeto/app/src/main/AndroidManifest.xml
       - name: Criar resposta direta de teste
         run: |
           python3 patches/v2.1.0/add_reply_test.py
-          grep -n 'RemoteInput.addResultsToIntent' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'action.actionIntent.send' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Ativar anti-eco e motor de comandos
         run: |
           python3 patches/v2.1.0/add_command_engine.py
-          test -f projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          grep -n 'CommandEngine.resolve' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'isEcho' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Corrigir eco no dashboard e ligar estatísticas
         run: |
           python3 patches/v2.1.0/fix_echo_and_stats.py
-          grep -n 'anti_loop_last_status' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'attendance_total' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Buscar ação Responder em notificação ativa
         run: |
           python3 patches/v2.1.0/add_active_notification_fallback.py
-          grep -n 'getActiveNotifications()' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'sameConversation' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'tryReplyOnNotification' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Impedir respostas duplicadas e consolidar métricas
         run: |
           python3 patches/v2.1.0/fix_duplicate_events.py
-          grep -n 'isDuplicateIncoming' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'last_incoming_fingerprint' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'age < 2500L' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Ativar controle real do bot e métricas do motor novo
         run: |
           python3 patches/v2.1.0/add_bot_control_and_metrics.py
-          grep -n "versionName '2.1.7'" projeto/app/build.gradle
-          grep -n 'bot pausado' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'reply_sent_total' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
-          grep -n 'attendance_total' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+      - name: Criar comandos configuráveis no painel
+        run: |
+          python3 patches/v2.1.0/add_configurable_commands.py
+          grep -n "versionName '2.1.8'" projeto/app/build.gradle
+          test -f projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
+          grep -n 'cmd_trigger_' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          grep -n 'SALVAR COMANDOS' projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
+          grep -n 'MessageSettingsActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          grep -n 'android:name=".MessageSettingsActivity"' projeto/app/src/main/AndroidManifest.xml
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -122,7 +107,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.7-BOT-CONTROL-METRICS
+          name: MASTER-RESPONDE-v2.1.8-CONFIG-COMMANDS
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
