@@ -67,13 +67,15 @@ jobs:
       - name: Criar avisos automáticos em grupo
         run: python3 patches/v2.1.0/add_scheduled_group_broadcast.py
       - name: Permitir grupos ilimitados nos avisos
+        run: python3 patches/v2.1.0/add_multiple_scheduled_group_broadcasts.py
+      - name: Corrigir relógio multi-grupo
         run: |
-          python3 patches/v2.1.0/add_multiple_scheduled_group_broadcasts.py
-          grep -n "versionName '2.1.28'" projeto/app/build.gradle
-          grep -n 'sgb_items_v2' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
+          python3 patches/v2.1.0/fix_multiple_group_broadcast_scheduler.py
+          grep -n "versionName '2.1.29'" projeto/app/build.gradle
+          grep -n 'ensureNext' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
+          grep -n 'ScheduledGroupBroadcast.ensureNext(job,now)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n '+ ADICIONAR GRUPO' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          grep -n 'TESTAR ESTE GRUPO AGORA' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          grep -n 'ScheduledGroupBroadcast.items(this)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'sendScheduledGroupReply(candidate,wanted,text)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -87,4 +89,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.28-MULTI-GROUP-BROADCASTS, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.29-MULTI-GROUP-SCHEDULER-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
