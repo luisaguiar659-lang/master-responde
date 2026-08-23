@@ -32,12 +32,23 @@ for name in png_icons:
         raise SystemExit('ERRO: asset PNG ausente: ' + name)
     shutil.copyfile(src, res_drawable / name)
 
-# Mantém os Material Icons vetoriais como fallback local.
+# Mantém Material Icons como fallback, com nomes separados para nunca colidir com os PNGs.
 material_src = Path('patches/v2.0.9/material_icons')
-for name in ['accessibility_new.xml', 'notifications.xml', 'smart_toy.xml']:
-    src = material_src / name
+material_map = {
+    'accessibility_new.xml': 'mr_material_accessibility_new.xml',
+    'notifications.xml': 'mr_material_notifications.xml',
+    'smart_toy.xml': 'mr_material_smart_toy.xml',
+}
+for src_name, dst_name in material_map.items():
+    src = material_src / src_name
     if src.exists():
-        shutil.copyfile(src, res_drawable / ('mr_' + name))
+        shutil.copyfile(src, res_drawable / dst_name)
+
+# Limpa nomes antigos que poderiam colidir com os novos PNGs.
+for old_name in ['mr_notifications.xml']:
+    old = res_drawable / old_name
+    if old.exists():
+        old.unlink()
 
 # O botão Configurações do painel principal deve abrir a tela Neon, nunca o painel antigo.
 dash = java_dir / 'NeonDashboardActivity.java'
@@ -110,4 +121,6 @@ if 'new Intent(this,NeonSettingsActivity.class)' not in dash.read_text(encoding=
 for name in png_icons:
     if not (res_drawable / name).exists():
         raise SystemExit('ERRO: asset PNG não instalado: ' + name)
-print('v2.0.9 aplicada com painel Neon + assets PNG 3D')
+if (res_drawable / 'mr_notifications.xml').exists():
+    raise SystemExit('ERRO: conflito antigo mr_notifications.xml ainda existe')
+print('v2.0.9 aplicada com painel Neon + assets PNG 3D sem conflitos')
