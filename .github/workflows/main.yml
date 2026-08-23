@@ -95,9 +95,12 @@ jobs:
         run: |
           python3 patches/v2.0.9/apply_v209.py
           python3 patches/v2.0.9/refine_dashboard.py
+          python3 patches/v2.0.9/telemetry_dashboard.py
           grep -n "versionName '2.0.9'" projeto/app/build.gradle
           test -f projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
           grep -n 'test_mode' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          grep -n 'mrTelemetryStart' projeto/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
+          grep -n 'mrTelemetryStatus' projeto/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
           grep -n 'android:name=".NeonDashboardActivity"' projeto/app/src/main/AndroidManifest.xml
           grep -n 'android:packageNames="com.whatsapp.w4b"' projeto/app/src/main/res/xml/accessibility_service_config.xml
           ! grep -q 'android:packageNames="[^"]*com.whatsapp[,\"]' projeto/app/src/main/res/xml/accessibility_service_config.xml
