@@ -50,12 +50,13 @@ jobs:
           grep -n 'Menu do Grupo' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
           ! grep -q 'nr.addView(nav(' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
       - name: Criar horário de atendimento
+        run: python3 patches/v2.1.0/add_business_hours.py
+      - name: Compartilhar temporizador com fora do horário
         run: |
-          python3 patches/v2.1.0/add_business_hours.py
-          grep -n "versionName '2.1.18'" projeto/app/build.gradle
-          grep -n 'FORA_HORARIO' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'BusinessHoursActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
-          grep -n 'SALVAR HORÁRIO' projeto/app/src/main/java/com/masterresponde/app/BusinessHoursActivity.java
+          python3 patches/v2.1.0/link_business_hours_to_fallback_cooldown.py
+          grep -n "versionName '2.1.19'" projeto/app/build.gradle
+          grep -n 'Mensagem fora do horário em temporizador' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'FORA_HORARIO.*cooldownType' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java || grep -n '"FORA_HORARIO".equals(cooldownType)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -69,4 +70,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.18-BUSINESS-HOURS, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.19-HOURS-COOLDOWN, path: MASTER-RESPONDE.apk, retention-days: 30}
