@@ -55,13 +55,21 @@ jobs:
           grep -n 'NotificationListenerService' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'capture_listener_connected' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
           grep -n 'android.permission.BIND_NOTIFICATION_LISTENER_SERVICE' projeto/app/src/main/AndroidManifest.xml
-      - name: Criar primeira resposta do motor novo
+      - name: Criar resposta direta de teste
         run: |
           python3 patches/v2.1.0/add_reply_test.py
-          grep -n "versionName '2.1.2'" projeto/app/build.gradle
-          grep -n '"@info".equalsIgnoreCase' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'RemoteInput.addResultsToIntent' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'action.actionIntent.send' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+      - name: Ativar anti-eco e motor de comandos
+        run: |
+          python3 patches/v2.1.0/add_command_engine.py
+          grep -n "versionName '2.1.3'" projeto/app/build.gradle
+          test -f projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          grep -n 'CommandEngine.resolve' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'isEcho' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'last_bot_reply_text' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n '"@status"' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          grep -n '"@ajuda"' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -94,7 +102,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.2-REPLY-TEST
+          name: MASTER-RESPONDE-v2.1.3-COMMAND-ENGINE
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
