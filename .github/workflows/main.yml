@@ -66,16 +66,15 @@ jobs:
         run: python3 patches/v2.1.0/add_masterflix_reseller_visible_settings.py
       - name: Restaurar motor funcional de avisos da v2.1.27
         run: python3 patches/v2.1.0/add_scheduled_group_broadcast.py
-      - name: Criar segundo motor totalmente independente
+      - name: Aplicar lista de grupos de suporte ao Motor 1
         run: |
-          python3 patches/v2.1.0/add_dual_independent_group_broadcasts.py
-          grep -n "versionName '2.1.30'" projeto/app/build.gradle
-          test -f projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast2.java
-          grep -n 'MOTOR 1' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          grep -n 'MOTOR 2' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          grep -n 'scheduledGroupTick2' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'runScheduledGroupBroadcast2IfDue' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'sendScheduledGroupReply(candidate, wanted, text)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          python3 patches/v2.1.0/add_support_group_list_to_motor1.py
+          grep -n "versionName '2.1.31'" projeto/app/build.gradle
+          grep -n 'GRUPOS DE SUPORTE' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
+          grep -n 'sgb_groups' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
+          grep -n 'ScheduledGroupBroadcast.groups(this)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'sgb_cycle_sent' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          ! test -f projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast2.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -89,4 +88,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.30-DUAL-INDEPENDENT-GROUP-BROADCASTS, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.31-SUPPORT-GROUP-LIST, path: MASTER-RESPONDE.apk, retention-days: 30}
