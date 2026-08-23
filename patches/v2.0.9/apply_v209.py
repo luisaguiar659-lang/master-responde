@@ -6,6 +6,7 @@ root = Path('projeto')
 app = root / 'app'
 java_dir = app / 'src/main/java/com/masterresponde/app'
 res_xml = app / 'src/main/res/xml'
+res_drawable = app / 'src/main/res/drawable'
 
 # 1) Copia as telas Neon.
 for name in ['NeonDashboardActivity.java', 'NeonSettingsActivity.java']:
@@ -13,6 +14,12 @@ for name in ['NeonDashboardActivity.java', 'NeonSettingsActivity.java']:
     dst = java_dir / name
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dst)
+
+# Instala os Material Icons vetoriais locais (sem depender de internet em runtime).
+res_drawable.mkdir(parents=True, exist_ok=True)
+icon_src = Path('patches/v2.0.9/material_icons')
+for name in ['accessibility_new.xml', 'notifications.xml', 'smart_toy.xml']:
+    shutil.copyfile(icon_src / name, res_drawable / ('mr_' + name))
 
 # O botão Configurações do painel principal deve abrir a tela Neon, nunca o painel antigo.
 dash = java_dir / 'NeonDashboardActivity.java'
@@ -42,18 +49,14 @@ text = text.replace(
     'return WHATSAPP_BUSINESS.equals(packageName);'
 )
 text = re.sub(r'\n\s*WHATSAPP \+ ":id/[^\"]+",?', '', text)
-
 needle = '        AccessibilityNodeInfo root =\n                getRootInActiveWindow();\n'
 guard = '''        AccessibilityNodeInfo root =\n                getRootInActiveWindow();\n\n        if (root != null) {\n            CharSequence activePackage = root.getPackageName();\n            if (activePackage == null\n                    || !WHATSAPP_BUSINESS.contentEquals(activePackage)) {\n                updateReplyStatus(\n                        "Envio bloqueado: somente WhatsApp Business"\n                );\n                finishReplyAndContinue();\n                return;\n            }\n        }\n'''
 if 'Envio bloqueado: somente WhatsApp Business' not in text:
     pos = text.find('    private void sendReplyNow(')
-    if pos < 0:
-        raise SystemExit('ERRO: sendReplyNow não encontrado')
+    if pos < 0: raise SystemExit('ERRO: sendReplyNow não encontrado')
     after = text.find(needle, pos)
-    if after < 0:
-        raise SystemExit('ERRO: raiz da janela em sendReplyNow não encontrada')
+    if after < 0: raise SystemExit('ERRO: raiz da janela em sendReplyNow não encontrada')
     text = text[:after] + text[after:].replace(needle, guard, 1)
-
 if '|| WHATSAPP.equals(packageName)' in text or 'WHATSAPP + ":id/' in text:
     raise SystemExit('ERRO: referência ao WhatsApp normal permaneceu na acessibilidade')
 svc.write_text(text, encoding='utf-8')
@@ -61,49 +64,31 @@ svc.write_text(text, encoding='utf-8')
 cfg = res_xml / 'accessibility_service_config.xml'
 xml = cfg.read_text(encoding='utf-8')
 xml = re.sub(r'android:packageNames="[^"]*"', 'android:packageNames="com.whatsapp.w4b"', xml)
-if 'com.whatsapp,' in xml or ',com.whatsapp' in xml:
-    raise SystemExit('ERRO: accessibility_service_config ainda permite WhatsApp normal')
+if 'com.whatsapp,' in xml or ',com.whatsapp' in xml: raise SystemExit('ERRO: accessibility_service_config ainda permite WhatsApp normal')
 cfg.write_text(xml, encoding='utf-8')
 
 # 4) Dashboard Neon vira launcher. MainActivity fica apenas como compatibilidade interna.
 manifest = app / 'src/main/AndroidManifest.xml'
 m = manifest.read_text(encoding='utf-8')
-activity_pattern = re.compile(
-    r'(<activity\b[^>]*android:name="\.MainActivity"[^>]*>)(.*?)(</activity>)',
-    re.S
-)
+activity_pattern = re.compile(r'(<activity\b[^>]*android:name="\.MainActivity"[^>]*>)(.*?)(</activity>)', re.S)
 match = activity_pattern.search(m)
-if not match:
-    raise SystemExit('ERRO: activity .MainActivity não encontrada no Manifest')
+if not match: raise SystemExit('ERRO: activity .MainActivity não encontrada no Manifest')
 body = match.group(2)
-body = re.sub(
-    r'\s*<intent-filter>\s*<action\s+android:name="android\.intent\.action\.MAIN"\s*/>\s*<category\s+android:name="android\.intent\.category\.LAUNCHER"\s*/>\s*</intent-filter>',
-    '', body, flags=re.S
-)
+body = re.sub(r'\s*<intent-filter>\s*<action\s+android:name="android\.intent\.action\.MAIN"\s*/>\s*<category\s+android:name="android\.intent\.category\.LAUNCHER"\s*/>\s*</intent-filter>','',body,flags=re.S)
 m = m[:match.start()] + match.group(1) + body + match.group(3) + m[match.end():]
-
 if 'android:name=".NeonDashboardActivity"' not in m:
-    insert = '''\n        <activity\n            android:name=".NeonDashboardActivity"\n            android:exported="true"\n            android:screenOrientation="portrait">\n            <intent-filter>\n                <action android:name="android.intent.action.MAIN"/>\n                <category android:name="android.intent.category.LAUNCHER"/>\n            </intent-filter>\n        </activity>\n'''
-    idx = m.find('<activity')
-    if idx < 0:
-        raise SystemExit('ERRO: nenhum ponto de inserção de Activity encontrado')
-    m = m[:idx] + insert + m[idx:]
-
+    insert='''\n        <activity android:name=".NeonDashboardActivity" android:exported="true" android:screenOrientation="portrait"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>\n'''
+    idx=m.find('<activity'); m=m[:idx]+insert+m[idx:]
 if 'android:name=".NeonSettingsActivity"' not in m:
-    insert = '''\n        <activity\n            android:name=".NeonSettingsActivity"\n            android:exported="false"\n            android:screenOrientation="portrait" />\n'''
-    idx = m.find('<activity')
-    m = m[:idx] + insert + m[idx:]
-
-manifest.write_text(m, encoding='utf-8')
+    insert='''\n        <activity android:name=".NeonSettingsActivity" android:exported="false" android:screenOrientation="portrait" />\n'''
+    idx=m.find('<activity'); m=m[:idx]+insert+m[idx:]
+manifest.write_text(m,encoding='utf-8')
 
 # 5) Validações.
-if 'android:packageNames="com.whatsapp.w4b"' not in cfg.read_text(encoding='utf-8'):
-    raise SystemExit('ERRO: trava Business-only ausente no XML')
-if 'NeonDashboardActivity' not in manifest.read_text(encoding='utf-8'):
-    raise SystemExit('ERRO: dashboard neon ausente do Manifest')
-if 'NeonSettingsActivity' not in manifest.read_text(encoding='utf-8'):
-    raise SystemExit('ERRO: configurações neon ausentes do Manifest')
-if 'new Intent(this,NeonSettingsActivity.class)' not in dash.read_text(encoding='utf-8'):
-    raise SystemExit('ERRO: painel principal ainda não aponta para Configurações Neon')
-
-print('v2.0.9 aplicada com painel e configurações Neon')
+if 'android:packageNames="com.whatsapp.w4b"' not in cfg.read_text(encoding='utf-8'): raise SystemExit('ERRO: trava Business-only ausente no XML')
+if 'NeonDashboardActivity' not in manifest.read_text(encoding='utf-8'): raise SystemExit('ERRO: dashboard neon ausente do Manifest')
+if 'NeonSettingsActivity' not in manifest.read_text(encoding='utf-8'): raise SystemExit('ERRO: configurações neon ausentes do Manifest')
+if 'new Intent(this,NeonSettingsActivity.class)' not in dash.read_text(encoding='utf-8'): raise SystemExit('ERRO: painel principal ainda não aponta para Configurações Neon')
+for name in ['mr_accessibility_new.xml','mr_notifications.xml','mr_smart_toy.xml']:
+    if not (res_drawable/name).exists(): raise SystemExit('ERRO: Material Icon ausente: '+name)
+print('v2.0.9 aplicada com painel Neon + Material Icons')
