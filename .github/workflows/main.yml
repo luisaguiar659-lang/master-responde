@@ -41,11 +41,15 @@ jobs:
       - name: Separar privado e grupo com lógica original
         run: |
           python3 patches/v2.1.0/fix_private_vs_group_and_menu.py
-          grep -n "versionName '2.1.16'" projeto/app/build.gradle
           grep -n 'EXTRA_IS_GROUP_CONVERSATION' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'EXTRA_CONVERSATION_TITLE' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'MENU_GRUPO' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'void render()' projeto/app/src/main/java/com/masterresponde/app/GroupMenuActivity.java
+      - name: Organizar navegação no menu lateral
+        run: |
+          python3 patches/v2.1.0/add_sidebar_navigation.py
+          grep -n "versionName '2.1.17'" projeto/app/build.gradle
+          grep -n 'openSideMenu()' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          grep -n 'Menu do Grupo' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          ! grep -q 'nr.addView(nav(' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -59,4 +63,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.16-ORIGINAL-GROUP-ROUTING, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.17-SIDEBAR-MENU, path: MASTER-RESPONDE.apk, retention-days: 30}
