@@ -42,39 +42,34 @@ jobs:
           python3 patches/v2.0.9/apply_v209_ui_only.py
           python3 patches/v2.0.9/refine_dashboard.py
       - name: Criar núcleo novo
-        run: |
-          python3 patches/v2.1.0/reset_clean_core.py
+        run: python3 patches/v2.1.0/reset_clean_core.py
       - name: Criar captura passiva do WhatsApp Business
         run: |
           python3 patches/v2.1.0/add_capture_only.py
           python3 patches/v2.1.0/fix_capture_dashboard.py
       - name: Criar resposta direta de teste
-        run: |
-          python3 patches/v2.1.0/add_reply_test.py
+        run: python3 patches/v2.1.0/add_reply_test.py
       - name: Ativar anti-eco e motor de comandos
-        run: |
-          python3 patches/v2.1.0/add_command_engine.py
+        run: python3 patches/v2.1.0/add_command_engine.py
       - name: Corrigir eco no dashboard e ligar estatísticas
-        run: |
-          python3 patches/v2.1.0/fix_echo_and_stats.py
+        run: python3 patches/v2.1.0/fix_echo_and_stats.py
       - name: Buscar ação Responder em notificação ativa
-        run: |
-          python3 patches/v2.1.0/add_active_notification_fallback.py
+        run: python3 patches/v2.1.0/add_active_notification_fallback.py
       - name: Impedir respostas duplicadas e consolidar métricas
-        run: |
-          python3 patches/v2.1.0/fix_duplicate_events.py
+        run: python3 patches/v2.1.0/fix_duplicate_events.py
       - name: Ativar controle real do bot e métricas do motor novo
-        run: |
-          python3 patches/v2.1.0/add_bot_control_and_metrics.py
+        run: python3 patches/v2.1.0/add_bot_control_and_metrics.py
       - name: Criar comandos configuráveis no painel
+        run: python3 patches/v2.1.0/add_configurable_commands.py
+      - name: Criar histórico real de atendimentos
         run: |
-          python3 patches/v2.1.0/add_configurable_commands.py
-          grep -n "versionName '2.1.8'" projeto/app/build.gradle
-          test -f projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
-          grep -n 'cmd_trigger_' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          grep -n 'SALVAR COMANDOS' projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
-          grep -n 'MessageSettingsActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
-          grep -n 'android:name=".MessageSettingsActivity"' projeto/app/src/main/AndroidManifest.xml
+          python3 patches/v2.1.0/add_real_history.py
+          grep -n "versionName '2.1.9'" projeto/app/build.gradle
+          test -f projeto/app/src/main/java/com/masterresponde/app/HistoryStore.java
+          test -f projeto/app/src/main/java/com/masterresponde/app/HistoryActivity.java
+          grep -n 'history_success_v219' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'HistoryActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          grep -n 'android:name=".HistoryActivity"' projeto/app/src/main/AndroidManifest.xml
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -107,7 +102,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.8-CONFIG-COMMANDS
+          name: MASTER-RESPONDE-v2.1.9-REAL-HISTORY
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
