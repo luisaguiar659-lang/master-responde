@@ -80,10 +80,16 @@ jobs:
       - name: Impedir respostas duplicadas e consolidar métricas
         run: |
           python3 patches/v2.1.0/fix_duplicate_events.py
-          grep -n "versionName '2.1.6'" projeto/app/build.gradle
           grep -n 'isDuplicateIncoming' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'last_incoming_fingerprint' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'age < 2500L' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+      - name: Ativar controle real do bot e métricas do motor novo
+        run: |
+          python3 patches/v2.1.0/add_bot_control_and_metrics.py
+          grep -n "versionName '2.1.7'" projeto/app/build.gradle
+          grep -n 'bot pausado' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'reply_sent_total' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          grep -n 'attendance_total' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -116,7 +122,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.6-DEDUP-STATS
+          name: MASTER-RESPONDE-v2.1.7-BOT-CONTROL-METRICS
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
