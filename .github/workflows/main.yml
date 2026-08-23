@@ -63,13 +63,15 @@ jobs:
       - name: Ativar anti-eco e motor de comandos
         run: |
           python3 patches/v2.1.0/add_command_engine.py
-          grep -n "versionName '2.1.3'" projeto/app/build.gradle
           test -f projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
           grep -n 'CommandEngine.resolve' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'isEcho' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'last_bot_reply_text' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n '"@status"' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          grep -n '"@ajuda"' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+      - name: Corrigir eco no dashboard e ligar estatísticas
+        run: |
+          python3 patches/v2.1.0/fix_echo_and_stats.py
+          grep -n "versionName '2.1.4'" projeto/app/build.gradle
+          grep -n 'anti_loop_last_status' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'attendance_total' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -102,7 +104,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.3-COMMAND-ENGINE
+          name: MASTER-RESPONDE-v2.1.4-ECHO-STATS
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
