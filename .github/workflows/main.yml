@@ -69,9 +69,15 @@ jobs:
       - name: Corrigir eco no dashboard e ligar estatísticas
         run: |
           python3 patches/v2.1.0/fix_echo_and_stats.py
-          grep -n "versionName '2.1.4'" projeto/app/build.gradle
           grep -n 'anti_loop_last_status' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'attendance_total' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+      - name: Buscar ação Responder em notificação ativa
+        run: |
+          python3 patches/v2.1.0/add_active_notification_fallback.py
+          grep -n "versionName '2.1.5'" projeto/app/build.gradle
+          grep -n 'getActiveNotifications()' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'sameConversation' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'tryReplyOnNotification' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -104,7 +110,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.4-ECHO-STATS
+          name: MASTER-RESPONDE-v2.1.5-ACTIVE-REPLY
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
