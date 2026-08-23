@@ -50,13 +50,18 @@ jobs:
         run: |
           python3 patches/v2.1.0/add_capture_only.py
           python3 patches/v2.1.0/fix_capture_dashboard.py
-          grep -n "versionName '2.1.1'" projeto/app/build.gradle
           test -f projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'com.whatsapp.w4b' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'NotificationListenerService' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'capture_listener_connected' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
           grep -n 'android.permission.BIND_NOTIFICATION_LISTENER_SERVICE' projeto/app/src/main/AndroidManifest.xml
-          ! grep -q 'RemoteInput' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+      - name: Criar primeira resposta do motor novo
+        run: |
+          python3 patches/v2.1.0/add_reply_test.py
+          grep -n "versionName '2.1.2'" projeto/app/build.gradle
+          grep -n '"@info".equalsIgnoreCase' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'RemoteInput.addResultsToIntent' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'action.actionIntent.send' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -89,7 +94,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.1-CAPTURE-ONLY
+          name: MASTER-RESPONDE-v2.1.2-REPLY-TEST
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
