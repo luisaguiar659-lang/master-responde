@@ -79,12 +79,10 @@ jobs:
                   raise SystemExit('ERRO: ponto de inserção da constante não encontrado')
               text = text.replace(marker, marker + '\n' + const_line, 1)
 
-          guard = '''        if (sbn == null
-                || !WHATSAPP_BUSINESS.equals(sbn.getPackageName())) {
-            return;
-        }
-
-'''
+          guard = ('        if (sbn == null\n'
+                   '                || !WHATSAPP_BUSINESS.equals(sbn.getPackageName())) {\n'
+                   '            return;\n'
+                   '        }\n\n')
 
           if '!WHATSAPP_BUSINESS.equals(sbn.getPackageName())' not in text:
               pattern = r'(public\s+void\s+onNotificationPosted\s*\(\s*StatusBarNotification\s+sbn\s*\)\s*\{\s*\n)'
