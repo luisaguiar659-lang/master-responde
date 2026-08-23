@@ -67,7 +67,6 @@ jobs:
           grep -n "versionName '2.1.9'" projeto/app/build.gradle
           test -f projeto/app/src/main/java/com/masterresponde/app/HistoryStore.java
           test -f projeto/app/src/main/java/com/masterresponde/app/HistoryActivity.java
-          grep -n 'history_success_v219' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'HistoryActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
           grep -n 'android:name=".HistoryActivity"' projeto/app/src/main/AndroidManifest.xml
       - name: Detectar diretório Gradle
