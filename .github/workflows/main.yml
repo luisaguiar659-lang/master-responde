@@ -62,13 +62,14 @@ jobs:
       - name: Criar comandos configuráveis no painel
         run: python3 patches/v2.1.0/add_configurable_commands.py
       - name: Criar histórico real de atendimentos
+        run: python3 patches/v2.1.0/add_real_history.py
+      - name: Criar resposta padrão configurável
         run: |
-          python3 patches/v2.1.0/add_real_history.py
-          grep -n "versionName '2.1.9'" projeto/app/build.gradle
-          test -f projeto/app/src/main/java/com/masterresponde/app/HistoryStore.java
-          test -f projeto/app/src/main/java/com/masterresponde/app/HistoryActivity.java
-          grep -n 'HistoryActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
-          grep -n 'android:name=".HistoryActivity"' projeto/app/src/main/AndroidManifest.xml
+          python3 patches/v2.1.0/add_default_fallback.py
+          grep -n "versionName '2.1.10'" projeto/app/build.gradle
+          grep -n 'fallback_enabled' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          test -f projeto/app/src/main/java/com/masterresponde/app/FallbackSettingsActivity.java
+          grep -n 'FallbackSettingsActivity.class' projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -101,7 +102,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.9-REAL-HISTORY
+          name: MASTER-RESPONDE-v2.1.10-FALLBACK
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
