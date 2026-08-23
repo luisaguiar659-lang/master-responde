@@ -66,13 +66,16 @@ jobs:
       - name: Criar resposta padrão configurável
         run: python3 patches/v2.1.0/add_default_fallback.py
       - name: Adicionar modos de gatilho aos comandos
+        run: python3 patches/v2.1.0/add_command_match_modes.py
+      - name: Comandos ilimitados e temporizador por pessoa
         run: |
-          python3 patches/v2.1.0/add_command_match_modes.py
-          grep -n "versionName '2.1.11'" projeto/app/build.gradle
-          grep -n 'cmd_match_' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          grep -n 'incoming.contains(normalized)' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          grep -n 'incoming.startsWith(normalized)' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          grep -n 'MODO DO GATILHO' projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
+          python3 patches/v2.1.0/add_dynamic_commands_and_cooldown.py
+          grep -n "versionName '2.1.12'" projeto/app/build.gradle
+          grep -n 'commands_json' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          grep -n 'ADICIONAR COMANDO' projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
+          grep -n 'TEMPORIZADOR POR PESSOA' projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
+          grep -n 'ConversationCooldown.remainingSeconds' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'ConversationCooldown.markSent' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -105,7 +108,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.11-MATCH-MODES
+          name: MASTER-RESPONDE-v2.1.12-DYNAMIC-COOLDOWN
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
