@@ -4,7 +4,6 @@ import re
 root=Path('projeto/app/src/main/java/com/masterresponde/app')
 gradle=Path('projeto/app/build.gradle')
 manifest=Path('projeto/app/src/main/AndroidManifest.xml')
-svc=root/'WhatsAppBusinessCaptureService.java'
 dash=root/'NeonDashboardActivity.java'
 
 g=gradle.read_text(encoding='utf-8')
@@ -36,13 +35,16 @@ public class HistoryActivity extends Activity{
  private void render(){ScrollView sc=new ScrollView(this);sc.setBackgroundColor(Color.rgb(1,7,12));list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);list.setPadding(28,35,28,35);sc.addView(list);TextView t=tv("HISTÓRICO DE ATENDIMENTOS",22,Color.WHITE);t.setTypeface(null,Typeface.BOLD);list.addView(t);list.addView(tv("Últimos 200 eventos do motor",13,Color.rgb(0,220,255)));Button clear=new Button(this);clear.setText("LIMPAR HISTÓRICO");clear.setOnClickListener(v->{HistoryStore.clear(this);render();});list.addView(clear);JSONArray a=HistoryStore.get(this);if(a.length()==0)list.addView(tv("\nNenhum atendimento registrado ainda.",16,Color.LTGRAY));for(int i=0;i<a.length();i++)try{JSONObject e=a.getJSONObject(i);TextView card=tv("\n"+e.optString("time")+" • "+e.optString("conversation")+"\nRecebida: "+e.optString("incoming")+"\nResposta: "+e.optString("reply")+"\nStatus: "+e.optString("status"),14,Color.WHITE);card.setBackgroundColor(Color.rgb(5,18,25));list.addView(card);}catch(Exception ignored){}setContentView(sc);}
 }''',encoding='utf-8')
 
-# Nesta etapa preservamos totalmente o motor funcional. O histórico recebe o snapshot
-# que o próprio dashboard já mantém, evitando introduzir variáveis inexistentes no serviço.
 d=dash.read_text(encoding='utf-8')
 if 'HistoryActivity.class' not in d:
-    d=d.replace('nav("•\\nHISTÓRICO",Color.WHITE,v->Toast.makeText(this,"Em breve",Toast.LENGTH_SHORT).show())','nav("•\\nHISTÓRICO",Color.WHITE,v->startActivity(new Intent(this,HistoryActivity.class)))')
-    # fallback para qualquer variante do ícone/texto
-    d=re.sub(r'nav\("[^"\\n]*\\nHISTÓRICO",Color\.WHITE,v->Toast\.makeText\(this,"Em breve",Toast\.LENGTH_SHORT\)\.show\(\)\)', 'nav("•\\nHISTÓRICO",Color.WHITE,v->startActivity(new Intent(this,HistoryActivity.class)))', d, count=1)
+    exact='nav("◉\\nHISTÓRICO",Color.WHITE,v->Toast.makeText(this,"Em breve",Toast.LENGTH_SHORT).show())'
+    replacement='nav("◉\\nHISTÓRICO",Color.WHITE,v->startActivity(new Intent(this,HistoryActivity.class)))'
+    if exact in d:
+        d=d.replace(exact,replacement,1)
+    else:
+        pattern=r'nav\("([^"\\n]*)\\nHISTÓRICO",Color\.WHITE,v->Toast\.makeText\(this,"Em breve",Toast\.LENGTH_SHORT\)\.show\(\)\)'
+        d,n=re.subn(pattern,lambda m:'nav("'+m.group(1)+'\\nHISTÓRICO",Color.WHITE,v->startActivity(new Intent(this,HistoryActivity.class)))',d,count=1)
+        if n==0: raise SystemExit('ERRO v2.1.9: botão HISTÓRICO não encontrado')
 dash.write_text(d,encoding='utf-8')
 
 m=manifest.read_text(encoding='utf-8')
@@ -55,4 +57,6 @@ manifest.write_text(m,encoding='utf-8')
 
 for p,mark in [(root/'HistoryStore.java','class HistoryStore'),(root/'HistoryActivity.java','HISTÓRICO DE ATENDIMENTOS'),(dash,'HistoryActivity.class'),(manifest,'.HistoryActivity')]:
     if mark not in p.read_text(encoding='utf-8'): raise SystemExit('ERRO v2.1.9: requisito ausente: '+mark)
-print('v2.1.9: histórico criado e navegação ligada; motor funcional preservado')
+if '"◉\\nHISTÓRICO"' not in dash.read_text(encoding='utf-8'):
+    raise SystemExit('ERRO v2.1.9: escape do botão HISTÓRICO foi corrompido')
+print('v2.1.9: histórico criado; botão HISTÓRICO preserva escape Java corretamente')
