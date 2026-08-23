@@ -18,7 +18,6 @@ start_marker = 'mrTelemetryStart(' + reply_var + ');'
 if start_marker not in text:
     text = text[:m.end()] + '\n        ' + start_marker + text[m.end():]
 
-# Instrumenta o método central de status para alimentar o Dashboard.
 status_method = re.search(r'(private\s+void\s+updateReplyStatus\s*\(\s*String\s+(\w+)\s*\)\s*\{)', text)
 if not status_method:
     status_method = re.search(r'(void\s+updateReplyStatus\s*\(\s*String\s+(\w+)\s*\)\s*\{)', text)
@@ -29,7 +28,6 @@ status_marker = 'mrTelemetryStatus(' + status_var + ');'
 if status_marker not in text:
     text = text[:status_method.end()] + '\n        ' + status_marker + text[status_method.end():]
 
-# Helper autocontido, usando as mesmas SharedPreferences do Dashboard.
 helper = r'''
     private void mrTelemetryStart(String reply) {
         try {
@@ -88,3 +86,11 @@ for marker in ['mrTelemetryStart(', 'mrTelemetryStatus(', 'accessibility_last_re
     if marker not in final:
         raise SystemExit('ERRO telemetry_dashboard: validação ausente ' + marker)
 print('Telemetria do Dashboard conectada ao envio real de respostas')
+
+# Também corrige o caminho de respostas privadas detectadas pela acessibilidade:
+# usa a ação real de RemoteInput do WhatsApp Business quando ela estiver em cache,
+# evitando depender de abrir a conversa e tocar no campo de texto.
+background_fix = Path('patches/v2.0.9/background_private_reply.py')
+if not background_fix.exists():
+    raise SystemExit('ERRO telemetry_dashboard: background_private_reply.py ausente')
+exec(compile(background_fix.read_text(encoding='utf-8'), str(background_fix), 'exec'))
