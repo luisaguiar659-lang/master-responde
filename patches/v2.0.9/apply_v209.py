@@ -7,11 +7,22 @@ app = root / 'app'
 java_dir = app / 'src/main/java/com/masterresponde/app'
 res_xml = app / 'src/main/res/xml'
 
-# 1) Copia o novo dashboard.
-src = Path('patches/v2.0.9/NeonDashboardActivity.java')
-dst = java_dir / 'NeonDashboardActivity.java'
-dst.parent.mkdir(parents=True, exist_ok=True)
-shutil.copyfile(src, dst)
+# 1) Copia as telas Neon.
+for name in ['NeonDashboardActivity.java', 'NeonSettingsActivity.java']:
+    src = Path('patches/v2.0.9') / name
+    dst = java_dir / name
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
+
+# O botão Configurações do painel principal deve abrir a tela Neon, nunca o painel antigo.
+dash = java_dir / 'NeonDashboardActivity.java'
+d = dash.read_text(encoding='utf-8')
+d = d.replace(
+    'startActivity(new Intent(this,MessageSettingsActivity.class));}catch(Throwable e){Toast.makeText(this,"Configurações indisponíveis"',
+    'startActivity(new Intent(this,NeonSettingsActivity.class));}catch(Throwable e){Toast.makeText(this,"Configurações indisponíveis"',
+    1
+)
+dash.write_text(d, encoding='utf-8')
 
 # 2) Atualiza versão.
 gradle = app / 'build.gradle'
@@ -30,10 +41,8 @@ text = text.replace(
     'return WHATSAPP_BUSINESS.equals(packageName)\n                || WHATSAPP.equals(packageName);',
     'return WHATSAPP_BUSINESS.equals(packageName);'
 )
-# Remove referências residuais a IDs do WhatsApp normal em arrays.
 text = re.sub(r'\n\s*WHATSAPP \+ ":id/[^\"]+",?', '', text)
 
-# Segunda trava na hora de enviar: a janela ativa também precisa ser Business.
 needle = '        AccessibilityNodeInfo root =\n                getRootInActiveWindow();\n'
 guard = '''        AccessibilityNodeInfo root =\n                getRootInActiveWindow();\n\n        if (root != null) {\n            CharSequence activePackage = root.getPackageName();\n            if (activePackage == null\n                    || !WHATSAPP_BUSINESS.contentEquals(activePackage)) {\n                updateReplyStatus(\n                        "Envio bloqueado: somente WhatsApp Business"\n                );\n                finishReplyAndContinue();\n                return;\n            }\n        }\n'''
 if 'Envio bloqueado: somente WhatsApp Business' not in text:
@@ -56,11 +65,9 @@ if 'com.whatsapp,' in xml or ',com.whatsapp' in xml:
     raise SystemExit('ERRO: accessibility_service_config ainda permite WhatsApp normal')
 cfg.write_text(xml, encoding='utf-8')
 
-# 4) Novo dashboard vira launcher; MainActivity permanece para configurações.
+# 4) Dashboard Neon vira launcher. MainActivity fica apenas como compatibilidade interna.
 manifest = app / 'src/main/AndroidManifest.xml'
 m = manifest.read_text(encoding='utf-8')
-
-# Remove MAIN/LAUNCHER da MainActivity sem remover a Activity.
 activity_pattern = re.compile(
     r'(<activity\b[^>]*android:name="\.MainActivity"[^>]*>)(.*?)(</activity>)',
     re.S
@@ -71,26 +78,32 @@ if not match:
 body = match.group(2)
 body = re.sub(
     r'\s*<intent-filter>\s*<action\s+android:name="android\.intent\.action\.MAIN"\s*/>\s*<category\s+android:name="android\.intent\.category\.LAUNCHER"\s*/>\s*</intent-filter>',
-    '',
-    body,
-    flags=re.S
+    '', body, flags=re.S
 )
 m = m[:match.start()] + match.group(1) + body + match.group(3) + m[match.end():]
 
 if 'android:name=".NeonDashboardActivity"' not in m:
     insert = '''\n        <activity\n            android:name=".NeonDashboardActivity"\n            android:exported="true"\n            android:screenOrientation="portrait">\n            <intent-filter>\n                <action android:name="android.intent.action.MAIN"/>\n                <category android:name="android.intent.category.LAUNCHER"/>\n            </intent-filter>\n        </activity>\n'''
-    marker = '<activity'
-    idx = m.find(marker)
+    idx = m.find('<activity')
     if idx < 0:
         raise SystemExit('ERRO: nenhum ponto de inserção de Activity encontrado')
     m = m[:idx] + insert + m[idx:]
 
+if 'android:name=".NeonSettingsActivity"' not in m:
+    insert = '''\n        <activity\n            android:name=".NeonSettingsActivity"\n            android:exported="false"\n            android:screenOrientation="portrait" />\n'''
+    idx = m.find('<activity')
+    m = m[:idx] + insert + m[idx:]
+
 manifest.write_text(m, encoding='utf-8')
 
-# 5) Validações de segurança e launcher.
+# 5) Validações.
 if 'android:packageNames="com.whatsapp.w4b"' not in cfg.read_text(encoding='utf-8'):
     raise SystemExit('ERRO: trava Business-only ausente no XML')
 if 'NeonDashboardActivity' not in manifest.read_text(encoding='utf-8'):
     raise SystemExit('ERRO: dashboard neon ausente do Manifest')
+if 'NeonSettingsActivity' not in manifest.read_text(encoding='utf-8'):
+    raise SystemExit('ERRO: configurações neon ausentes do Manifest')
+if 'new Intent(this,NeonSettingsActivity.class)' not in dash.read_text(encoding='utf-8'):
+    raise SystemExit('ERRO: painel principal ainda não aponta para Configurações Neon')
 
-print('v2.0.9 aplicada com sucesso')
+print('v2.0.9 aplicada com painel e configurações Neon')
