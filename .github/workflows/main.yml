@@ -64,12 +64,15 @@ jobs:
       - name: Criar histórico real de atendimentos
         run: python3 patches/v2.1.0/add_real_history.py
       - name: Criar resposta padrão configurável
+        run: python3 patches/v2.1.0/add_default_fallback.py
+      - name: Adicionar modos de gatilho aos comandos
         run: |
-          python3 patches/v2.1.0/add_default_fallback.py
-          grep -n "versionName '2.1.10'" projeto/app/build.gradle
-          grep -n 'fallback_enabled' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          test -f projeto/app/src/main/java/com/masterresponde/app/FallbackSettingsActivity.java
-          grep -n 'FallbackSettingsActivity.class' projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
+          python3 patches/v2.1.0/add_command_match_modes.py
+          grep -n "versionName '2.1.11'" projeto/app/build.gradle
+          grep -n 'cmd_match_' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          grep -n 'incoming.contains(normalized)' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          grep -n 'incoming.startsWith(normalized)' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          grep -n 'MODO DO GATILHO' projeto/app/src/main/java/com/masterresponde/app/MessageSettingsActivity.java
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -102,7 +105,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.1.10-FALLBACK
+          name: MASTER-RESPONDE-v2.1.11-MATCH-MODES
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
