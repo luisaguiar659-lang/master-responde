@@ -15,18 +15,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
       - name: Instalar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
-
       - name: Validar assinatura
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -34,37 +31,25 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
-            echo "ERRO: configure os 4 GitHub Secrets de assinatura antes de compilar."
-            exit 1
-          fi
-
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then echo "ERRO: configure os 4 GitHub Secrets de assinatura."; exit 1; fi
       - name: Extrair base visual
         run: |
           test -f MASTER-RESPONDE-RAIZ.zip
-          rm -rf projeto
-          mkdir -p projeto
+          rm -rf projeto && mkdir -p projeto
           unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto
-
       - name: Montar Dashboard Neon
         run: |
           python3 patches/v2.0.9/apply_v209_ui_only.py
           python3 patches/v2.0.9/refine_dashboard.py
-
-      - name: Apagar motores antigos e criar núcleo novo
+      - name: Criar núcleo novo
         run: |
           python3 patches/v2.1.0/reset_clean_core.py
-          grep -n "versionName '2.1.0'" projeto/app/build.gradle
           test -f projeto/app/src/main/java/com/masterresponde/app/AutomationEngine.java
-          test -f projeto/app/src/main/java/com/masterresponde/app/AutomationEvent.java
-          test -f projeto/app/src/main/java/com/masterresponde/app/AutomationRule.java
           test -f projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessGateway.java
-          ! test -f projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
-          ! test -f projeto/app/src/main/java/com/masterresponde/app/WhatsAppReply.java
-
       - name: Criar captura passiva do WhatsApp Business
         run: |
           python3 patches/v2.1.0/add_capture_only.py
+          python3 patches/v2.1.0/fix_capture_dashboard.py
           grep -n "versionName '2.1.1'" projeto/app/build.gradle
           test -f projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'com.whatsapp.w4b' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
@@ -72,8 +57,6 @@ jobs:
           grep -n 'capture_listener_connected' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
           grep -n 'android.permission.BIND_NOTIFICATION_LISTENER_SERVICE' projeto/app/src/main/AndroidManifest.xml
           ! grep -q 'RemoteInput' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          ! grep -q 'AccessibilityService' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-
       - name: Detectar diretório Gradle
         id: project
         shell: bash
@@ -82,16 +65,12 @@ jobs:
           test -n "$SETTINGS"
           PROJECT_DIR=$(dirname "$SETTINGS")
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-          test -f "$PROJECT_DIR/app/build.gradle" || test -f "$PROJECT_DIR/app/build.gradle.kts"
-
       - name: Preparar chave de assinatura
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          KEYSTORE="$RUNNER_TEMP/master-responde-release.jks"
-          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
-          test -s "$KEYSTORE"
-
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/master-responde-release.jks"
+          test -s "$RUNNER_TEMP/master-responde-release.jks"
       - name: Compilar APK release
         working-directory: ${{ steps.project.outputs.dir }}
         env:
@@ -100,23 +79,13 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -f ./gradlew ]; then
-            chmod +x ./gradlew
-            ./gradlew :app:assembleRelease --stacktrace --no-daemon
-          else
-            gradle :app:assembleRelease --stacktrace --no-daemon
-          fi
-
+          if [ -f ./gradlew ]; then chmod +x ./gradlew; ./gradlew :app:assembleRelease --stacktrace --no-daemon; else gradle :app:assembleRelease --stacktrace --no-daemon; fi
       - name: Preparar APK final
         run: |
           APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1)
-          if [ -z "$APK" ]; then
-            APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1)
-          fi
+          [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1)
           test -n "$APK"
           cp "$APK" MASTER-RESPONDE.apk
-          ls -lh MASTER-RESPONDE.apk
-
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
