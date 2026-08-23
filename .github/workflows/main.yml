@@ -64,18 +64,18 @@ jobs:
         run: python3 patches/v2.1.0/add_masterflix_trigger_settings_and_test_cooldown.py
       - name: Tornar links e mensagens de revenda configuráveis
         run: python3 patches/v2.1.0/add_masterflix_reseller_visible_settings.py
-      - name: Criar avisos automáticos em grupo
+      - name: Restaurar motor funcional de avisos da v2.1.27
         run: python3 patches/v2.1.0/add_scheduled_group_broadcast.py
-      - name: Permitir grupos ilimitados nos avisos
-        run: python3 patches/v2.1.0/add_multiple_scheduled_group_broadcasts.py
-      - name: Corrigir relógio multi-grupo
+      - name: Criar segundo motor totalmente independente
         run: |
-          python3 patches/v2.1.0/fix_multiple_group_broadcast_scheduler.py
-          grep -n "versionName '2.1.29'" projeto/app/build.gradle
-          grep -n 'ensureNext' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
-          grep -n 'ScheduledGroupBroadcast.ensureNext(job,now)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n '+ ADICIONAR GRUPO' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
-          grep -n 'sendScheduledGroupReply(candidate,wanted,text)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          python3 patches/v2.1.0/add_dual_independent_group_broadcasts.py
+          grep -n "versionName '2.1.30'" projeto/app/build.gradle
+          test -f projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast2.java
+          grep -n 'MOTOR 1' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
+          grep -n 'MOTOR 2' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcastActivity.java
+          grep -n 'scheduledGroupTick2' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'runScheduledGroupBroadcast2IfDue' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'sendScheduledGroupReply(candidate, wanted, text)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -89,4 +89,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.29-MULTI-GROUP-SCHEDULER-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.30-DUAL-INDEPENDENT-GROUP-BROADCASTS, path: MASTER-RESPONDE.apk, retention-days: 30}
