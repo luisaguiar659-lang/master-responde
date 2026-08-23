@@ -15,11 +15,29 @@ for name in ['NeonDashboardActivity.java', 'NeonSettingsActivity.java']:
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dst)
 
-# Instala os Material Icons vetoriais locais (sem depender de internet em runtime).
+# Instala os assets PNG 3D Neon locais (sem depender de internet em runtime).
 res_drawable.mkdir(parents=True, exist_ok=True)
-icon_src = Path('patches/v2.0.9/material_icons')
+icon_src = Path('patches/v2.0.9/icon_assets')
+png_icons = [
+    'mr_robot.png',
+    'mr_security.png',
+    'mr_notifications.png',
+    'mr_accessibility.png',
+    'mr_power.png',
+    'mr_whatsapp_business.png',
+]
+for name in png_icons:
+    src = icon_src / name
+    if not src.exists():
+        raise SystemExit('ERRO: asset PNG ausente: ' + name)
+    shutil.copyfile(src, res_drawable / name)
+
+# Mantém os Material Icons vetoriais como fallback local.
+material_src = Path('patches/v2.0.9/material_icons')
 for name in ['accessibility_new.xml', 'notifications.xml', 'smart_toy.xml']:
-    shutil.copyfile(icon_src / name, res_drawable / ('mr_' + name))
+    src = material_src / name
+    if src.exists():
+        shutil.copyfile(src, res_drawable / ('mr_' + name))
 
 # O botão Configurações do painel principal deve abrir a tela Neon, nunca o painel antigo.
 dash = java_dir / 'NeonDashboardActivity.java'
@@ -89,6 +107,7 @@ if 'android:packageNames="com.whatsapp.w4b"' not in cfg.read_text(encoding='utf-
 if 'NeonDashboardActivity' not in manifest.read_text(encoding='utf-8'): raise SystemExit('ERRO: dashboard neon ausente do Manifest')
 if 'NeonSettingsActivity' not in manifest.read_text(encoding='utf-8'): raise SystemExit('ERRO: configurações neon ausentes do Manifest')
 if 'new Intent(this,NeonSettingsActivity.class)' not in dash.read_text(encoding='utf-8'): raise SystemExit('ERRO: painel principal ainda não aponta para Configurações Neon')
-for name in ['mr_accessibility_new.xml','mr_notifications.xml','mr_smart_toy.xml']:
-    if not (res_drawable/name).exists(): raise SystemExit('ERRO: Material Icon ausente: '+name)
-print('v2.0.9 aplicada com painel Neon + Material Icons')
+for name in png_icons:
+    if not (res_drawable / name).exists():
+        raise SystemExit('ERRO: asset PNG não instalado: ' + name)
+print('v2.0.9 aplicada com painel Neon + assets PNG 3D')
