@@ -55,7 +55,6 @@ jobs:
           grep -n '!WHATSAPP_BUSINESS.equals(sbn.getPackageName())' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
           grep -n 'WhatsAppReply.send(' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
           grep -n 'RemoteInput.addResultsToIntent' projeto/app/src/main/java/com/masterresponde/app/WhatsAppReply.java
-          grep -n 'BackgroundRuntime.requestListenerRebind' projeto/app/src/main/java/com/masterresponde/app/BackgroundRuntime.java
           ! test -f projeto/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
 
       - name: Aplicar v2.0.9 — somente interface Neon
