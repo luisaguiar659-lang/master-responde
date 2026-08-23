@@ -46,18 +46,55 @@ jobs:
           mkdir -p projeto
           unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto
 
-      - name: Restaurar núcleo funcional v2.0.3 até v2.0.8
+      - name: Restaurar núcleo funcional v2.0.3 até v2.0.7
         run: |
           cat patches/v2.0.3/part-*.patch > "$RUNNER_TEMP/v203.patch"
           (cd projeto && patch -p1 --forward --batch < "$RUNNER_TEMP/v203.patch")
           cat patches/v2.0.4/part-*.patch > "$RUNNER_TEMP/v204.patch"
           (cd projeto && patch -p1 --forward --batch < "$RUNNER_TEMP/v204.patch")
-          for v in v2.0.5 v2.0.6 v2.0.7 v2.0.8; do
+          for v in v2.0.5 v2.0.6 v2.0.7; do
             cat patches/$v/*.patch > "$RUNNER_TEMP/$v.patch"
             (cd projeto && patch -p1 --forward --batch < "$RUNNER_TEMP/$v.patch")
           done
+          grep -n "versionName '2.0.7'" projeto/app/build.gradle
+
+      - name: Aplicar v2.0.8 — apenas filtro WhatsApp Business
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          gradle = Path('projeto/app/build.gradle')
+          text = gradle.read_text(encoding='utf-8')
+          text = re.sub(r"versionCode\s+68\b", "versionCode 69", text, count=1)
+          text = re.sub(r"versionName\s+'2\.0\.7'", "versionName '2.0.8'", text, count=1)
+          gradle.write_text(text, encoding='utf-8')
+
+          svc = Path('projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java')
+          text = svc.read_text(encoding='utf-8')
+
+          const_line = '    private static final String WHATSAPP_BUSINESS = "com.whatsapp.w4b";\n'
+          if 'private static final String WHATSAPP_BUSINESS = "com.whatsapp.w4b";' not in text:
+              marker = '    private final Handler handler = new Handler(Looper.getMainLooper());\n'
+              if marker not in text:
+                  raise SystemExit('ERRO: ponto de inserção da constante não encontrado')
+              text = text.replace(marker, marker + '\n' + const_line, 1)
+
+          guard = ('        if (sbn == null\n'
+                   '                || !WHATSAPP_BUSINESS.equals(sbn.getPackageName())) {\n'
+                   '            return;\n'
+                   '        }\n\n')
+
+          if '!WHATSAPP_BUSINESS.equals(sbn.getPackageName())' not in text:
+              pattern = r'(public\s+void\s+onNotificationPosted\s*\(\s*StatusBarNotification\s+sbn\s*\)\s*\{\s*\n)'
+              m = re.search(pattern, text)
+              if not m:
+                  raise SystemExit('ERRO: método onNotificationPosted não encontrado')
+              text = text[:m.end()] + guard + text[m.end():]
+
+          svc.write_text(text, encoding='utf-8')
+          PY
           grep -n "versionName '2.0.8'" projeto/app/build.gradle
-          grep -n 'WHATSAPP_BUSINESS = "com.whatsapp.w4b"' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
           grep -n '!WHATSAPP_BUSINESS.equals(sbn.getPackageName())' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
 
       - name: Aplicar v2.0.9 — somente interface Neon
