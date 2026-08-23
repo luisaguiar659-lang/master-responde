@@ -39,25 +39,34 @@ jobs:
             exit 1
           fi
 
-      - name: Extrair projeto original funcional
+      - name: Extrair base do projeto
         run: |
           test -f MASTER-RESPONDE-RAIZ.zip
           rm -rf projeto
           mkdir -p projeto
           unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto
-          grep -n "versionName '2.0.2'" projeto/app/build.gradle
+
+      - name: Restaurar núcleo EXATO do projeto original enviado
+        run: |
+          cat patches/original_core/core.part*.b64 | tr -d '\n\r ' > "$RUNNER_TEMP/original_core.b64"
+          base64 --decode "$RUNNER_TEMP/original_core.b64" > "$RUNNER_TEMP/original_core.tar.gz"
+          tar -xzf "$RUNNER_TEMP/original_core.tar.gz" -C projeto
           grep -n 'private static final String WHATSAPP_BUSINESS = "com.whatsapp.w4b";' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
           grep -n '!WHATSAPP_BUSINESS.equals(sbn.getPackageName())' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
           grep -n 'WhatsAppReply.send(' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
+          grep -n 'RemoteInput.addResultsToIntent' projeto/app/src/main/java/com/masterresponde/app/WhatsAppReply.java
+          grep -n 'BackgroundRuntime.requestListenerRebind' projeto/app/src/main/java/com/masterresponde/app/BackgroundRuntime.java
+          ! test -f projeto/app/src/main/java/com/masterresponde/app/WhatsAppAccessibilityService.java
 
-      - name: Aplicar v2.0.9 — somente interface Neon sobre o original
+      - name: Aplicar v2.0.9 — somente interface Neon
         run: |
           python3 patches/v2.0.9/apply_v209_ui_only.py
           python3 patches/v2.0.9/refine_dashboard.py
           grep -n "versionName '2.0.9'" projeto/app/build.gradle
           test -f projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
           test -f projeto/app/src/main/java/com/masterresponde/app/NeonSettingsActivity.java
-          grep -n 'test_mode' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          grep -n 'BackgroundRuntime.requestListenerRebind(this)' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          grep -n 'BackgroundRuntime.KEY_LISTENER_CONNECTED' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
           grep -n 'android:name=".NeonDashboardActivity"' projeto/app/src/main/AndroidManifest.xml
           grep -n '!WHATSAPP_BUSINESS.equals(sbn.getPackageName())' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
           grep -n 'WhatsAppReply.send(' projeto/app/src/main/java/com/masterresponde/app/NotificationAccessService.java
@@ -109,7 +118,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-v2.0.9-NEON-ORIGINAL-CORE
+          name: MASTER-RESPONDE-v2.0.9-NEON-UPLOADED-ORIGINAL-CORE
           path: MASTER-RESPONDE.apk
           if-no-files-found: error
           retention-days: 30
