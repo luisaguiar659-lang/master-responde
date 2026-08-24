@@ -79,6 +79,12 @@ jobs:
           grep -n 'allScheduledSupportDone' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'sgb_cycle_started_at' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'postDelayed(this, 3000L)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+      - name: Adicionar mensagem configurável antes do teste
+        run: |
+          python3 patches/v2.1.0/add_pre_test_message_setting.py
+          grep -n "versionName '2.1.34'" projeto/app/build.gradle
+          grep -n 'MENSAGEM ANTES DO TESTE' projeto/app/src/main/java/com/masterresponde/app/MasterflixAutomationSettingsActivity.java
+          grep -n 'masterflix_pre_test_message' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -92,4 +98,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.33-SUPPORT-GROUP-CYCLE-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.34-PRE-TEST-MESSAGE, path: MASTER-RESPONDE.apk, retention-days: 30}
