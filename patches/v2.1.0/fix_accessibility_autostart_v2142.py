@@ -15,20 +15,21 @@ dash=java/'NeonDashboardActivity.java'
 s=acc.read_text(encoding='utf-8')
 
 # 1) Escuta em tempo real a flag telegram_auto_pending gravada quando o álbum termina de ser salvo.
-# Assim não dependemos apenas do tick periódico do AccessibilityService.
+# IMPORTANTE: beginPending precisa ser declarado ANTES do prefListener para evitar
+# "illegal forward reference" no javac.
 s=s.replace('private List<File> images=new ArrayList<>();', '''private List<File> images=new ArrayList<>();
     private android.content.SharedPreferences prefs;
+    private final Runnable beginPending=new Runnable(){@Override public void run(){
+        try{if(!busy && TelegramAutoDeliveryStore.ready(TelegramWhatsAppAccessibilityService.this))beginBatch();}
+        catch(Throwable e){TelegramAutoDeliveryStore.status(TelegramWhatsAppAccessibilityService.this,"Falha ao iniciar envio automático");}
+    }};
     private final android.content.SharedPreferences.OnSharedPreferenceChangeListener prefListener=(sp,key)->{
         if("telegram_auto_pending".equals(key) && sp.getBoolean("telegram_auto_pending",false)){
             TelegramAutoDeliveryStore.status(TelegramWhatsAppAccessibilityService.this,"Conteúdo recebido • preparando envio automático...");
             h.removeCallbacks(beginPending);
             h.postDelayed(beginPending,2800L);
         }
-    };
-    private final Runnable beginPending=new Runnable(){@Override public void run(){
-        try{if(!busy && TelegramAutoDeliveryStore.ready(TelegramWhatsAppAccessibilityService.this))beginBatch();}
-        catch(Throwable e){TelegramAutoDeliveryStore.status(TelegramWhatsAppAccessibilityService.this,"Falha ao iniciar envio automático");}
-    }};''',1)
+    };''',1)
 
 old='''    @Override protected void onServiceConnected(){
         super.onServiceConnected();
@@ -102,4 +103,4 @@ dash.write_text(D,encoding='utf-8')
 
 for pth,mark in [(acc,'OnSharedPreferenceChangeListener'),(acc,'telegram_accessibility_heartbeat'),(act,'serviço conectado'),(gradle,"versionName '2.1.42'")]:
     if mark not in pth.read_text(encoding='utf-8'): raise SystemExit('ERRO v2.1.42: requisito ausente '+mark)
-print('v2.1.42: partida automática do envio corrigida por listener de preferência + heartbeat; captura Telegram API intocada')
+print('v2.1.42: partida automática corrigida; beginPending declarado antes do listener; captura Telegram API intocada')
