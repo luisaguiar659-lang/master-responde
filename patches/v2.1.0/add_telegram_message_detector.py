@@ -49,21 +49,34 @@ helper=r'''
 
             // MessagingStyle costuma trazer a mensagem mais fiel, inclusive em grupos.
             try {
-                android.app.Notification.MessagingStyle.Message[] msgs =
-                        android.app.Notification.MessagingStyle.Message.getMessagesFromBundleArray(
-                                (android.os.Parcelable[]) e.getParcelableArray(Notification.EXTRA_MESSAGES));
-                if (msgs != null && msgs.length > 0) {
-                    android.app.Notification.MessagingStyle.Message last = msgs[msgs.length - 1];
-                    if (last != null) {
-                        CharSequence txt = last.getText();
-                        if (txt != null && !txt.toString().trim().isEmpty()) message = txt.toString().trim();
-                        if (last.getSenderPerson() != null && last.getSenderPerson().getName() != null) {
-                            String sender = last.getSenderPerson().getName().toString().trim();
-                            if (!sender.isEmpty()) title = sender;
-                        }
-                    }
+    java.util.List<android.app.Notification.MessagingStyle.Message> msgs =
+            android.app.Notification.MessagingStyle.Message.getMessagesFromBundleArray(
+                    (android.os.Parcelable[]) e.getParcelableArray(Notification.EXTRA_MESSAGES));
+
+    if (msgs != null && !msgs.isEmpty()) {
+        android.app.Notification.MessagingStyle.Message last =
+                msgs.get(msgs.size() - 1);
+
+        if (last != null) {
+            CharSequence txt = last.getText();
+
+            if (txt != null && !txt.toString().trim().isEmpty()) {
+                message = txt.toString().trim();
+            }
+
+            if (last.getSenderPerson() != null &&
+                    last.getSenderPerson().getName() != null) {
+
+                String sender =
+                        last.getSenderPerson().getName().toString().trim();
+
+                if (!sender.isEmpty()) {
+                    title = sender;
                 }
-            } catch (Throwable ignored) {}
+            }
+        }
+    }
+} catch (Throwable ignored) {}
 
             if (message == null) message = "";
             message = message.trim();
