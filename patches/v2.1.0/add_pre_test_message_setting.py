@@ -8,9 +8,13 @@ act=java/'MasterflixAutomationSettingsActivity.java'
 dash=java/'NeonDashboardActivity.java'
 gradle=app/'build.gradle'
 
-# 1) Campo visível em Automações MasterFlix.
+# 1) Campo visível em Automações MasterFlix, compatível com a tela ampliada da v2.1.26.
 a=act.read_text(encoding='utf-8')
-a=a.replace('SharedPreferences p;EditText test,reseller,hours;', 'SharedPreferences p;EditText test,reseller,hours,preTestMessage;', 1)
+old_decl='SharedPreferences p;EditText test,reseller,hours,signupLink,supportLink,signupMessage,confirmedMessage;'
+new_decl='SharedPreferences p;EditText test,reseller,hours,signupLink,supportLink,signupMessage,confirmedMessage,preTestMessage;'
+if old_decl not in a:
+    raise SystemExit('ERRO v2.1.34: declaração de campos MasterFlix não encontrada')
+a=a.replace(old_decl,new_decl,1)
 
 needle=''' r.addView(tv("INTERVALO PARA NOVO TESTE",14,true));r.addView(tv("Tempo, em horas, que a mesma pessoa precisa aguardar para solicitar outro teste. Use 0 para desativar o limite.",11,false));hours=field("24",1);hours.setInputType(InputType.TYPE_CLASS_NUMBER);hours.setText(String.valueOf(p.getInt("masterflix_test_cooldown_hours",24)));r.addView(hours);'''
 insert=needle+'''\n r.addView(tv("MENSAGEM ANTES DO TESTE",14,true));r.addView(tv("Esta mensagem será enviada imediatamente antes de iniciar a geração automática do teste.",11,false));preTestMessage=field("🧪 TESTE MASTER PLAY PLUS\\n\\n🚀 Que bom que você quer conhecer nosso serviço!\\n\\n⏳ Aguarde alguns instantes enquanto seu acesso é gerado automaticamente.",5);preTestMessage.setText(p.getString("masterflix_pre_test_message","🧪 *TESTE MASTER PLAY PLUS*\\n\\n🚀 Que bom que você quer conhecer nosso serviço!\\n\\n⏳ Aguarde alguns instantes enquanto seu acesso é gerado automaticamente."));r.addView(preTestMessage);'''
@@ -18,31 +22,33 @@ if needle not in a:
     raise SystemExit('ERRO v2.1.34: intervalo de teste não encontrado na tela')
 a=a.replace(needle,insert,1)
 
-oldsave='''void save(){String t=test.getText().toString().trim(),rv=reseller.getText().toString().trim();int h=24;'''
-newsave='''void save(){String t=test.getText().toString().trim(),rv=reseller.getText().toString().trim(),pre=preTestMessage.getText().toString().trim();int h=24;'''
+# Acrescenta a leitura do novo campo no método save já ampliado pela v2.1.26.
+oldsave=''' void save(){String t=test.getText().toString().trim(),rv=reseller.getText().toString().trim(),sl=signupLink.getText().toString().trim(),gl=supportLink.getText().toString().trim(),sm=signupMessage.getText().toString().trim(),cm=confirmedMessage.getText().toString().trim();int h=24;'''
+newsave=''' void save(){String t=test.getText().toString().trim(),rv=reseller.getText().toString().trim(),sl=signupLink.getText().toString().trim(),gl=supportLink.getText().toString().trim(),sm=signupMessage.getText().toString().trim(),cm=confirmedMessage.getText().toString().trim(),pre=preTestMessage.getText().toString().trim();int h=24;'''
 if oldsave not in a:
-    raise SystemExit('ERRO v2.1.34: método save não encontrado')
+    raise SystemExit('ERRO v2.1.34: método save atual não encontrado')
 a=a.replace(oldsave,newsave,1)
 
-oldprefs='''.putString("masterflix_test_triggers",t).putString("masterflix_reseller_triggers",rv).putInt("masterflix_test_cooldown_hours",h).apply();'''
-newprefs='''.putString("masterflix_test_triggers",t).putString("masterflix_reseller_triggers",rv).putInt("masterflix_test_cooldown_hours",h).putString("masterflix_pre_test_message",pre).apply();'''
+oldprefs='''.putString("reseller_signup_message",sm).putString(MessageSettings.MSG_RESELLER_CONFIRMED,cm).apply();'''
+newprefs='''.putString("reseller_signup_message",sm).putString(MessageSettings.MSG_RESELLER_CONFIRMED,cm).putString("masterflix_pre_test_message",pre).apply();'''
 if oldprefs not in a:
-    raise SystemExit('ERRO v2.1.34: persistência MasterFlix não encontrada')
+    raise SystemExit('ERRO v2.1.34: persistência MasterFlix atual não encontrada')
 a=a.replace(oldprefs,newprefs,1)
 act.write_text(a,encoding='utf-8')
 
-# 2) Usa o texto configurado exatamente antes de iniciar a geração.
+# 2) Usa o texto configurado no ponto onde hoje é enviada a mensagem fixa.
 s=svc.read_text(encoding='utf-8')
 old='''                    prefs().edit().putString("last_test_status", "Teste: geração automática iniciada").apply();\n                    sendDirectReply(n, conversation, "Gerando seu teste, aguarde...");'''
 new='''                    prefs().edit().putString("last_test_status", "Teste: geração automática iniciada").apply();\n                    String preTestMessage = prefs().getString("masterflix_pre_test_message", "🧪 *TESTE MASTER PLAY PLUS*\\n\\n🚀 Que bom que você quer conhecer nosso serviço!\\n\\n⏳ Aguarde alguns instantes enquanto seu acesso é gerado automaticamente.").trim();\n                    if (!preTestMessage.isEmpty()) sendDirectReply(n, conversation, preTestMessage);'''
 if old not in s:
-    raise SystemExit('ERRO v2.1.34: mensagem antiga antes do teste não encontrada')
+    raise SystemExit('ERRO v2.1.34: mensagem fixa antes do teste não encontrada')
 s=s.replace(old,new,1)
 svc.write_text(s,encoding='utf-8')
 
 # 3) Versão.
 D=dash.read_text(encoding='utf-8')
-D=D.replace('brand.addView(text("v2.1.33",10,MUTED,false));','brand.addView(text("v2.1.34",10,MUTED,false));')
+for v in ['v2.1.26','v2.1.27','v2.1.28','v2.1.29','v2.1.30','v2.1.31','v2.1.32','v2.1.33']:
+    D=D.replace('brand.addView(text("'+v+'",10,MUTED,false));','brand.addView(text("v2.1.34",10,MUTED,false));')
 dash.write_text(D,encoding='utf-8')
 G=gradle.read_text(encoding='utf-8')
 G=re.sub(r'versionCode\s+\d+','versionCode 105',G,count=1)
