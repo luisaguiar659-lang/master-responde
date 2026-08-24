@@ -78,13 +78,17 @@ jobs:
         run: python3 patches/v2.1.0/add_telegram_banner_detection.py
       - name: Recuperar imagem Telegram para prévia
         run: python3 patches/v2.1.0/add_telegram_image_preview.py
-      - name: Capturar álbum Telegram
+      - name: Capturar álbum Telegram pela notificação
+        run: python3 patches/v2.1.0/add_telegram_album_capture.py
+      - name: Criar Motor Telegram Bot API
         run: |
-          python3 patches/v2.1.0/add_telegram_album_capture.py
-          grep -n "versionName '2.1.37'" projeto/app/build.gradle
-          grep -n 'telegram_album_count' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'IMAGENS NO ÚLTIMO LOTE' projeto/app/src/main/java/com/masterresponde/app/TelegramDetectorActivity.java
-          grep -n 'PRÉVIAS CAPTURADAS' projeto/app/src/main/java/com/masterresponde/app/TelegramDetectorActivity.java
+          python3 patches/v2.1.0/add_telegram_bot_api_album_motor.py
+          grep -n "versionName '2.1.38'" projeto/app/build.gradle
+          grep -n 'media_group_id' projeto/app/src/main/java/com/masterresponde/app/TelegramApiAlbumService.java
+          grep -n 'getUpdates' projeto/app/src/main/java/com/masterresponde/app/TelegramApiAlbumService.java
+          grep -n 'getFile' projeto/app/src/main/java/com/masterresponde/app/TelegramApiAlbumService.java
+          grep -n 'USAR ÚLTIMO CHAT DETECTADO' projeto/app/src/main/java/com/masterresponde/app/TelegramApiSettingsActivity.java
+          grep -n 'Motor Telegram API' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -98,4 +102,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.37-TELEGRAM-ALBUM-CAPTURE, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.38-TELEGRAM-BOT-API-ALBUM, path: MASTER-RESPONDE.apk, retention-days: 30}
