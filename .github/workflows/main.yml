@@ -75,13 +75,14 @@ jobs:
       - name: Criar detector passivo do Telegram
         run: python3 patches/v2.1.0/add_telegram_message_detector.py
       - name: Detectar imagem e banner do Telegram
+        run: python3 patches/v2.1.0/add_telegram_banner_detection.py
+      - name: Recuperar imagem Telegram para prévia
         run: |
-          python3 patches/v2.1.0/add_telegram_banner_detection.py
-          grep -n "versionName '2.1.35'" projeto/app/build.gradle
-          grep -n 'telegram_last_has_image' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'getDataMimeType()' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'TIPO DE CONTEÚDO' projeto/app/src/main/java/com/masterresponde/app/TelegramDetectorActivity.java
-          grep -n 'IMAGEM / BANNER DETECTADO' projeto/app/src/main/java/com/masterresponde/app/TelegramDetectorActivity.java
+          python3 patches/v2.1.0/add_telegram_image_preview.py
+          grep -n "versionName '2.1.36'" projeto/app/build.gradle
+          grep -n 'telegram_last_image_path' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'PRÉVIA CAPTURADA' projeto/app/src/main/java/com/masterresponde/app/TelegramDetectorActivity.java
+          grep -n 'IMAGEM RECUPERADA COM SUCESSO' projeto/app/src/main/java/com/masterresponde/app/TelegramDetectorActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -95,4 +96,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.35-TELEGRAM-BANNER-DETECTOR, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.36-TELEGRAM-IMAGE-PREVIEW, path: MASTER-RESPONDE.apk, retention-days: 30}
