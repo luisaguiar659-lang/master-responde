@@ -86,9 +86,14 @@ jobs:
       - name: Restringir resposta padrão à sessão de autoatendimento
         run: |
           python3 patches/v2.1.0/add_facebook_service_session.py
-          grep -n "versionName '2.1.35'" projeto/app/build.gradle
           grep -n 'AutoServiceSession.active' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
           grep -n 'DURAÇÃO DA SESSÃO' projeto/app/src/main/java/com/masterresponde/app/FallbackSettingsActivity.java
+      - name: Abrir sessão somente pelo gatilho do anúncio
+        run: |
+          python3 patches/v2.1.0/restrict_session_to_entry_trigger.py
+          grep -n "versionName '2.1.36'" projeto/app/build.gradle
+          grep -n 'auto_service_entry_trigger' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
+          grep -n 'GATILHO DE ENTRADA DO ANÚNCIO' projeto/app/src/main/java/com/masterresponde/app/FallbackSettingsActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -102,4 +107,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.35-AUTO-SERVICE-SESSION, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.36-ENTRY-SESSION, path: MASTER-RESPONDE.apk, retention-days: 30}
