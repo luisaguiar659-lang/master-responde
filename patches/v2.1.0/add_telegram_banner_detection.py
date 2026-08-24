@@ -10,7 +10,6 @@ gradle=app/'build.gradle'
 
 s=svc.read_text(encoding='utf-8')
 
-# Acrescenta variáveis de mídia logo após a leitura da mensagem.
 needle='''            String message = firstNonEmpty(
                     e.getCharSequence(Notification.EXTRA_BIG_TEXT),
                     e.getCharSequence(Notification.EXTRA_TEXT)
@@ -19,18 +18,11 @@ repl=needle+'''\n            boolean hasImage = false;\n            String media
 if needle not in s: raise SystemExit('ERRO v2.1.35: leitura da mensagem Telegram não encontrada')
 s=s.replace(needle,repl,1)
 
-# Dentro do MessagingStyle, usa MIME/URI da última mensagem para identificar imagem.
-needle2='''            if (msgs != null && !msgs.isEmpty()) {
-        android.app.Notification.MessagingStyle.Message last =
-                msgs.get(msgs.size() - 1);
-
-        if (last != null) {
+# O patch v2.1.34 teve o bloco MessagingStyle corrigido depois do primeiro build.
+# Em vez de depender da indentação exata, ancora na linha estável CharSequence txt.
+needle2='''        if (last != null) {
             CharSequence txt = last.getText();'''
-repl2='''            if (msgs != null && !msgs.isEmpty()) {
-        android.app.Notification.MessagingStyle.Message last =
-                msgs.get(msgs.size() - 1);
-
-        if (last != null) {
+repl2='''        if (last != null) {
             try {
                 String mime = last.getDataMimeType();
                 android.net.Uri uri = last.getDataUri();
@@ -41,10 +33,9 @@ repl2='''            if (msgs != null && !msgs.isEmpty()) {
                 }
             } catch (Throwable ignored) {}
             CharSequence txt = last.getText();'''
-if needle2 not in s: raise SystemExit('ERRO v2.1.35: bloco MessagingStyle não encontrado')
+if needle2 not in s: raise SystemExit('ERRO v2.1.35: ponto da última mensagem MessagingStyle não encontrado')
 s=s.replace(needle2,repl2,1)
 
-# Heurística complementar para notificações Telegram que descrevem mídia só no texto.
 needle3='''            if (message == null) message = "";
             message = message.trim();
             if (message.isEmpty()) return;'''
@@ -60,7 +51,6 @@ repl3='''            if (message == null) message = "";
 if needle3 not in s: raise SystemExit('ERRO v2.1.35: normalização da mensagem não encontrada')
 s=s.replace(needle3,repl3,1)
 
-# Persiste diagnóstico de mídia junto com os dados já validados.
 needle4='''.putString("telegram_last_message", message)
                     .putLong("telegram_last_timestamp", now)
                     .putString("telegram_last_status", "Mensagem do Telegram detectada")'''
@@ -74,7 +64,6 @@ if needle4 not in s: raise SystemExit('ERRO v2.1.35: persistência Telegram não
 s=s.replace(needle4,repl4,1)
 svc.write_text(s,encoding='utf-8')
 
-# Atualiza a tela para exibir explicitamente o tipo detectado.
 a=act.read_text(encoding='utf-8')
 a=a.replace('SharedPreferences p; TextView status,conversation,sender,message,time,total;', 'SharedPreferences p; TextView status,conversation,sender,message,media,time,total;',1)
 a=a.replace('''        r.addView(t("MENSAGEM",13,true));message=value();message.setMinLines(3);r.addView(message);
