@@ -98,12 +98,13 @@ jobs:
           python3 patches/v2.1.0/add_accessibility_whatsapp_business_sender.py
           python3 patches/v2.1.0/fix_accessibility_autostart_v2142.py
           python3 patches/v2.1.0/fix_accessibility_reconnect_v2143.py
+          python3 patches/v2.1.0/fix_whatsapp_group_result_click_v2144.py
           AFTER=$(sha256sum projeto/app/src/main/java/com/masterresponde/app/TelegramApiAlbumService.java | awk '{print $1}')
           [ "$BEFORE" = "$AFTER" ]
-          grep -n "versionName '2.1.43'" projeto/app/build.gradle
-          grep -n 'DIAGNÓSTICO DO ENVIO' projeto/app/src/main/java/com/masterresponde/app/TelegramApiSettingsActivity.java
-          grep -n 'RECONECTAR ENVIO AUTOMÁTICO' projeto/app/src/main/java/com/masterresponde/app/TelegramApiSettingsActivity.java
-          grep -n 'SERVIÇO CONECTADO' projeto/app/src/main/java/com/masterresponde/app/TelegramWhatsAppAccessibilityService.java
+          grep -n "versionName '2.1.44'" projeto/app/build.gradle
+          grep -n 'findExactNonEditable' projeto/app/src/main/java/com/masterresponde/app/TelegramWhatsAppAccessibilityService.java
+          grep -n 'clickResultRow' projeto/app/src/main/java/com/masterresponde/app/TelegramWhatsAppAccessibilityService.java
+          grep -n 'GRUPO CONFIRMADO:' projeto/app/src/main/java/com/masterresponde/app/TelegramWhatsAppAccessibilityService.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -124,4 +125,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.43-TELEGRAM-AUTO-WAB, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.44-TELEGRAM-AUTO-WAB, path: MASTER-RESPONDE.apk, retention-days: 30}
