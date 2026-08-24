@@ -94,6 +94,16 @@ jobs:
           grep -n 'ENVIO AUTOMÁTICO' projeto/app/src/main/java/com/masterresponde/app/TelegramApiSettingsActivity.java
           grep -n 'runTelegramApiAutoDelivery' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           ! grep -q 'Detector Telegram' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+      - name: Criar envio automático pelo WhatsApp Business
+        run: |
+          BEFORE=$(sha256sum projeto/app/src/main/java/com/masterresponde/app/TelegramApiAlbumService.java | awk '{print $1}')
+          python3 patches/v2.1.0/add_accessibility_whatsapp_business_sender.py
+          AFTER=$(sha256sum projeto/app/src/main/java/com/masterresponde/app/TelegramApiAlbumService.java | awk '{print $1}')
+          [ "$BEFORE" = "$AFTER" ]
+          grep -n "versionName '2.1.41'" projeto/app/build.gradle
+          grep -n 'ACTION_SEND_MULTIPLE' projeto/app/src/main/java/com/masterresponde/app/TelegramWhatsAppAccessibilityService.java
+          grep -n 'com.whatsapp.w4b' projeto/app/src/main/res/xml/telegram_whatsapp_accessibility.xml
+          grep -n 'ATIVAR ENVIO AUTOMÁTICO' projeto/app/src/main/java/com/masterresponde/app/TelegramApiSettingsActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -114,4 +124,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.40-TELEGRAM-API-AUTO, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.41-TELEGRAM-AUTO-WAB, path: MASTER-RESPONDE.apk, retention-days: 30}
