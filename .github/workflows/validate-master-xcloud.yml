@@ -1,0 +1,70 @@
+name: Validate Master XCloud v2.1.38
+on:
+  push:
+    branches: [feature/master-xcloud-whatsapp-v2138]
+    paths: [".github/workflows/validate-master-xcloud.yml","patches/**","MASTER-RESPONDE-RAIZ.zip"]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: "17"}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: "8.7"}
+      - name: Extrair projeto
+        run: 'rm -rf projeto && mkdir projeto && unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto'
+      - name: Aplicar todos os patches existentes e Master XCloud
+        run: |
+          python3 patches/v2.0.9/apply_v209_ui_only.py
+          python3 patches/v2.0.9/refine_dashboard.py
+          python3 patches/v2.1.0/reset_clean_core.py
+          python3 patches/v2.1.0/add_capture_only.py
+          python3 patches/v2.1.0/fix_capture_dashboard.py
+          python3 patches/v2.1.0/add_reply_test.py
+          python3 patches/v2.1.0/add_command_engine.py
+          python3 patches/v2.1.0/fix_echo_and_stats.py
+          python3 patches/v2.1.0/add_active_notification_fallback.py
+          python3 patches/v2.1.0/fix_duplicate_events.py
+          python3 patches/v2.1.0/add_bot_control_and_metrics.py
+          python3 patches/v2.1.0/add_configurable_commands.py
+          python3 patches/v2.1.0/add_real_history.py
+          python3 patches/v2.1.0/add_default_fallback.py
+          python3 patches/v2.1.0/add_command_match_modes.py
+          python3 patches/v2.1.0/add_dynamic_commands_and_cooldown.py
+          python3 patches/v2.1.0/fix_cooldown_fallback_only.py
+          python3 patches/v2.1.0/add_group_menu.py
+          python3 patches/v2.1.0/fix_private_vs_group_and_menu.py
+          python3 patches/v2.1.0/add_sidebar_navigation.py
+          python3 patches/v2.1.0/add_business_hours.py
+          python3 patches/v2.1.0/link_business_hours_to_fallback_cooldown.py
+          python3 patches/v2.1.0/add_ignored_contacts.py
+          python3 patches/v2.1.0/restore_masterflix_ui.py
+          python3 patches/v2.1.0/restore_masterflix_test_automation.py
+          python3 patches/v2.1.0/restore_masterflix_reseller_automation.py
+          python3 patches/v2.1.0/add_masterflix_trigger_settings_and_test_cooldown.py
+          python3 patches/v2.1.0/add_masterflix_reseller_visible_settings.py
+          python3 patches/v2.1.0/add_scheduled_group_broadcast.py
+          python3 patches/v2.1.0/add_support_group_list_to_motor1.py
+          python3 patches/v2.1.0/add_motor1_toggle_button.py
+          python3 patches/v2.1.0/fix_support_group_cycle_delivery.py
+          python3 patches/v2.1.0/add_pre_test_message_setting.py
+          python3 patches/v2.1.0/add_facebook_service_session.py
+          python3 patches/v2.1.0/restrict_session_to_entry_trigger.py
+          python3 patches/v2.1.0/remove_group_menu_auto_append.py
+      - name: Validar preservação e integração
+        run: |
+          grep -n "versionName '2.1.38'" projeto/app/build.gradle
+          grep -n 'MasterXCloudFlow.handle' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'ResellerFlow.handle' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'MasterflixTestTrigger.matches' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'GroupMenuStore.trigger' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'runScheduledGroupBroadcastIfDue' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n '/operations/activate' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudApi.java
+          grep -n '/operations/reset' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudApi.java
+      - name: Detectar Gradle
+        id: project
+        run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
+      - name: Compilar APK debug para validação
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: 'if [ -f ./gradlew ]; then chmod +x ./gradlew; ./gradlew :app:assembleDebug --stacktrace --no-daemon; else gradle :app:assembleDebug --stacktrace --no-daemon; fi'
