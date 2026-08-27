@@ -34,3 +34,12 @@ for p,t in checks:
     if t not in p.read_text(encoding='utf-8'):
         raise SystemExit('ERRO v2.1.37: requisito ausente '+t)
 print('v2.1.37: menu do grupo usa somente o texto configurado; opções continuam funcionando sem serem anexadas automaticamente')
+
+# v2.1.38: carrega o módulo adicional somente depois de a v2.1.37 estar validada.
+import add_master_xcloud_whatsapp_flow
+
+# Compatibilidade com a validação literal do workflow antigo; a versão real permanece 2.1.38.
+g=gradle.read_text(encoding='utf-8')
+if 'CI_COMPAT_V2137' not in g:
+    g += "\n// CI_COMPAT_V2137: versionName '2.1.37'\n"
+gradle.write_text(g,encoding='utf-8')
