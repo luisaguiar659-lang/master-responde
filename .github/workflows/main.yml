@@ -104,6 +104,15 @@ jobs:
           grep -n "versionName '2.1.46'" projeto/app/build.gradle
           grep -n 'Somente leitura' projeto/app/src/main/java/com/masterresponde/app/MotorDiagnosticsActivity.java
           grep -n 'MotorDiagnosticsActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+      - name: Adicionar central operacional completa sem alterar motores
+        run: |
+          python3 patches/v2.1.0/add_operations_center_v2147.py
+          grep -n "versionName '2.1.47'" projeto/app/build.gradle
+          grep -n 'CENTRAL OPERACIONAL' projeto/app/src/main/java/com/masterresponde/app/OperationsCenterActivity.java
+          grep -n 'HISTÓRICO CENTRALIZADO' projeto/app/src/main/java/com/masterresponde/app/OperationsCenterActivity.java
+          grep -n 'COPIAR BACKUP COMPLETO' projeto/app/src/main/java/com/masterresponde/app/OperationsCenterActivity.java
+          grep -n 'SAÚDE DO ANDROID' projeto/app/src/main/java/com/masterresponde/app/OperationsCenterActivity.java
+          grep -n 'OperationsCenterActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -117,4 +126,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.46-DIAGNOSTICO-PASSIVO, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.47-CENTRAL-OPERACIONAL, path: MASTER-RESPONDE.apk, retention-days: 30}
