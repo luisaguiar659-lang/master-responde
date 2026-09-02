@@ -91,6 +91,13 @@ jobs:
           python3 patches/v2.1.0/fix_xcloud_search_field_v2144.py
           grep -n "versionName '2.1.44'" projeto/app/build.gradle
           grep -n "SEARCH_INPUT_NOT_FOUND" projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
+      - name: Adicionar operação profissional do Master XCloud
+        run: |
+          python3 patches/v2.1.0/add_xcloud_professional_ops_v2145.py
+          grep -n "versionName '2.1.45'" projeto/app/build.gradle
+          grep -n 'MasterXCloudOps.enqueue' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudWhatsAppFlow.java
+          grep -n 'ArrayDeque<Job>' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudOps.java
+          grep -n 'COPIAR BACKUP DAS CONFIGURAÇÕES' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -104,4 +111,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.44-XCLOUD-RESET-EXCLUIR-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.45-PRO, path: MASTER-RESPONDE.apk, retention-days: 30}
