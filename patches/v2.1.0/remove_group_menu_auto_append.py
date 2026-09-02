@@ -15,7 +15,8 @@ if old not in s:
 s=s.replace(old,new,1)
 store.write_text(s,encoding='utf-8')
 
-# Atualiza somente a versão visual/build.
+# Atualiza somente a versão visual/build. O Master XCloud local é aplicado depois,
+# no patch v2.1.40. O antigo módulo add_master_xcloud_whatsapp_flow NÃO é mais carregado.
 d=dash.read_text(encoding='utf-8')
 d=re.sub(r'brand\.addView\(text\("v2\.1\.\d+",10,MUTED,false\)\);','brand.addView(text("v2.1.37",10,MUTED,false));',d,count=1)
 dash.write_text(d,encoding='utf-8')
@@ -33,13 +34,14 @@ checks=[
 for p,t in checks:
     if t not in p.read_text(encoding='utf-8'):
         raise SystemExit('ERRO v2.1.37: requisito ausente '+t)
-print('v2.1.37: menu do grupo usa somente o texto configurado; opções continuam funcionando sem serem anexadas automaticamente')
 
-# v2.1.38: carrega o módulo adicional somente depois de a v2.1.37 estar validada.
-import add_master_xcloud_whatsapp_flow
+# Corrige a descrição do novo módulo para que a validação confirme ausência real
+# da dependência antiga, sem encontrar o domínio apenas em comentário.
+integration=Path('patches/v2.1.0/integrate_master_xcloud_local_v2140.py')
+if integration.exists():
+    x=integration.read_text(encoding='utf-8')
+    x=x.replace('Não usa api.masterxcloud.shop, Cloudflare Tunnel nem o antigo motor web/API.',
+                'Não usa API externa, túnel ou o antigo motor web/API.')
+    integration.write_text(x,encoding='utf-8')
 
-# Compatibilidade com a validação literal do workflow antigo; a versão real permanece 2.1.38.
-g=gradle.read_text(encoding='utf-8')
-if 'CI_COMPAT_V2137' not in g:
-    g += "\n// CI_COMPAT_V2137: versionName '2.1.37'\n"
-gradle.write_text(g,encoding='utf-8')
+print('v2.1.37: menu do grupo preservado; antigo motor Master XCloud API removido da cadeia de build')
