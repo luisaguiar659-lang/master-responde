@@ -98,6 +98,12 @@ jobs:
           grep -n 'MasterXCloudOps.enqueue' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudWhatsAppFlow.java
           grep -n 'ArrayDeque<Job>' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudOps.java
           grep -n 'COPIAR BACKUP DAS CONFIGURAÇÕES' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
+      - name: Adicionar diagnóstico passivo dos motores
+        run: |
+          python3 patches/v2.1.0/add_passive_diagnostics_v2146.py
+          grep -n "versionName '2.1.46'" projeto/app/build.gradle
+          grep -n 'Somente leitura' projeto/app/src/main/java/com/masterresponde/app/MotorDiagnosticsActivity.java
+          grep -n 'MotorDiagnosticsActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -111,4 +117,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.45-PRO, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.46-DIAGNOSTICO-PASSIVO, path: MASTER-RESPONDE.apk, retention-days: 30}
