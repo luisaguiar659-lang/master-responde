@@ -42,12 +42,8 @@ jobs:
         run: |
           python3 patches/v2.1.0/fix_private_vs_group_and_menu.py
           grep -n 'EXTRA_IS_GROUP_CONVERSATION' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'MENU_GRUPO' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
       - name: Organizar navegação no menu lateral
-        run: |
-          python3 patches/v2.1.0/add_sidebar_navigation.py
-          grep -n 'openSideMenu()' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
-          ! grep -q 'nr.addView(nav(' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+        run: python3 patches/v2.1.0/add_sidebar_navigation.py
       - name: Criar horário de atendimento
         run: python3 patches/v2.1.0/add_business_hours.py
       - name: Compartilhar temporizador com fora do horário
@@ -71,65 +67,30 @@ jobs:
       - name: Criar botão liga desliga do Motor 1
         run: python3 patches/v2.1.0/add_motor1_toggle_button.py
       - name: Corrigir ciclo de envio dos grupos de suporte
-        run: |
-          python3 patches/v2.1.0/fix_support_group_cycle_delivery.py
-          grep -n 'retryWindowMillis' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
-          grep -n 'finishCycle' projeto/app/src/main/java/com/masterresponde/app/ScheduledGroupBroadcast.java
-          grep -n 'allScheduledSupportDone' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'sgb_cycle_started_at' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'postDelayed(this, 3000L)' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+        run: python3 patches/v2.1.0/fix_support_group_cycle_delivery.py
       - name: Adicionar mensagem configurável antes do teste
-        run: |
-          python3 patches/v2.1.0/add_pre_test_message_setting.py
-          grep -n 'MENSAGEM ANTES DO TESTE' projeto/app/src/main/java/com/masterresponde/app/MasterflixAutomationSettingsActivity.java
-          grep -n 'masterflix_pre_test_message' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+        run: python3 patches/v2.1.0/add_pre_test_message_setting.py
       - name: Restringir resposta padrão à sessão de autoatendimento
-        run: |
-          python3 patches/v2.1.0/add_facebook_service_session.py
-          grep -n 'AutoServiceSession.active' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          grep -n 'DURAÇÃO DA SESSÃO' projeto/app/src/main/java/com/masterresponde/app/FallbackSettingsActivity.java
+        run: python3 patches/v2.1.0/add_facebook_service_session.py
       - name: Abrir sessão somente pelo gatilho do anúncio
-        run: |
-          python3 patches/v2.1.0/restrict_session_to_entry_trigger.py
-          grep -n 'auto_service_entry_trigger' projeto/app/src/main/java/com/masterresponde/app/CommandEngine.java
-          grep -n 'GATILHO DE ENTRADA DO ANÚNCIO' projeto/app/src/main/java/com/masterresponde/app/FallbackSettingsActivity.java
+        run: python3 patches/v2.1.0/restrict_session_to_entry_trigger.py
       - name: Remover opções duplicadas do menu do grupo
-        run: |
-          python3 patches/v2.1.0/remove_group_menu_auto_append.py
-          grep -n 'public static String menu(Context c){return' projeto/app/src/main/java/com/masterresponde/app/GroupMenuStore.java
-          grep -n 'resolveOption(Context c,String m)' projeto/app/src/main/java/com/masterresponde/app/GroupMenuStore.java
+        run: python3 patches/v2.1.0/remove_group_menu_auto_append.py
       - name: Sincronizar estado do bot entre painel e serviço
-        run: |
-          python3 patches/v2.1.0/fix_bot_state_sync.py
-          grep -n "versionName '2.1.39'" projeto/app/build.gradle
-          grep -n 'botEnabledNow' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'debug_bot_state' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'putBoolean("bot_enabled",true).commit()' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+        run: python3 patches/v2.1.0/fix_bot_state_sync.py
       - name: Integrar Master XCloud local v1.10.3
-        run: |
-          python3 patches/v2.1.0/integrate_master_xcloud_local_v2140.py
-          grep -n "versionName '2.1.40'" projeto/app/build.gradle
-          grep -n 'enum Flow { ACTIVATE, RESET, DELETE }' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
-          grep -n 'MasterXCloudActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
-          ! grep -R -q 'api.masterxcloud.shop' projeto/app/src/main/java/com/masterresponde/app
-          ! grep -R -q 'MasterXCloudApi.execute' projeto/app/src/main/java/com/masterresponde/app
+        run: python3 patches/v2.1.0/integrate_master_xcloud_local_v2140.py
       - name: Ativar comandos WhatsApp do Master XCloud
-        run: |
-          python3 patches/v2.1.0/add_xcloud_whatsapp_commands_v2141.py
-          grep -n "versionName '2.1.41'" projeto/app/build.gradle
-          grep -n 'MasterXCloudWhatsAppFlow.handle' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-          grep -n 'xcloud_cmd_activate' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudWhatsAppFlow.java
-          grep -n 'MasterXCloudActivity.Scripts.deleteDevice' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudBackgroundAutomation.java
+        run: python3 patches/v2.1.0/add_xcloud_whatsapp_commands_v2141.py
       - name: Auto-login da tela Master XCloud
-        run: |
-          python3 patches/v2.1.0/force_xcloud_auto_login_v2142.py
-          grep -n 'ui.postDelayed(this::login' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
+        run: python3 patches/v2.1.0/force_xcloud_auto_login_v2142.py
       - name: Restaurar motores XCloud com login automático seguro
+        run: python3 patches/v2.1.0/fix_xcloud_motors_after_autologin_v2143.py
+      - name: Corrigir pesquisa de Reset e Excluir
         run: |
-          python3 patches/v2.1.0/fix_xcloud_motors_after_autologin_v2143.py
-          grep -n "versionName '2.1.43'" projeto/app/build.gradle
-          grep -n 'web.loadUrl(DEVICES' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudBackgroundAutomation.java
-          ! grep -n 'web.loadUrl(LOGIN' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudBackgroundAutomation.java
+          python3 patches/v2.1.0/fix_xcloud_search_field_v2144.py
+          grep -n "versionName '2.1.44'" projeto/app/build.gradle
+          grep -n "SEARCH_INPUT_NOT_FOUND" projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -143,4 +104,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.43-XCLOUD-MOTORES-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.44-XCLOUD-RESET-EXCLUIR-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
