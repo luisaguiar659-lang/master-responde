@@ -120,12 +120,16 @@ jobs:
           grep -n 'MasterXCloudWhatsAppFlow.handle' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'xcloud_cmd_activate' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudWhatsAppFlow.java
           grep -n 'MasterXCloudActivity.Scripts.deleteDevice' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudBackgroundAutomation.java
-      - name: Forçar login automático do Master XCloud
+      - name: Auto-login da tela Master XCloud
         run: |
           python3 patches/v2.1.0/force_xcloud_auto_login_v2142.py
-          grep -n "versionName '2.1.42'" projeto/app/build.gradle
-          grep -n 'web.loadUrl(LOGIN' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudBackgroundAutomation.java
           grep -n 'ui.postDelayed(this::login' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
+      - name: Restaurar motores XCloud com login automático seguro
+        run: |
+          python3 patches/v2.1.0/fix_xcloud_motors_after_autologin_v2143.py
+          grep -n "versionName '2.1.43'" projeto/app/build.gradle
+          grep -n 'web.loadUrl(DEVICES' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudBackgroundAutomation.java
+          ! grep -n 'web.loadUrl(LOGIN' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudBackgroundAutomation.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -139,4 +143,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.42-XCLOUD-AUTO-LOGIN, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.43-XCLOUD-MOTORES-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
