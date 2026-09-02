@@ -96,9 +96,15 @@ jobs:
       - name: Remover opções duplicadas do menu do grupo
         run: |
           python3 patches/v2.1.0/remove_group_menu_auto_append.py
-          grep -n "versionName '2.1.37'" projeto/app/build.gradle
           grep -n 'public static String menu(Context c){return' projeto/app/src/main/java/com/masterresponde/app/GroupMenuStore.java
           grep -n 'resolveOption(Context c,String m)' projeto/app/src/main/java/com/masterresponde/app/GroupMenuStore.java
+      - name: Sincronizar estado do bot entre painel e serviço
+        run: |
+          python3 patches/v2.1.0/fix_bot_state_sync.py
+          grep -n "versionName '2.1.39'" projeto/app/build.gradle
+          grep -n 'botEnabledNow' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'debug_bot_state' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
+          grep -n 'putBoolean("bot_enabled",true).commit()' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -112,4 +118,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.37-GROUP-MENU-CLEAN, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.39-BOT-SYNC, path: MASTER-RESPONDE.apk, retention-days: 30}
