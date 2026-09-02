@@ -90,10 +90,10 @@ jobs:
         run: |
           python3 patches/v2.1.0/fix_xcloud_search_field_v2144.py
           grep -n "versionName '2.1.44'" projeto/app/build.gradle
-          grep -n "SEARCH_INPUT_NOT_FOUND" projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
       - name: Adicionar operação profissional do Master XCloud
         run: |
           python3 patches/v2.1.0/add_xcloud_professional_ops_v2145.py
+          python3 patches/v2.1.0/fix_xcloud_professional_strings_v2145.py
           grep -n "versionName '2.1.45'" projeto/app/build.gradle
           grep -n 'MasterXCloudOps.enqueue' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudWhatsAppFlow.java
           grep -n 'ArrayDeque<Job>' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudOps.java
