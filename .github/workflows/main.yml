@@ -105,6 +105,14 @@ jobs:
           grep -n 'botEnabledNow' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'debug_bot_state' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
           grep -n 'putBoolean("bot_enabled",true).commit()' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+      - name: Integrar Master XCloud local v1.10.3
+        run: |
+          python3 patches/v2.1.0/integrate_master_xcloud_local_v2140.py
+          grep -n "versionName '2.1.40'" projeto/app/build.gradle
+          grep -n 'enum Flow { ACTIVATE, RESET, DELETE }' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
+          grep -n 'MasterXCloudActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+          ! grep -R -q 'api.masterxcloud.shop' projeto/app/src/main/java/com/masterresponde/app
+          ! grep -R -q 'MasterXCloudApi.execute' projeto/app/src/main/java/com/masterresponde/app
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
@@ -118,4 +126,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.39-BOT-SYNC, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.40-XCLOUD-LOCAL, path: MASTER-RESPONDE.apk, retention-days: 30}
