@@ -2,7 +2,7 @@ name: Build MASTER RESPONDE APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, rollback/v2.1.44-install-over-current]
     paths: [".github/workflows/main.yml","MASTER-RESPONDE-RAIZ.zip","patches/**"]
 jobs:
   build:
@@ -90,6 +90,7 @@ jobs:
         run: |
           python3 patches/v2.1.0/fix_xcloud_search_field_v2144.py
           grep -n "versionName '2.1.44'" projeto/app/build.gradle
+          grep -n "versionCode 119" projeto/app/build.gradle
           grep -n "SEARCH_INPUT_NOT_FOUND" projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
       - name: Detectar diretório Gradle
         id: project
@@ -104,4 +105,4 @@ jobs:
       - name: Preparar APK
         run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
       - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.44-XCLOUD-RESET-EXCLUIR-FIX, path: MASTER-RESPONDE.apk, retention-days: 30}
+        with: {name: MASTER-RESPONDE-v2.1.44-INSTALL-OVER-CURRENT, path: MASTER-RESPONDE.apk, retention-days: 30}
