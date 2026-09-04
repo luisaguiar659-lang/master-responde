@@ -15,7 +15,7 @@ a=a.replace(old,new,1)
 activity.write_text(a,encoding='utf-8')
 
 g=gradle.read_text(encoding='utf-8')
-g=re.sub(r'versionCode\s+\d+','versionCode 115',g,count=1)
+g=re.sub(r'versionCode\s+\d+','versionCode 119',g,count=1)
 g=re.sub(r"versionName\s+'[^']+'","versionName '2.1.44'",g,count=1)
 gradle.write_text(g,encoding='utf-8')
 
