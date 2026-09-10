@@ -21,16 +21,32 @@ jobs:
         run: python3 patches/v2.1.0/add_master_ibo_integration.py
       - name: Adicionar roteador de comandos Master IBO
         run: python3 patches/v2.1.0/add_master_ibo_command_router.py
+      - name: Preparar assinatura release
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.keystore
+          SETTINGS=$(find projeto -type f \( -name build.gradle -o -name build.gradle.kts \) | head -1)
+          DIR=$(dirname "$SETTINGS")
+          cat >> "$DIR/signing.properties" <<EOF
+          storeFile=$(pwd)/release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -1); test -n "$SETTINGS"; echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
-      - name: Compilar APK release
+      - name: Compilar APK release assinado
         working-directory: ${{ steps.project.outputs.dir }}
         run: 'gradle :app:assembleRelease --stacktrace --no-daemon'
       - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
-          name: master-responde-apk
+          name: master-responde-apk-assinado
           path: projeto/**/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30
