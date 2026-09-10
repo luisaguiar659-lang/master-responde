@@ -28,6 +28,17 @@ if gradle.exists():
             g = g.replace("dependencies {", "dependencies {\n    " + dep, 1)
         else:
             g = g.rstrip() + "\n\ndependencies {\n    " + dep + "\n}\n"
+
+    # A base usa signingConfig release apenas quando há um keystore externo.
+    # No CI sem keystore, deixa o release sem assinatura para que o build valide
+    # toda a integração em vez de falhar só na etapa de empacotamento.
+    signing_line = "            signingConfig signingConfigs.release"
+    conditional_signing = '''            if (System.getenv("ANDROID_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }'''
+    if signing_line in g and conditional_signing not in g:
+        g = g.replace(signing_line, conditional_signing, 1)
+
     gradle.write_text(g, encoding="utf-8")
 
 p = properties.read_text(encoding="utf-8") if properties.exists() else ""
