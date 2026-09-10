@@ -1,4 +1,5 @@
 name: Build MASTER RESPONDE APK
+
 on:
   workflow_dispatch:
   push:
@@ -18,9 +19,11 @@ jobs:
         run: 'rm -rf projeto && mkdir projeto && unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto'
       - name: Integrar Master IBO sem alterar motores existentes
         run: python3 patches/v2.1.0/add_master_ibo_integration.py
+      - name: Adicionar roteador de comandos Master IBO
+        run: python3 patches/v2.1.0/add_master_ibo_command_router.py
       - name: Detectar diretório Gradle
         id: project
-        run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
+        run: 'SETTINGS=$(find projeto \\( -name settings.gradle -o -name settings.gradle.kts \\) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
       - name: Compilar APK release
         working-directory: ${{ steps.project.outputs.dir }}
         run: 'gradle :app:assembleRelease --stacktrace --no-daemon'
