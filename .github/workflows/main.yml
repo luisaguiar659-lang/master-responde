@@ -39,12 +39,12 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.keystore
-          cat > signing.properties <<EOF
-storeFile=release.keystore
-storePassword=$ANDROID_KEYSTORE_PASSWORD
-keyAlias=$ANDROID_KEY_ALIAS
-keyPassword=$ANDROID_KEY_PASSWORD
-EOF
+          cat > signing.properties <<'EOF'
+          storeFile=release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
           echo "Signing properties created"
       - name: Compilar APK release assinado
         working-directory: ${{ steps.project.outputs.dir }}
