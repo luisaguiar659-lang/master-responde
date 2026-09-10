@@ -39,18 +39,14 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.keystore
-          cat > signing.properties <<'EOF'
-          storeFile=release.keystore
-          storePassword=$ANDROID_KEYSTORE_PASSWORD
-          keyAlias=$ANDROID_KEY_ALIAS
-          keyPassword=$ANDROID_KEY_PASSWORD
-          EOF
+          printf "storeFile=release.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n" "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > signing.properties
           echo "Signing properties created"
       - name: Compilar APK release assinado
         working-directory: ${{ steps.project.outputs.dir }}
         run: |
           gradle :app:assembleRelease --stacktrace --no-daemon
           APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          test -n "$APK"
           jarsigner -verify -verbose -certs "$APK"
       - name: Publicar APK assinado
         uses: actions/upload-artifact@v4
