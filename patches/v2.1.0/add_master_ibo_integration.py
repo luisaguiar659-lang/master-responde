@@ -4,6 +4,7 @@ app = Path("projeto/app")
 java = app / "src/main/java/com/masterresponde/app"
 manifest = app / "src/main/AndroidManifest.xml"
 gradle = app / "build.gradle"
+properties = app.parent / "gradle.properties"
 main_activity = java / "MainActivity.java"
 sources = Path(__file__).parent / "master_ibo"
 
@@ -28,6 +29,11 @@ if gradle.exists():
         else:
             g = g.rstrip() + "\n\ndependencies {\n    " + dep + "\n}\n"
     gradle.write_text(g, encoding="utf-8")
+
+p = properties.read_text(encoding="utf-8") if properties.exists() else ""
+lines = [line for line in p.splitlines() if not line.strip().startswith("android.useAndroidX=")]
+lines.append("android.useAndroidX=true")
+properties.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 if manifest.exists():
     m = manifest.read_text(encoding="utf-8")
