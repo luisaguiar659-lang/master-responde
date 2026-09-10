@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths: [".github/workflows/main.yml","MASTER-RESPONDE-RAIZ.zip","patches/**"]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,117 +14,13 @@ jobs:
         with: {distribution: temurin, java-version: "17"}
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: "8.7"}
-      - name: Validar assinatura
-        env: {KEYSTORE_B64: "${{ secrets.ANDROID_KEYSTORE_BASE64 }}", STORE_PASSWORD: "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}", KEY_ALIAS: "${{ secrets.ANDROID_KEY_ALIAS }}", KEY_PASSWORD: "${{ secrets.ANDROID_KEY_PASSWORD }}"}
-        run: 'if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then exit 1; fi'
       - name: Extrair base visual
         run: 'rm -rf projeto && mkdir projeto && unzip -q MASTER-RESPONDE-RAIZ.zip -d projeto'
-      - name: Aplicar núcleo validado
-        run: |
-          python3 patches/v2.0.9/apply_v209_ui_only.py
-          python3 patches/v2.0.9/refine_dashboard.py
-          python3 patches/v2.1.0/reset_clean_core.py
-          python3 patches/v2.1.0/add_capture_only.py
-          python3 patches/v2.1.0/fix_capture_dashboard.py
-          python3 patches/v2.1.0/add_reply_test.py
-          python3 patches/v2.1.0/add_command_engine.py
-          python3 patches/v2.1.0/fix_echo_and_stats.py
-          python3 patches/v2.1.0/add_active_notification_fallback.py
-          python3 patches/v2.1.0/fix_duplicate_events.py
-          python3 patches/v2.1.0/add_bot_control_and_metrics.py
-          python3 patches/v2.1.0/add_configurable_commands.py
-          python3 patches/v2.1.0/add_real_history.py
-          python3 patches/v2.1.0/add_default_fallback.py
-          python3 patches/v2.1.0/add_command_match_modes.py
-          python3 patches/v2.1.0/add_dynamic_commands_and_cooldown.py
-          python3 patches/v2.1.0/fix_cooldown_fallback_only.py
-          python3 patches/v2.1.0/add_group_menu.py
-      - name: Separar privado e grupo com lógica original
-        run: |
-          python3 patches/v2.1.0/fix_private_vs_group_and_menu.py
-          grep -n 'EXTRA_IS_GROUP_CONVERSATION' projeto/app/src/main/java/com/masterresponde/app/WhatsAppBusinessCaptureService.java
-      - name: Organizar navegação no menu lateral
-        run: python3 patches/v2.1.0/add_sidebar_navigation.py
-      - name: Criar horário de atendimento
-        run: python3 patches/v2.1.0/add_business_hours.py
-      - name: Compartilhar temporizador com fora do horário
-        run: python3 patches/v2.1.0/link_business_hours_to_fallback_cooldown.py
-      - name: Selecionar contatos ignorados da agenda
-        run: python3 patches/v2.1.0/add_ignored_contacts.py
-      - name: Restaurar MasterFlix tela e login
-        run: python3 patches/v2.1.0/restore_masterflix_ui.py
-      - name: Restaurar geração automática de teste MasterFlix
-        run: python3 patches/v2.1.0/restore_masterflix_test_automation.py
-      - name: Restaurar fluxo de revenda MasterFlix
-        run: python3 patches/v2.1.0/restore_masterflix_reseller_automation.py
-      - name: Configurar gatilhos e intervalo de teste MasterFlix
-        run: python3 patches/v2.1.0/add_masterflix_trigger_settings_and_test_cooldown.py
-      - name: Tornar links e mensagens de revenda configuráveis
-        run: python3 patches/v2.1.0/add_masterflix_reseller_visible_settings.py
-      - name: Restaurar motor funcional de avisos da v2.1.27
-        run: python3 patches/v2.1.0/add_scheduled_group_broadcast.py
-      - name: Aplicar lista de grupos de suporte ao Motor 1
-        run: python3 patches/v2.1.0/add_support_group_list_to_motor1.py
-      - name: Criar botão liga desliga do Motor 1
-        run: python3 patches/v2.1.0/add_motor1_toggle_button.py
-      - name: Corrigir ciclo de envio dos grupos de suporte
-        run: python3 patches/v2.1.0/fix_support_group_cycle_delivery.py
-      - name: Adicionar mensagem configurável antes do teste
-        run: python3 patches/v2.1.0/add_pre_test_message_setting.py
-      - name: Restringir resposta padrão à sessão de autoatendimento
-        run: python3 patches/v2.1.0/add_facebook_service_session.py
-      - name: Abrir sessão somente pelo gatilho do anúncio
-        run: python3 patches/v2.1.0/restrict_session_to_entry_trigger.py
-      - name: Remover opções duplicadas do menu do grupo
-        run: python3 patches/v2.1.0/remove_group_menu_auto_append.py
-      - name: Sincronizar estado do bot entre painel e serviço
-        run: python3 patches/v2.1.0/fix_bot_state_sync.py
-      - name: Integrar Master XCloud local v1.10.3
-        run: python3 patches/v2.1.0/integrate_master_xcloud_local_v2140.py
-      - name: Ativar comandos WhatsApp do Master XCloud
-        run: python3 patches/v2.1.0/add_xcloud_whatsapp_commands_v2141.py
-      - name: Auto-login da tela Master XCloud
-        run: python3 patches/v2.1.0/force_xcloud_auto_login_v2142.py
-      - name: Restaurar motores XCloud com login automático seguro
-        run: python3 patches/v2.1.0/fix_xcloud_motors_after_autologin_v2143.py
-      - name: Corrigir pesquisa de Reset e Excluir
-        run: |
-          python3 patches/v2.1.0/fix_xcloud_search_field_v2144.py
-          grep -n "versionName '2.1.44'" projeto/app/build.gradle
-      - name: Adicionar operação profissional do Master XCloud
-        run: |
-          python3 patches/v2.1.0/add_xcloud_professional_ops_v2145.py
-          python3 patches/v2.1.0/fix_xcloud_professional_strings_v2145.py
-          grep -n "versionName '2.1.45'" projeto/app/build.gradle
-          grep -n 'MasterXCloudOps.enqueue' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudWhatsAppFlow.java
-          grep -n 'ArrayDeque<Job>' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudOps.java
-          grep -n 'COPIAR BACKUP DAS CONFIGURAÇÕES' projeto/app/src/main/java/com/masterresponde/app/MasterXCloudActivity.java
-      - name: Adicionar diagnóstico passivo dos motores
-        run: |
-          python3 patches/v2.1.0/add_passive_diagnostics_v2146.py
-          grep -n "versionName '2.1.46'" projeto/app/build.gradle
-          grep -n 'Somente leitura' projeto/app/src/main/java/com/masterresponde/app/MotorDiagnosticsActivity.java
-          grep -n 'MotorDiagnosticsActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
-      - name: Adicionar central operacional completa sem alterar motores
-        run: |
-          python3 patches/v2.1.0/add_operations_center_v2147.py
-          grep -n "versionName '2.1.47'" projeto/app/build.gradle
-          grep -n 'CENTRAL OPERACIONAL' projeto/app/src/main/java/com/masterresponde/app/OperationsCenterActivity.java
-          grep -n 'HISTÓRICO CENTRALIZADO' projeto/app/src/main/java/com/masterresponde/app/OperationsCenterActivity.java
-          grep -n 'COPIAR BACKUP COMPLETO' projeto/app/src/main/java/com/masterresponde/app/OperationsCenterActivity.java
-          grep -n 'SAÚDE DO ANDROID' projeto/app/src/main/java/com/masterresponde/app/OperationsCenterActivity.java
-          grep -n 'OperationsCenterActivity.class' projeto/app/src/main/java/com/masterresponde/app/NeonDashboardActivity.java
+      - name: Integrar Master IBO sem alterar motores existentes
+        run: python3 patches/v2.1.0/add_master_ibo_integration.py
       - name: Detectar diretório Gradle
         id: project
         run: 'SETTINGS=$(find projeto \( -name settings.gradle -o -name settings.gradle.kts \) -type f | head -1); echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"'
-      - name: Preparar chave
-        env: {KEYSTORE_B64: "${{ secrets.ANDROID_KEYSTORE_BASE64 }}"}
-        run: 'printf "%s" "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/master-responde-release.jks"'
       - name: Compilar APK release
         working-directory: ${{ steps.project.outputs.dir }}
-        env: {ANDROID_KEYSTORE_PATH: "${{ runner.temp }}/master-responde-release.jks", ANDROID_KEYSTORE_PASSWORD: "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}", ANDROID_KEY_ALIAS: "${{ secrets.ANDROID_KEY_ALIAS }}", ANDROID_KEY_PASSWORD: "${{ secrets.ANDROID_KEY_PASSWORD }}"}
-        run: 'if [ -f ./gradlew ]; then chmod +x ./gradlew; ./gradlew :app:assembleRelease --stacktrace --no-daemon; else gradle :app:assembleRelease --stacktrace --no-daemon; fi'
-      - name: Preparar APK
-        run: 'APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" ! -name "*unsigned*" | head -1); [ -n "$APK" ] || APK=$(find projeto -type f -path "*/app/build/outputs/apk/release/*.apk" | head -1); cp "$APK" MASTER-RESPONDE.apk'
-      - uses: actions/upload-artifact@v4
-        with: {name: MASTER-RESPONDE-v2.1.47-CENTRAL-OPERACIONAL, path: MASTER-RESPONDE.apk, retention-days: 30}
+        run: 'gradle :app:assembleRelease --stacktrace --no-daemon'
