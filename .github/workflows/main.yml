@@ -33,6 +33,22 @@ jobs:
           python3 patches/v2.1.0/add_master_ibo_integration.py || true
           python3 patches/v2.1.0/add_master_ibo_command_router.py || true
 
+      - name: Preparar assinatura release
+        run: |
+          keytool -genkeypair -v \
+            -keystore release.keystore \
+            -alias masterresponde \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=MASTER RESPONDE"
+          echo "ANDROID_KEYSTORE_PATH=$GITHUB_WORKSPACE/release.keystore" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PASSWORD=android" >> $GITHUB_ENV
+          echo "ANDROID_KEY_ALIAS=masterresponde" >> $GITHUB_ENV
+          echo "ANDROID_KEY_PASSWORD=android" >> $GITHUB_ENV
+
       - name: Validar projeto Android
         run: |
           test -f settings.gradle
