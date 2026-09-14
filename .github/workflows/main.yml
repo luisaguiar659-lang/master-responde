@@ -1,1 +1,51 @@
-bmFtZTogQnVpbGQgTUFTVEVSIFJFU1BPTkRFIEFQSwoKb246CiAgd29ya2tmb3dfZGlzcGF0Y2g6CiAgcHVzaDoKICAgIGJyYW5jaGVzOiBbbWFpbl0KICAgIHBhdGhzOiBbIi5naXRodWIvd29ya2Zsb3dzL21haW4ueW1sIiwicGF0Y2hlcy8qKiJdCgogam9iczogCiAgYnVpbGQ6CiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICBzdGVwczoKICAgICAgLSB1c2VzOiBhY3Rpb25zL2NoZWNrb3V0QHY0CiAgICAgIC0gdXNlczogYWN0aW9ucy9zZXR1cC1qYXZhQHY0CiAgICAgICAgd2l0aDoKICAgICAgICAgIGRpc3RyaWJ1dGlvbjogdGVtdXJpbgogICAgICAgICAgamF2YS12ZXJzaW9uOiAiMTciCiAgICAgIC0gdXNlczogZ3JhZGxlL2FjdGlvbnMvc2V0dXAtZ3JhZGxlQHY0CiAgICAgICAgd2l0aDoKICAgICAgICAgIGdyYWRsZS12ZXJzaW9uOiAiOC43IgogICAgICAtIG5hbWU6IEludGVncmFyIE1hc3RlciBJQk8gc2VtIGFsdGVyYXIgbyBtvdG9yZXMgZXhpc3RlbnRlcwogICAgICAgIHJ1bjogcHl0aG9uMyBwYXRjaGVzL3YyLjEuMC9hZGRfbWFzdGVyX2lib19pbnRlZ3JhdGlvbi5weQogICAgICAtIG5hbWU6IEFkaWNpb25hciByb3RlYWRvciBkZSBjb21hbmRvcyBNYXN0ZXIgSUJPCiAgICAgICAgcnVuOiBweXRob24zIHBhdGNoZXMvdjIuMS4wL2FkZF9tYXN0ZXJfaWJvX2NvbW1hbmRfcm91dGVyLnB5CiAgICAgIC0gbmFtZTogUHJlcGFyYXIgZ3JhZGxlCiAgICAgICAgcnVuOiB8CiAgICAgICAgICBncmFkbGUgdGFza3MKICAgICAgLSBuYW1lOiBDb21waWxhciBBUEsgcmVsZWFzZQogICAgICAgIHJ1bjogZ3JhZGxlIDphcHA6YXNzZW1ibGVSZWxlYXNlIC0tc3RhY2t0cmFjZSAtLW5vLWRhZW1vbgogICAgICAtIG5hbWU6IFB1YmxpY2FyIEFQSyBhc3NpbmFkbwogICAgICAgIHVzZXM6IGFjdGlvbnMvdXBsb2FkLWFydGlmYWN0QHY0CiAgICAgICAgd2l0aDoKICAgICAgICAgIG5hbWU6IG1hc3Rlci1yZXNwb25kZS1hcGstYXNzaW5hZG8KICAgICAgICAgIHBhdGg6IGFwcC9idWlsZC9vdXRwdXRzL2Fway9yZWxlYXNlLyoubXBrCiAgICAgICAgICBpZi1uby1maWxlcy1mb3VuZDogZXJyb3IKICAgICAgICAgIHJldGVudGlvbi1kYXlzOiAzMAo
+name: Build MASTER RESPONDE APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/main.yml"
+      - "app/**"
+      - "patches/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Integrar Master IBO
+        run: |
+          python3 patches/v2.1.0/add_master_ibo_integration.py || true
+          python3 patches/v2.1.0/add_master_ibo_command_router.py || true
+
+      - name: Validar projeto Android
+        run: |
+          test -f settings.gradle
+          test -f app/build.gradle
+          echo "Projeto Android encontrado"
+
+      - name: Compilar APK Release
+        run: gradle :app:assembleRelease --stacktrace --no-daemon
+
+      - name: Publicar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: master-responde-apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
