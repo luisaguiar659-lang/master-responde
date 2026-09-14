@@ -43,7 +43,7 @@ jobs:
       - name: Compilar APK release
         working-directory: ${{ steps.project.outputs.dir }}
         run: gradle :app:assembleRelease --stacktrace --no-daemon
-      - name: Assinar APK manualmente
+      - name: Assinar APK com esquema v2/v3
         working-directory: ${{ steps.project.outputs.dir }}
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -53,9 +53,10 @@ jobs:
           APK=$(find app/build/outputs/apk/release -name '*unsigned.apk' | head -1)
           if [ -z "$APK" ]; then APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1); fi
           test -n "$APK"
-          jarsigner -keystore release.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" "$APK" "$ANDROID_KEY_ALIAS"
-          $ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | tail -1)/zipalign -f 4 "$APK" MASTER-RESPONDE.apk
-          $ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | tail -1)/apksigner verify MASTER-RESPONDE.apk
+          BT=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | tail -1)
+          $BT/zipalign -f 4 "$APK" aligned.apk
+          $BT/apksigner sign --ks release.keystore --ks-pass pass:$ANDROID_KEYSTORE_PASSWORD --key-pass pass:$ANDROID_KEY_PASSWORD --ks-key-alias $ANDROID_KEY_ALIAS --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out MASTER-RESPONDE.apk aligned.apk
+          $BT/apksigner verify --verbose --min-sdk-version 23 MASTER-RESPONDE.apk
       - name: Publicar APK assinado
         uses: actions/upload-artifact@v4
         with:
