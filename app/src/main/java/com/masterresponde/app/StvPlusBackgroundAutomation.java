@@ -108,4 +108,10 @@ public final class StvPlusBackgroundAutomation {
     private void status(String s){prefs.edit().putString("last_stv_status",s).apply();}
     private String decode(String v){if(v==null||"null".equals(v))return"";try{Object o=new org.json.JSONTokener(v).nextValue();return o==null?"":o.toString();}catch(Exception e){return v;}}
     private void cleanup(){handler.post(()->{try{if(web!=null){web.removeJavascriptInterface("StvBridge");web.stopLoading();web.loadUrl("about:blank");web.destroy();web=null;}}catch(Throwable ignored){}synchronized(LOCK){if(active==this)active=null;}});}
+    public class Bridge {
+        @JavascriptInterface
+        public void copiedText(String value) {
+            if (value != null && !value.trim().isEmpty()) capturedCopyText = value.trim();
+        }
+    }
 }
