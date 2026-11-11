@@ -2096,12 +2096,43 @@ public class NotificationAccessService extends NotificationListenerService {
                 "master_responde_stv",
                 MODE_PRIVATE
         );
-        return MessageSettings.matchesAnyTrigger(
-                stvPrefs,
+
+        // Mantém os gatilhos personalizados e acrescenta os aliases padrão.
+        // Assim, uma lista antiga já salva não impede o reconhecimento de
+        // "Teste STV", mesmo que tenha sido gravada antes desses aliases.
+        String configured = stvPrefs.getString(
                 StvTriggerSettingsActivity.KEY_TRIGGERS,
-                StvTriggerSettingsActivity.DEFAULT_TRIGGERS,
-                incoming
+                ""
         );
+        String allTriggers = (configured == null ? "" : configured)
+                + "\\n"
+                + StvTriggerSettingsActivity.DEFAULT_TRIGGERS;
+
+        String message = normalizeTriggerForStv(incoming);
+        if (message.isEmpty()) return false;
+
+        for (String line : allTriggers.split("[\\\\n;]+")) {
+            String trigger = normalizeTriggerForStv(line);
+            if (trigger.isEmpty()) continue;
+
+            // Aceita mensagem igual ao gatilho ou texto que contenha a frase.
+            if (message.equals(trigger) || message.contains(trigger)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String normalizeTriggerForStv(String value) {
+        if (value == null) return "";
+        return java.text.Normalizer.normalize(
+                value,
+                java.text.Normalizer.Form.NFD
+        ).replaceAll("\\p{M}", "")
+         .toLowerCase(java.util.Locale.ROOT)
+         .replaceAll("[^a-z0-9]+", " ")
+         .trim()
+         .replaceAll("\\s+", " ");
     }
 
     private void startStvPlusTest(
