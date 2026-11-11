@@ -72,7 +72,7 @@ public final class StvPlusBackgroundAutomation {
         if(finished||web==null)return;copyAttempts++;
         installCopyHook();
         String js="(function(){var a=Array.from(document.querySelectorAll('button,a,[role=button],*')).filter(e=>(e.innerText||'').trim().toUpperCase()==='COPIAR');if(a.length){a.sort((x,y)=>(x.innerText||'').length-(y.innerText||'').length)[0].click();return 'clicked';}window.scrollBy(0,600);return 'scroll';})();";
-        web.evaluateJavascript(js,v->{if("clicked".equals(decode(v)))handler.postDelayed(this::extractResult,800L);else if(copyAttempts<25)handler.postDelayed(this::copyButton,500L);else fail("O botão COPIAR não foi encontrado.");});
+        web.evaluateJavascript(js,v->{if("clicked".equals(decode(v))){captureAttempts=0;handler.postDelayed(this::waitForCapturedText,350L);}else if(copyAttempts<25)handler.postDelayed(this::copyButton,500L);else fail("O botão COPIAR não foi encontrado.");});
     }
     private void installCopyHook(){
         if(finished||web==null)return;
@@ -94,7 +94,7 @@ public final class StvPlusBackgroundAutomation {
     private void sendResult(String result){
         if(finished)return;
         finished=true;
-        boolean sent=WhatsAppReply.send(context,notification,"✅ *TESTE STV+*\\n⏳ Validade: *1 hora*\\n\\n"+result);
+        boolean sent=WhatsAppReply.send(context,notification,"✅ *TESTE STV+*\n⏳ Validade: *1 hora*\n\n"+result);
         status(sent?"Teste STV+ gerado e enviado.":"Teste STV+ gerado, mas o WhatsApp não confirmou o envio.");
         cleanup();
     }
@@ -102,7 +102,7 @@ public final class StvPlusBackgroundAutomation {
     private void extractResult(){
         if(finished||web==null)return;
         String js="(function(){var a=Array.from(document.querySelectorAll('textarea,input,pre,code,[contenteditable=true]')).map(e=>e.value||e.innerText||e.textContent||'').filter(x=>x.trim().length>10);return a.sort((x,y)=>y.length-x.length)[0]||'';})();";
-        web.evaluateJavascript(js,v->{String result=decode(v).trim();if(result.length()>10){finished=true;boolean sent=WhatsAppReply.send(context,notification,"✅ *TESTE STV+*\n⏳ Validade: *1 hora*\n\n"+result);status(sent?"Teste gerado e enviado.":"Teste gerado, mas a resposta do WhatsApp não foi enviada.");cleanup();}else fail("O painel não disponibilizou os dados do teste para leitura automática.");});
+        web.evaluateJavascript(js,v->{String result=decode(v).trim();if(result.length()>10)sendResult(result);else fail("O painel não disponibilizou os dados do teste para leitura automática.");});
     }
     private void fail(String reason){if(finished)return;finished=true;status(reason);WhatsAppReply.send(context,notification,"⚠️ STV+: "+reason);cleanup();}
     private void status(String s){prefs.edit().putString("last_stv_status",s).apply();}
