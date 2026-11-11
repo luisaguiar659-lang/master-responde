@@ -69,13 +69,25 @@ public class StvPlusActivity extends Activity {
         content.addView(label("VALIDADE DO TESTE: 1 HORA"));
 
         Button open = button("ABRIR PAINEL STV+"); open.setOnClickListener(v -> {
+            saveCurrentConfiguration();
             if (web == null) createPanel(content);
             web.setVisibility(android.view.View.VISIBLE);
-            if (web.getUrl() == null) web.loadUrl(StvPanelConfig.getBaseUrl(this) + "/#/sign-in?redirect=/dashboard");
+            if (web.getUrl() == null) {
+                status.setText("Abrindo STV+. Faça login no painel e conclua a verificação, se aparecer.");
+                web.loadUrl(StvPanelConfig.getBaseUrl(this) + "/#/sign-in?redirect=/dashboard");
+            }
         }); content.addView(open);
         Button generate = button("GERAR TESTE STV+"); generate.setOnClickListener(v -> {
-            if (web == null) { createPanel(content); web.setVisibility(android.view.View.VISIBLE); web.loadUrl(StvPanelConfig.getBaseUrl(this) + "/#/sign-in?redirect=/dashboard"); }
-            else runGeneration();
+            saveCurrentConfiguration();
+            if (web == null) {
+                createPanel(content);
+                web.setVisibility(android.view.View.VISIBLE);
+                status.setText("Primeiro faça login no STV+. Depois toque novamente em GERAR TESTE STV+.");
+                web.loadUrl(StvPanelConfig.getBaseUrl(this) + "/#/sign-in?redirect=/dashboard");
+                return;
+            }
+            web.setVisibility(android.view.View.VISIBLE);
+            runGeneration();
         }); content.addView(generate);
         status = label("Aguardando ação."); content.addView(status);
         scroll.addView(content); root.addView(scroll, new LinearLayout.LayoutParams(-1,0,1f));
@@ -101,6 +113,12 @@ public class StvPlusActivity extends Activity {
         parent.addView(web, new LinearLayout.LayoutParams(-1, dp(360)));
     }
 
+    private void saveCurrentConfiguration() {
+        StvPanelConfig.saveBaseUrl(this, url.getText().toString());
+        StvPanelConfig.saveCredentials(this, user.getText().toString(), pass.getText().toString());
+        StvPanelConfig.saveMode(this, adult.isChecked() ? "adult" : "standard");
+    }
+
     private void fillLogin(WebView view) {
         String u = org.json.JSONObject.quote(StvPanelConfig.getUser(this));
         String p = org.json.JSONObject.quote(StvPanelConfig.getPass(this));
@@ -110,6 +128,18 @@ public class StvPlusActivity extends Activity {
 
     private void runGeneration() {
         if (web == null || generationStarted) return;
+        web.evaluateJavascript("(function(){return location.href||'';})();", location -> {
+            String current = location == null ? "" : location;
+            if (!current.contains("#/dashboard")) {
+                status.setText("Login ainda não concluído. Entre no painel STV+, finalize a verificação e só depois gere o teste.");
+                return;
+            }
+            startGenerationOnDashboard();
+        });
+    }
+
+    private void startGenerationOnDashboard() {
+        if (generationStarted) return;
         String target = adult.isChecked() ? "TESTE + ADULTO" : "TESTE SEM ADULTO";
         String q = org.json.JSONObject.quote(target);
         String js = "(function(){const n=s=>(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'');const t=n("+q+");const e=Array.from(document.querySelectorAll('body *')).filter(x=>x.offsetWidth||x.offsetHeight||x.getClientRects().length).map(x=>({x,t:n(x.innerText||x.textContent||'')})).filter(x=>x.t===t||x.t.startsWith(t)).sort((a,b)=>a.t.length-b.t.length)[0];if(!e)return 'not-found';e.x.scrollIntoView({block:'center'});e.x.click();return 'clicked';})();";
