@@ -14,6 +14,6 @@ public class IntegrationController {
         initialized = true;
 
         EngineRegistry.initialize(context);
-        CloudBridge.connect(context);
+        new CloudBridge(context).connect();
     }
 }
