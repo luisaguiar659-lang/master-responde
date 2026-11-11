@@ -2111,6 +2111,19 @@ public class NotificationAccessService extends NotificationListenerService {
         if (last > 0L && now - last < 90000L) return;
         prefs.edit().putLong(guardKey, now).apply();
 
+        android.content.SharedPreferences stvPrefs =
+                getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+        boolean credentialsSaved =
+                stvPrefs.getBoolean("credentials_saved", false);
+        String stvUser = StvPanelConfig.getUser(this);
+        String stvPass = StvPanelConfig.getPass(this);
+        if (!credentialsSaved || stvUser == null || stvUser.trim().isEmpty()
+                || stvPass == null || stvPass.isEmpty()) {
+            WhatsAppReply.send(this, notification,
+                    "STV+ ainda não está configurado. Abra o menu STV+ no MASTER RESPONDE, informe URL, usuário e senha e salve o acesso.");
+            return;
+        }
+
         if (!StvPlusBackgroundAutomation.start(
                 this, notification, prefs, StvPanelConfig.getMode(this))) {
             WhatsAppReply.send(this, notification,
