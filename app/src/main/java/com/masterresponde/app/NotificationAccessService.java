@@ -2093,10 +2093,16 @@ public class NotificationAccessService extends NotificationListenerService {
     }
 
     private boolean isStvPlusTestRequest(String incoming) {
-        String value = normalize(incoming);
-        return "teste stv+".equals(value)
-                || "teste stv plus".equals(value)
-                || "gerar teste stv+".equals(value);
+        SharedPreferences stvPrefs = getSharedPreferences(
+                "master_responde_stv",
+                MODE_PRIVATE
+        );
+        return MessageSettings.matchesAnyTrigger(
+                stvPrefs,
+                StvTriggerSettingsActivity.KEY_TRIGGERS,
+                StvTriggerSettingsActivity.DEFAULT_TRIGGERS,
+                incoming
+        );
     }
 
     private void startStvPlusTest(
