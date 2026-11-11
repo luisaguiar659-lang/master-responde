@@ -2150,7 +2150,10 @@ public class NotificationAccessService extends NotificationListenerService {
         android.content.SharedPreferences stvPrefs =
                 getSharedPreferences("master_responde_stv", MODE_PRIVATE);
         boolean credentialsSaved =
-                stvPrefs.getBoolean("credentials_saved", false);
+                stvPrefs.getBoolean(
+                        "stvplus_credentials_saved",
+                        stvPrefs.getBoolean("credentials_saved", false)
+                );
         String stvUser = StvPanelConfig.getUser(this);
         String stvPass = StvPanelConfig.getPass(this);
         if (!credentialsSaved || stvUser == null || stvUser.trim().isEmpty()
