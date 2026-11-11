@@ -33,7 +33,7 @@ import org.json.JSONObject;
 public class StvPlusActivity extends Activity {
 
     private SharedPreferences prefs;
-    private SecureStore secureStore;
+    private StvSecureStore secureStore;
 
     private EditText userField;
     private EditText passField;
