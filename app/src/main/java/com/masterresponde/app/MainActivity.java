@@ -1222,9 +1222,13 @@ public class MainActivity extends Activity {
         }
 
         if (stvStatus != null) {
+            SharedPreferences stvPrefs =
+                    getSharedPreferences("master_responde_stv", MODE_PRIVATE);
             boolean credentials =
-                    getSharedPreferences("master_responde_stv", MODE_PRIVATE)
-                            .getBoolean("credentials_saved", false);
+                    stvPrefs.getBoolean(
+                            "stvplus_credentials_saved",
+                            stvPrefs.getBoolean("credentials_saved", false)
+                    );
             String lastStatus =
                     getSharedPreferences("master_responde_stv", MODE_PRIVATE)
                             .getString("last_stv_status", "");
