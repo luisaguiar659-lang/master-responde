@@ -414,6 +414,18 @@ public class StvPlusActivity extends Activity {
 
         loginCard.addView(clearSession);
 
+        Button configureTriggers = actionButton(
+                "CONFIGURAR GATILHOS STV+",
+                false
+        );
+        configureTriggers.setOnClickListener(v ->
+                startActivity(new Intent(
+                        StvPlusActivity.this,
+                        StvTriggerSettingsActivity.class
+                ))
+        );
+        loginCard.addView(configureTriggers);
+
         content.addView(loginCard);
 
         gap(content, 12);
