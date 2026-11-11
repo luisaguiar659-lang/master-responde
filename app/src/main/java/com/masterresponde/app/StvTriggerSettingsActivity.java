@@ -14,10 +14,16 @@ import android.widget.Toast;
 public class StvTriggerSettingsActivity extends Activity {
     public static final String KEY_TRIGGERS = "cfg_stv_test_triggers";
     public static final String DEFAULT_TRIGGERS =
+            "teste stv\\n" +
             "teste stv+\\n" +
-            "quero um teste stv+\\n" +
+            "teste stv plus\\n" +
+            "quero teste stv\\n" +
             "quero teste stv+\\n" +
+            "quero um teste stv\\n" +
+            "quero um teste stv+\\n" +
+            "gerar teste stv\\n" +
             "gerar teste stv+\\n" +
+            "gerar um teste stv\\n" +
             "gerar um teste stv+";
 
     private EditText triggers;
