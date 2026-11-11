@@ -10,7 +10,7 @@ android {
         applicationId 'com.masterresponde.app'
         minSdk 26
         targetSdk 35
-        versionCode (System.getenv("VERSION_CODE") ?: "64").toInteger()
+        versionCode 64
         versionName '2.0.3'
     }
 
