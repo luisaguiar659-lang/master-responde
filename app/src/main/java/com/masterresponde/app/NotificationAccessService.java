@@ -262,14 +262,13 @@ public class NotificationAccessService extends NotificationListenerService {
 
         if (!privateMessages.isEmpty()) {
             for (PrivateMessage message : privateMessages) {
-                // No MessagingStyle, remetente vazio normalmente representa
-                // mensagem enviada pelo próprio usuário/aparelho. Durante uma
-                // janela curta após o bot responder, ignore essas saídas sem
-                // bloquear mensagens novas do contato.
-                if (message.senderKey.isEmpty()
-                        && WhatsAppReply.hasRecentOutgoing(
+                // Ignora somente o eco exato de uma mensagem enviada pelo bot.
+                // Não descarta toda a notificação quando o WhatsApp omite o remetente,
+                // pois isso também pode bloquear uma nova mensagem legítima do contato.
+                if (WhatsAppReply.isRecentlySent(
                         this,
-                        notification
+                        notification,
+                        message.text
                 )) {
                     continue;
                 }
