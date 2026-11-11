@@ -1514,6 +1514,11 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
+        if (isStvPlusTestRequest(incoming)) {
+            startStvPlusTest(notification, incoming, prefs);
+            return;
+        }
+
         if (isTestRequest(incoming)) {
             startMasterflixTest(
                     notification,
@@ -2085,6 +2090,35 @@ public class NotificationAccessService extends NotificationListenerService {
                 MessageSettings.DEFAULT_TEST_TRIGGERS,
                 incoming
         );
+    }
+
+    private boolean isStvPlusTestRequest(String incoming) {
+        String value = normalize(incoming);
+        return "teste stv+".equals(value)
+                || "teste stv plus".equals(value)
+                || "gerar teste stv+".equals(value);
+    }
+
+    private void startStvPlusTest(
+            Notification notification,
+            String incoming,
+            SharedPreferences prefs
+    ) {
+        String contactKey = privateContactKey(notification);
+        String guardKey = "stv_test_request_guard_" + contactKey;
+        long now = System.currentTimeMillis();
+        long last = prefs.getLong(guardKey, 0L);
+        if (last > 0L && now - last < 90000L) return;
+        prefs.edit().putLong(guardKey, now).apply();
+
+        if (!StvPlusBackgroundAutomation.start(
+                this, notification, prefs, StvPanelConfig.getMode(this))) {
+            WhatsAppReply.send(this, notification,
+                    "Já existe uma geração STV+ em andamento. Aguarde a conclusão.");
+            return;
+        }
+        WhatsAppReply.send(this, notification,
+                "Recebi seu pedido de teste STV+. Estou gerando seu acesso de 1 hora.");
     }
 
     private void startMasterflixTest(
