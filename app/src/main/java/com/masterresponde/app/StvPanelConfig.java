@@ -34,6 +34,9 @@ public final class StvPanelConfig {
             store.put("stv_pass", pass == null ? "" : pass);
             saved = user != null && !user.trim().isEmpty() && pass != null && !pass.isEmpty();
         } catch (Exception ignored) {}
-        prefs(c).edit().putBoolean("stvplus_credentials_saved", saved).apply();
+        prefs(c).edit()
+                .putBoolean("stvplus_credentials_saved", saved)
+                .putBoolean("credentials_saved", saved)
+                .apply();
     }
 }
