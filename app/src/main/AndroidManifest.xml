@@ -26,6 +26,11 @@
 
 
         <activity
+            android:name=".StvPlusActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".SigmaPanelSettingsActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>

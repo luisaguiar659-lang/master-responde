@@ -494,6 +494,17 @@ public class MainActivity extends Activity {
         );
 
         drawerItem(
+                "STV+",
+                true,
+                () -> launchFromMenu(
+                        new Intent(
+                                this,
+                                StvPlusActivity.class
+                        )
+                )
+        );
+
+        drawerItem(
                 "GERAR TESTE",
                 true,
                 () -> {
