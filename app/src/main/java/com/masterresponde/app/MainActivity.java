@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
     private TextView botStatus;
     private TextView waStatus;
     private TextView masterflixStatus;
+    private TextView stvStatus;
     private TextView engineStatus;
 
     private Switch botSwitch;
@@ -904,6 +905,20 @@ public class MainActivity extends Activity {
                         )
                 );
 
+        stvStatus =
+                addStatus(
+                        statusGrid,
+                        "STV+",
+                        "● Configuração necessária",
+                        Color.rgb(255, 145, 0),
+                        () -> startActivity(
+                                new Intent(
+                                        this,
+                                        StvPlusActivity.class
+                                )
+                        )
+                );
+
         engineStatus =
                 addStatus(
                         statusGrid,
@@ -1203,6 +1218,29 @@ public class MainActivity extends Activity {
                 BackgroundRuntime.requestListenerRebind(
                         this
                 );
+            }
+        }
+
+        if (stvStatus != null) {
+            boolean credentials =
+                    getSharedPreferences("master_responde_stv", MODE_PRIVATE)
+                            .getBoolean("credentials_saved", false);
+            String lastStatus =
+                    getSharedPreferences("master_responde_stv", MODE_PRIVATE)
+                            .getString("last_stv_status", "");
+
+            if (StvPlusBackgroundAutomation.isRunning()) {
+                stvStatus.setText("● Gerando teste");
+                stvStatus.setTextColor(Color.rgb(0, 184, 255));
+            } else if (!credentials) {
+                stvStatus.setText("● Login necessário");
+                stvStatus.setTextColor(Color.rgb(255, 145, 0));
+            } else if (lastStatus != null && lastStatus.toLowerCase().contains("enviado")) {
+                stvStatus.setText("● Último teste enviado");
+                stvStatus.setTextColor(Color.rgb(0, 184, 255));
+            } else {
+                stvStatus.setText("● Login salvo");
+                stvStatus.setTextColor(Color.rgb(255, 145, 0));
             }
         }
 
