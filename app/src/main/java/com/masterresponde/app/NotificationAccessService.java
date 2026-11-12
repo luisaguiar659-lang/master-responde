@@ -1752,611 +1752,44 @@ public class NotificationAccessService extends NotificationListenerService {
         }
     }
 
-    private boolean isDuplicatePrivateMessage(
-            Notification notification,
-            String notificationKey,
-            String incoming,
-            String messageEventId,
-            SharedPreferences prefs
+    private boolean isNewStvResellerRequest(
+            String incoming
     ) {
-        if (incoming == null
-                || incoming.trim().isEmpty()) {
-            return true;
-        }
-
-        String contactKey =
-                privateContactKey(
-                        notification
+        SharedPreferences prefs =
+                getSharedPreferences(
+                        "master_responde_stv",
+                        MODE_PRIVATE
                 );
 
-        String eventId =
-                messageEventId == null
-                        ? ""
-                        : messageEventId.trim();
+        String configured = prefs.getString(
+                MessageSettings.KEY_STV_RESELLER_TRIGGERS,
+                MessageSettings.DEFAULT_STV_RESELLER_TRIGGERS
+        );
 
-        if (eventId.isEmpty()) {
-            long eventTime =
-                    notification != null
-                            ? notification.when
-                            : 0L;
+        // Aceita linhas reais, separador ';' e o texto literal "\n"
+        // que pode ter sido salvo por versões anteriores.
+        String allTriggers =
+                ((configured == null || configured.trim().isEmpty())
+                        ? MessageSettings.DEFAULT_STV_RESELLER_TRIGGERS
+                        : configured)
+                .replace("\\n", "\n")
+                + "\n"
+                + MessageSettings.DEFAULT_STV_RESELLER_TRIGGERS;
 
-            if (eventTime > 0L) {
-                eventId =
-                        String.valueOf(
-                                eventTime
-                        );
+        String message = normalizeTriggerForStv(incoming);
+        if (message.isEmpty()) return false;
 
-            } else if (notificationKey != null
-                    && !notificationKey.trim().isEmpty()) {
-                eventId =
-                        notificationKey.trim();
+        for (String line : allTriggers.split("[\\n;]+")) {
+            String trigger = normalizeTriggerForStv(line);
+            if (trigger.isEmpty()) continue;
 
-            } else {
-                eventId =
-                        "no-event";
-            }
-        }
-
-        String eventFingerprint =
-                contactKey
-                        + "|"
-                        + eventId
-                        + "|"
-                        + incoming;
-
-        String contentFingerprint =
-                contactKey
-                        + "|"
-                        + incoming;
-
-        synchronized (SEND_LOCK) {
-            long now =
-                    System.currentTimeMillis();
-
-            long duplicateWindow =
-                    MessageSettings.getMilliseconds(
-                            prefs,
-                            MessageSettings.KEY_PRIVATE_DUPLICATE_SECONDS,
-                            MessageSettings.DEFAULT_PRIVATE_DUPLICATE_SECONDS
-                    );
-
-            Long eventSeen =
-                    PRIVATE_RECENT.get(
-                            eventFingerprint
-                    );
-
-            long eventWindow =
-                    eventId.startsWith("msg|")
-                            ? Math.max(
-                            duplicateWindow,
-                            PRIVATE_STABLE_EVENT_TTL_MS
-                    )
-                            : duplicateWindow;
-
-            if (eventSeen != null
-                    && now - eventSeen < eventWindow) {
+            // Aceita o gatilho isolado ou dentro de uma frase maior.
+            if (message.equals(trigger) || message.contains(trigger)) {
                 return true;
             }
-
-            // Segunda proteção para atualizações rápidas da mesma
-            // notificação onde o WhatsApp troca key/when.
-            String privateContentKey =
-                    "last_private_content_fingerprint_"
-                            + contactKey;
-
-            String privateContentTimeKey =
-                    "last_private_content_fingerprint_time_"
-                            + contactKey;
-
-            String lastContent =
-                    prefs.getString(
-                            privateContentKey,
-                            ""
-                    );
-
-            long lastContentTime =
-                    prefs.getLong(
-                            privateContentTimeKey,
-                            0L
-                    );
-
-            if (contentFingerprint.equals(
-                    lastContent
-            )
-                    && now - lastContentTime < duplicateWindow) {
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-
-                return true;
-            }
-
-            // Reserva a mensagem antes de qualquer resposta.
-            PRIVATE_RECENT.put(
-                    eventFingerprint,
-                    now
-            );
-
-            prefs.edit()
-                    .putString(
-                            privateContentKey,
-                            contentFingerprint
-                    )
-                    .putLong(
-                            privateContentTimeKey,
-                            now
-                    )
-                    .apply();
-
-            if (PRIVATE_RECENT.size() > 300) {
-                PRIVATE_RECENT.clear();
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-            }
-
-            return false;
-        }
-    }
-
-
-    private boolean isDuplicatePrivateMessage(
-            Notification notification,
-            String notificationKey,
-            String incoming,
-            String messageEventId,
-            SharedPreferences prefs
-    ) {
-        if (incoming == null
-                || incoming.trim().isEmpty()) {
-            return true;
         }
 
-        String contactKey =
-                privateContactKey(
-                        notification
-                );
-
-        String eventId =
-                messageEventId == null
-                        ? ""
-                        : messageEventId.trim();
-
-        if (eventId.isEmpty()) {
-            long eventTime =
-                    notification != null
-                            ? notification.when
-                            : 0L;
-
-            if (eventTime > 0L) {
-                eventId =
-                        String.valueOf(
-                                eventTime
-                        );
-
-            } else if (notificationKey != null
-                    && !notificationKey.trim().isEmpty()) {
-                eventId =
-                        notificationKey.trim();
-
-            } else {
-                eventId =
-                        "no-event";
-            }
-        }
-
-        String eventFingerprint =
-                contactKey
-                        + "|"
-                        + eventId
-                        + "|"
-                        + incoming;
-
-        String contentFingerprint =
-                contactKey
-                        + "|"
-                        + incoming;
-
-        synchronized (SEND_LOCK) {
-            long now =
-                    System.currentTimeMillis();
-
-            long duplicateWindow =
-                    MessageSettings.getMilliseconds(
-                            prefs,
-                            MessageSettings.KEY_PRIVATE_DUPLICATE_SECONDS,
-                            MessageSettings.DEFAULT_PRIVATE_DUPLICATE_SECONDS
-                    );
-
-            Long eventSeen =
-                    PRIVATE_RECENT.get(
-                            eventFingerprint
-                    );
-
-            long eventWindow =
-                    eventId.startsWith("msg|")
-                            ? Math.max(
-                            duplicateWindow,
-                            PRIVATE_STABLE_EVENT_TTL_MS
-                    )
-                            : duplicateWindow;
-
-            if (eventSeen != null
-                    && now - eventSeen < eventWindow) {
-                return true;
-            }
-
-            // Segunda proteção para atualizações rápidas da mesma
-            // notificação onde o WhatsApp troca key/when.
-            String privateContentKey =
-                    "last_private_content_fingerprint_"
-                            + contactKey;
-
-            String privateContentTimeKey =
-                    "last_private_content_fingerprint_time_"
-                            + contactKey;
-
-            String lastContent =
-                    prefs.getString(
-                            privateContentKey,
-                            ""
-                    );
-
-            long lastContentTime =
-                    prefs.getLong(
-                            privateContentTimeKey,
-                            0L
-                    );
-
-            if (contentFingerprint.equals(
-                    lastContent
-            )
-                    && now - lastContentTime < duplicateWindow) {
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-
-                return true;
-            }
-
-            // Reserva a mensagem antes de qualquer resposta.
-            PRIVATE_RECENT.put(
-                    eventFingerprint,
-                    now
-            );
-
-            prefs.edit()
-                    .putString(
-                            privateContentKey,
-                            contentFingerprint
-                    )
-                    .putLong(
-                            privateContentTimeKey,
-                            now
-                    )
-                    .apply();
-
-            if (PRIVATE_RECENT.size() > 300) {
-                PRIVATE_RECENT.clear();
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-            }
-
-            return false;
-        }
-    }
-
-
-    private boolean isDuplicatePrivateMessage(
-            Notification notification,
-            String notificationKey,
-            String incoming,
-            String messageEventId,
-            SharedPreferences prefs
-    ) {
-        if (incoming == null
-                || incoming.trim().isEmpty()) {
-            return true;
-        }
-
-        String contactKey =
-                privateContactKey(
-                        notification
-                );
-
-        String eventId =
-                messageEventId == null
-                        ? ""
-                        : messageEventId.trim();
-
-        if (eventId.isEmpty()) {
-            long eventTime =
-                    notification != null
-                            ? notification.when
-                            : 0L;
-
-            if (eventTime > 0L) {
-                eventId =
-                        String.valueOf(
-                                eventTime
-                        );
-
-            } else if (notificationKey != null
-                    && !notificationKey.trim().isEmpty()) {
-                eventId =
-                        notificationKey.trim();
-
-            } else {
-                eventId =
-                        "no-event";
-            }
-        }
-
-        String eventFingerprint =
-                contactKey
-                        + "|"
-                        + eventId
-                        + "|"
-                        + incoming;
-
-        String contentFingerprint =
-                contactKey
-                        + "|"
-                        + incoming;
-
-        synchronized (SEND_LOCK) {
-            long now =
-                    System.currentTimeMillis();
-
-            long duplicateWindow =
-                    MessageSettings.getMilliseconds(
-                            prefs,
-                            MessageSettings.KEY_PRIVATE_DUPLICATE_SECONDS,
-                            MessageSettings.DEFAULT_PRIVATE_DUPLICATE_SECONDS
-                    );
-
-            Long eventSeen =
-                    PRIVATE_RECENT.get(
-                            eventFingerprint
-                    );
-
-            long eventWindow =
-                    eventId.startsWith("msg|")
-                            ? Math.max(
-                            duplicateWindow,
-                            PRIVATE_STABLE_EVENT_TTL_MS
-                    )
-                            : duplicateWindow;
-
-            if (eventSeen != null
-                    && now - eventSeen < eventWindow) {
-                return true;
-            }
-
-            // Segunda proteção para atualizações rápidas da mesma
-            // notificação onde o WhatsApp troca key/when.
-            String privateContentKey =
-                    "last_private_content_fingerprint_"
-                            + contactKey;
-
-            String privateContentTimeKey =
-                    "last_private_content_fingerprint_time_"
-                            + contactKey;
-
-            String lastContent =
-                    prefs.getString(
-                            privateContentKey,
-                            ""
-                    );
-
-            long lastContentTime =
-                    prefs.getLong(
-                            privateContentTimeKey,
-                            0L
-                    );
-
-            if (contentFingerprint.equals(
-                    lastContent
-            )
-                    && now - lastContentTime < duplicateWindow) {
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-
-                return true;
-            }
-
-            // Reserva a mensagem antes de qualquer resposta.
-            PRIVATE_RECENT.put(
-                    eventFingerprint,
-                    now
-            );
-
-            prefs.edit()
-                    .putString(
-                            privateContentKey,
-                            contentFingerprint
-                    )
-                    .putLong(
-                            privateContentTimeKey,
-                            now
-                    )
-                    .apply();
-
-            if (PRIVATE_RECENT.size() > 300) {
-                PRIVATE_RECENT.clear();
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-            }
-
-            return false;
-        }
-    }
-
-
-    private boolean isDuplicatePrivateMessage(
-            Notification notification,
-            String notificationKey,
-            String incoming,
-            String messageEventId,
-            SharedPreferences prefs
-    ) {
-        if (incoming == null
-                || incoming.trim().isEmpty()) {
-            return true;
-        }
-
-        String contactKey =
-                privateContactKey(
-                        notification
-                );
-
-        String eventId =
-                messageEventId == null
-                        ? ""
-                        : messageEventId.trim();
-
-        if (eventId.isEmpty()) {
-            long eventTime =
-                    notification != null
-                            ? notification.when
-                            : 0L;
-
-            if (eventTime > 0L) {
-                eventId =
-                        String.valueOf(
-                                eventTime
-                        );
-
-            } else if (notificationKey != null
-                    && !notificationKey.trim().isEmpty()) {
-                eventId =
-                        notificationKey.trim();
-
-            } else {
-                eventId =
-                        "no-event";
-            }
-        }
-
-        String eventFingerprint =
-                contactKey
-                        + "|"
-                        + eventId
-                        + "|"
-                        + incoming;
-
-        String contentFingerprint =
-                contactKey
-                        + "|"
-                        + incoming;
-
-        synchronized (SEND_LOCK) {
-            long now =
-                    System.currentTimeMillis();
-
-            long duplicateWindow =
-                    MessageSettings.getMilliseconds(
-                            prefs,
-                            MessageSettings.KEY_PRIVATE_DUPLICATE_SECONDS,
-                            MessageSettings.DEFAULT_PRIVATE_DUPLICATE_SECONDS
-                    );
-
-            Long eventSeen =
-                    PRIVATE_RECENT.get(
-                            eventFingerprint
-                    );
-
-            long eventWindow =
-                    eventId.startsWith("msg|")
-                            ? Math.max(
-                            duplicateWindow,
-                            PRIVATE_STABLE_EVENT_TTL_MS
-                    )
-                            : duplicateWindow;
-
-            if (eventSeen != null
-                    && now - eventSeen < eventWindow) {
-                return true;
-            }
-
-            // Segunda proteção para atualizações rápidas da mesma
-            // notificação onde o WhatsApp troca key/when.
-            String privateContentKey =
-                    "last_private_content_fingerprint_"
-                            + contactKey;
-
-            String privateContentTimeKey =
-                    "last_private_content_fingerprint_time_"
-                            + contactKey;
-
-            String lastContent =
-                    prefs.getString(
-                            privateContentKey,
-                            ""
-                    );
-
-            long lastContentTime =
-                    prefs.getLong(
-                            privateContentTimeKey,
-                            0L
-                    );
-
-            if (contentFingerprint.equals(
-                    lastContent
-            )
-                    && now - lastContentTime < duplicateWindow) {
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-
-                return true;
-            }
-
-            // Reserva a mensagem antes de qualquer resposta.
-            PRIVATE_RECENT.put(
-                    eventFingerprint,
-                    now
-            );
-
-            prefs.edit()
-                    .putString(
-                            privateContentKey,
-                            contentFingerprint
-                    )
-                    .putLong(
-                            privateContentTimeKey,
-                            now
-                    )
-                    .apply();
-
-            if (PRIVATE_RECENT.size() > 300) {
-                PRIVATE_RECENT.clear();
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-            }
-
-            return false;
-        }
+        return false;
     }
 
 
@@ -2441,155 +1874,249 @@ public class NotificationAccessService extends NotificationListenerService {
     }
 
 
-    private boolean isDuplicatePrivateMessage(
+    private boolean handlePendingStvResellerFlow(
             Notification notification,
-            String notificationKey,
+            String contactKey,
             String incoming,
-            String messageEventId,
             SharedPreferences prefs
     ) {
-        if (incoming == null
-                || incoming.trim().isEmpty()) {
-            return true;
-        }
-
-        String contactKey =
-                privateContactKey(
-                        notification
+        String state =
+                prefs.getString(
+                        "stv_reseller_state_" + contactKey,
+                        ""
                 );
 
-        String eventId =
-                messageEventId == null
-                        ? ""
-                        : messageEventId.trim();
-
-        if (eventId.isEmpty()) {
-            long eventTime =
-                    notification != null
-                            ? notification.when
-                            : 0L;
-
-            if (eventTime > 0L) {
-                eventId =
-                        String.valueOf(
-                                eventTime
-                        );
-
-            } else if (notificationKey != null
-                    && !notificationKey.trim().isEmpty()) {
-                eventId =
-                        notificationKey.trim();
-
-            } else {
-                eventId =
-                        "no-event";
-            }
+        if (state.isEmpty()
+                || "COMPLETE".equals(state)
+                || "ERROR".equals(state)
+                || "REVIEW_REQUIRED".equals(state)) {
+            return false;
         }
 
-        String eventFingerprint =
-                contactKey
-                        + "|"
-                        + eventId
-                        + "|"
-                        + incoming;
+        if (MessageSettings.matchesAnyTrigger(
+                prefs,
+                MessageSettings.KEY_STV_RESELLER_CANCEL_TRIGGER,
+                MessageSettings.DEFAULT_STV_RESELLER_CANCEL_TRIGGER,
+                incoming
+        )) {
+            StvPlusResellerAutomation.cancelFind(
+                    contactKey
+            );
 
-        String contentFingerprint =
-                contactKey
-                        + "|"
-                        + incoming;
-
-        synchronized (SEND_LOCK) {
-            long now =
-                    System.currentTimeMillis();
-
-            long duplicateWindow =
-                    MessageSettings.getMilliseconds(
-                            prefs,
-                            MessageSettings.KEY_PRIVATE_DUPLICATE_SECONDS,
-                            MessageSettings.DEFAULT_PRIVATE_DUPLICATE_SECONDS
-                    );
-
-            Long eventSeen =
-                    PRIVATE_RECENT.get(
-                            eventFingerprint
-                    );
-
-            long eventWindow =
-                    eventId.startsWith("msg|")
-                            ? Math.max(
-                            duplicateWindow,
-                            PRIVATE_STABLE_EVENT_TTL_MS
-                    )
-                            : duplicateWindow;
-
-            if (eventSeen != null
-                    && now - eventSeen < eventWindow) {
-                return true;
-            }
-
-            // Segunda proteção para atualizações rápidas da mesma
-            // notificação onde o WhatsApp troca key/when.
-            String privateContentKey =
-                    "last_private_content_fingerprint_"
-                            + contactKey;
-
-            String privateContentTimeKey =
-                    "last_private_content_fingerprint_time_"
-                            + contactKey;
-
-            String lastContent =
-                    prefs.getString(
-                            privateContentKey,
-                            ""
-                    );
-
-            long lastContentTime =
-                    prefs.getLong(
-                            privateContentTimeKey,
-                            0L
-                    );
-
-            if (contentFingerprint.equals(
-                    lastContent
-            )
-                    && now - lastContentTime < duplicateWindow) {
-
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
-                );
-
-                return true;
-            }
-
-            // Reserva a mensagem antes de qualquer resposta.
-            PRIVATE_RECENT.put(
-                    eventFingerprint,
-                    now
+            BackgroundRuntime.clearResellerPending(
+                    prefs
             );
 
             prefs.edit()
-                    .putString(
-                            privateContentKey,
-                            contentFingerprint
+                    .remove(
+                            "stv_reseller_state_" + contactKey
                     )
-                    .putLong(
-                            privateContentTimeKey,
-                            now
+                    .putString(
+                            "last_stv_reseller_status",
+                            "Revenda: fluxo cancelado"
                     )
                     .apply();
 
-            if (PRIVATE_RECENT.size() > 300) {
-                PRIVATE_RECENT.clear();
+            try {
+                new StvSecureStore(this).remove(
+                        "stv_pending_reseller_email_" + contactKey
+                );
+            } catch (Exception ignored) {
+            }
 
-                PRIVATE_RECENT.put(
-                        eventFingerprint,
-                        now
+            MessageSettings.send(
+                    this,
+                    notification,
+                    prefs,
+                    MessageSettings.MSG_STV_RESELLER_CANCELLED,
+                    MessageSettings.DEFAULT_STV_RESELLER_CANCELLED
+            );
+
+            return true;
+        }
+
+        if ("WAITING_EMAIL".equals(state)) {
+            if (isNewStvResellerRequest(
+                    incoming
+            )) {
+                return true;
+            }
+
+            String email =
+                    incoming == null
+                            ? ""
+                            : incoming.trim().toLowerCase(Locale.ROOT);
+
+            if (!isValidEmail(email)) {
+                MessageSettings.send(
+                        this,
+                        notification,
+                        prefs,
+                        MessageSettings.MSG_STV_RESELLER_INVALID_EMAIL,
+                        MessageSettings.DEFAULT_STV_RESELLER_INVALID_EMAIL
+                );
+
+                return true;
+            }
+
+            try {
+                new StvSecureStore(this).put(
+                        "stv_pending_reseller_email_" + contactKey,
+                        email
+                );
+
+            } catch (Exception e) {
+                MessageSettings.send(
+                        this,
+                        notification,
+                        prefs,
+                        MessageSettings.MSG_STV_RESELLER_SAVE_ERROR,
+                        MessageSettings.DEFAULT_STV_RESELLER_SAVE_ERROR
+                );
+
+                return true;
+            }
+
+            prefs.edit()
+                    .putString(
+                            "stv_reseller_state_" + contactKey,
+                            "SEARCHING"
+                    )
+                    .putString(
+                            "last_stv_reseller_status",
+                            "Revenda: verificando e-mail cadastrado no painel Sigma"
+                    )
+                    .apply();
+
+            MessageSettings.send(
+                    this,
+                    notification,
+                    prefs,
+                    MessageSettings.MSG_STV_RESELLER_VERIFYING,
+                    MessageSettings.DEFAULT_STV_RESELLER_VERIFYING
+            );
+
+            BackgroundRuntime.markResellerPending(
+                    prefs,
+                    notification,
+                    contactKey
+            );
+
+            boolean started =
+                    StvPlusResellerAutomation.findReseller(
+                            this,
+                            notification,
+                            prefs,
+                            contactKey,
+                            email
+                    );
+
+            if (!started) {
+                BackgroundRuntime.clearResellerPending(
+                        prefs
+                );
+                prefs.edit()
+                        .putString(
+                                "stv_reseller_state_" + contactKey,
+                                "WAITING_EMAIL"
+                        )
+                        .putString(
+                                "last_stv_reseller_status",
+                                "Revenda: verificação ocupada"
+                        )
+                        .apply();
+
+                MessageSettings.send(
+                        this,
+                        notification,
+                        prefs,
+                        MessageSettings.MSG_STV_RESELLER_BUSY,
+                        MessageSettings.DEFAULT_STV_RESELLER_BUSY
                 );
             }
 
-            return false;
+            return true;
         }
+
+        if ("SEARCHING".equals(state)
+                || "ADDING".equals(state)) {
+            // Não responde a republicações/atualizações da notificação
+            // enquanto a automação já está trabalhando.
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+    private boolean isStvPlusTestRequest(String incoming) {
+        SharedPreferences stvPrefs = getSharedPreferences(
+                "master_responde_stv",
+                MODE_PRIVATE
+        );
+        return MessageSettings.matchesAnyTrigger(
+                stvPrefs,
+                StvTriggerSettingsActivity.KEY_TRIGGERS,
+                StvTriggerSettingsActivity.DEFAULT_TRIGGERS,
+                incoming,
+                stvPrefs.getBoolean(
+                        StvTriggerSettingsActivity.KEY_MATCH_EXACT,
+                        true
+                )
+        );
+    }
+
+
+    private String normalizeTriggerForStv(String value) {
+        if (value == null) return "";
+        return java.text.Normalizer.normalize(
+                value,
+                java.text.Normalizer.Form.NFD
+        ).replaceAll("\\p{M}", "")
+         .toLowerCase(java.util.Locale.ROOT)
+         .replaceAll("[^a-z0-9]+", " ")
+         .trim()
+         .replaceAll("\\s+", " ");
+    }
+
+
+    private void startStvPlusTest(
+            Notification notification,
+            String incoming,
+            SharedPreferences prefs
+    ) {
+        String contactKey = privateContactKey(notification);
+        String guardKey = "stv_test_request_guard_" + contactKey;
+        long now = System.currentTimeMillis();
+        long last = prefs.getLong(guardKey, 0L);
+        if (last > 0L && now - last < 90000L) return;
+        prefs.edit().putLong(guardKey, now).apply();
+
+        android.content.SharedPreferences stvPrefs =
+                getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+        boolean credentialsSaved =
+                stvPrefs.getBoolean(
+                        "stvplus_credentials_saved",
+                        stvPrefs.getBoolean("credentials_saved", false)
+                );
+        String stvUser = StvPanelConfig.getUser(this);
+        String stvPass = StvPanelConfig.getPass(this);
+        if (!credentialsSaved || stvUser == null || stvUser.trim().isEmpty()
+                || stvPass == null || stvPass.isEmpty()) {
+            WhatsAppReply.send(this, notification,
+                    "STV+ ainda não está configurado. Abra o menu STV+ no MASTER RESPONDE, informe URL, usuário e senha e salve o acesso.");
+            return;
+        }
+
+        if (!StvPlusBackgroundAutomation.start(
+                this, notification, prefs, StvPanelConfig.getMode(this))) {
+            WhatsAppReply.send(this, notification,
+                    "Já existe uma geração STV+ em andamento. Aguarde a conclusão.");
+            return;
+        }
+        WhatsAppReply.send(this, notification,
+                "Recebi seu pedido de teste STV+. Estou gerando seu acesso de 1 hora.");
     }
 
     private boolean isNewResellerRequest(
@@ -2949,7 +2476,11 @@ public class NotificationAccessService extends NotificationListenerService {
                 prefs,
                 MessageSettings.KEY_TEST_TRIGGERS,
                 MessageSettings.DEFAULT_TEST_TRIGGERS,
-                incoming
+                incoming,
+                prefs.getBoolean(
+                        MessageSettings.KEY_TEST_MATCH_EXACT,
+                        true
+                )
         );
     }
 
@@ -3331,12 +2862,60 @@ public class NotificationAccessService extends NotificationListenerService {
         return started;
     }
 
-    private boolean recoverPendingTest(
+    private boolean recoverPendingStvReseller(
             SharedPreferences prefs
     ) {
+        String contactKey =
+                prefs.getString(
+                        BackgroundRuntime.KEY_RESELLER_CONTACT,
+                        ""
+                );
+
+        if (contactKey.isEmpty()) {
+            BackgroundRuntime.clearResellerPending(
+                    prefs
+            );
+
+            return false;
+        }
+
+        String email =
+                "";
+
+        try {
+            email =
+                    new StvSecureStore(
+                            this
+                    ).get(
+                            "stv_pending_reseller_email_" + contactKey
+                    );
+
+        } catch (Exception ignored) {
+        }
+
+        if (email == null
+                || email.trim().isEmpty()) {
+            BackgroundRuntime.clearResellerPending(
+                    prefs
+            );
+
+            prefs.edit()
+                    .putString(
+                            "stv_reseller_state_" + contactKey,
+                            "WAITING_EMAIL"
+                    )
+                    .putString(
+                            "last_stv_reseller_status",
+                            "Revenda: tarefa interrompida; aguardando o e-mail novamente"
+                    )
+                    .apply();
+
+            return false;
+        }
+
         String locator =
                 prefs.getString(
-                        BackgroundRuntime.KEY_TEST_LOCATOR,
+                        BackgroundRuntime.KEY_RESELLER_LOCATOR,
                         ""
                 );
 
@@ -3349,31 +2928,20 @@ public class NotificationAccessService extends NotificationListenerService {
             return false;
         }
 
-        String requestKey =
-                prefs.getString(
-                        BackgroundRuntime.KEY_TEST_REQUEST_KEY,
-                        "recovered-test"
-                );
-
-        if (!TestTaskBridge.hasPending()) {
-            TestTaskBridge.begin(
-                    notification,
-                    requestKey
-            );
-        }
-
         boolean started =
-                MasterflixBackgroundAutomation.start(
+                StvPlusResellerAutomation.findReseller(
                         this,
                         notification,
-                        prefs
+                        prefs,
+                        contactKey,
+                        email
                 );
 
         if (started) {
             prefs.edit()
                     .putString(
-                            "last_test_status",
-                            "Teste: tarefa recuperada pelo motor em segundo plano"
+                            "last_stv_reseller_status",
+                            "Revenda: verificação recuperada pelo motor em segundo plano"
                     )
                     .apply();
         }
