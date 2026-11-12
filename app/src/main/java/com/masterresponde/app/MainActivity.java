@@ -537,39 +537,6 @@ public class MainActivity extends Activity {
                 )
         );
 
-        drawerItem(
-                "PAINEL SIGMA",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                SigmaPanelSettingsActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "MÍDIAS / LINKS",
-                true,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                CategoriesActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "@INFOR GRUPOS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                GroupsActivity.class
-                        )
-                )
-        );
-
         drawerSection(
                 "MÓDULOS"
         );
@@ -586,34 +553,12 @@ public class MainActivity extends Activity {
         );
 
         drawerItem(
-                "MÍDIAS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                CategoriesActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
                 "REVENDAS",
                 false,
                 () -> launchFromMenu(
                         new Intent(
                                 this,
                                 ResellersActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "GRUPOS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                GroupsActivity.class
                         )
                 )
         );
@@ -777,7 +722,7 @@ public class MainActivity extends Activity {
 
         heroText.addView(
                 text(
-                        "Painel Sigma configurável com os mesmos fluxos automáticos.",
+                        "Atendimento automático inteligente para WhatsApp Business.",
                         13,
                         secondaryTextColor(),
                         false
