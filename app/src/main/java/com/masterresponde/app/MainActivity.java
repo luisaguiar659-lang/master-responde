@@ -525,39 +525,6 @@ public class MainActivity extends Activity {
                 )
         );
 
-        drawerItem(
-                "PAINEL SIGMA",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                SigmaPanelSettingsActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "MÍDIAS / LINKS",
-                true,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                CategoriesActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "@INFOR GRUPOS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                GroupsActivity.class
-                        )
-                )
-        );
-
         drawerSection(
                 "MÓDULOS"
         );
@@ -574,34 +541,12 @@ public class MainActivity extends Activity {
         );
 
         drawerItem(
-                "MÍDIAS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                CategoriesActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
                 "REVENDAS",
                 false,
                 () -> launchFromMenu(
                         new Intent(
                                 this,
                                 ResellersActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "GRUPOS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                GroupsActivity.class
                         )
                 )
         );
@@ -763,15 +708,6 @@ public class MainActivity extends Activity {
                 )
         );
 
-        heroText.addView(
-                text(
-                        "Painel Sigma configurável com os mesmos fluxos automáticos.",
-                        13,
-                        secondaryTextColor(),
-                        false
-                )
-        );
-
         heroRow.addView(
                 heroText,
                 new LinearLayout.LayoutParams(
@@ -878,7 +814,7 @@ public class MainActivity extends Activity {
         masterflixStatus =
                 addStatus(
                         statusGrid,
-                        SigmaPanelConfig.getPanelName(this),
+                        "MASTERFLIX",
                         "● Login necessário",
                         Color.rgb(
                                 255,
@@ -937,7 +873,7 @@ public class MainActivity extends Activity {
 
         info.addView(
                 text(
-                        "PAINEL SIGMA",
+                        "ÚLTIMO TESTE",
                         12,
                         Color.rgb(
                                 255,
@@ -946,30 +882,6 @@ public class MainActivity extends Activity {
                         ),
                         true
                 )
-        );
-
-        TextView credentialsInfo =
-                text(
-                        prefs.getBoolean(
-                                "masterflix_credentials_saved",
-                                false
-                        )
-                                ? "Credenciais salvas para " + SigmaPanelConfig.getPanelName(this) + ". Se a sessão expirar, o bot tentará entrar automaticamente."
-                                : "Nenhuma credencial salva. Abra PAINEL SIGMA no menu para configurar URL, usuário e senha.",
-                        12,
-                        secondaryTextColor(),
-                        false
-                );
-
-        credentialsInfo.setPadding(
-                0,
-                dp(8),
-                0,
-                0
-        );
-
-        info.addView(
-                credentialsInfo
         );
 
         TextView lastTest =
