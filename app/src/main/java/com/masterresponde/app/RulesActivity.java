@@ -158,6 +158,12 @@ public class RulesActivity extends Activity {
             response.setPadding(0, dp(10), 0, dp(8));
             c.addView(response);
 
+            if (categoryId.isEmpty()) {
+                Button edit = actionButton("EDITAR REGRA", true);
+                edit.setOnClickListener(v -> showEditDialog(id));
+                c.addView(edit);
+            }
+
             Button delete = actionButton("EXCLUIR", false);
             delete.setOnClickListener(v -> confirmDelete(id));
             c.addView(delete);
@@ -228,6 +234,82 @@ public class RulesActivity extends Activity {
             Toast.makeText(this, "Regra salva.", Toast.LENGTH_SHORT).show();
         } catch (Exception ignored) {
         }
+    }
+
+    private void showEditDialog(String id) {
+        JSONObject selected = null;
+        JSONArray rules = loadRules();
+        for (int i = 0; i < rules.length(); i++) {
+            JSONObject rule = rules.optJSONObject(i);
+            if (rule != null && id.equals(rule.optString("id"))) {
+                selected = rule;
+                break;
+            }
+        }
+
+        if (selected == null) {
+            Toast.makeText(this, "Regra não encontrada.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        LinearLayout box = dialogBox();
+        EditText trigger = field("Palavra ou frase");
+        trigger.setText(selected.optString("trigger", ""));
+        box.addView(trigger);
+
+        EditText reply = field("Resposta automática");
+        reply.setMinLines(3);
+        reply.setGravity(Gravity.TOP);
+        reply.setText(selected.optString("reply", ""));
+        box.addView(reply);
+
+        CheckBox exact = exactCheck();
+        exact.setChecked(selected.optBoolean("exact", false));
+        box.addView(exact);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Editar regra")
+                .setView(box)
+                .setNegativeButton("CANCELAR", null)
+                .setPositiveButton("SALVAR ALTERAÇÕES", null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            Button save = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            save.setOnClickListener(v -> {
+                String newTrigger = trigger.getText().toString().trim();
+                String newReply = reply.getText().toString().trim();
+
+                if (newTrigger.isEmpty()) {
+                    trigger.setError("Informe a palavra ou frase.");
+                    return;
+                }
+                if (newReply.isEmpty()) {
+                    reply.setError("Informe a resposta.");
+                    return;
+                }
+
+                JSONArray updated = loadRules();
+                for (int i = 0; i < updated.length(); i++) {
+                    JSONObject rule = updated.optJSONObject(i);
+                    if (rule == null || !id.equals(rule.optString("id"))) continue;
+                    try {
+                        rule.put("trigger", newTrigger);
+                        rule.put("reply", newReply);
+                        rule.put("exact", exact.isChecked());
+                    } catch (Exception ignored) {
+                    }
+                    break;
+                }
+
+                saveRules(updated);
+                dialog.dismiss();
+                Toast.makeText(this, "Regra atualizada.", Toast.LENGTH_SHORT).show();
+                renderRules();
+            });
+        });
+
+        dialog.show();
     }
 
     private void confirmDelete(String id) {
