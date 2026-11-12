@@ -349,7 +349,7 @@ public class StvPlusResellerAutomation {
                             );
 
                             handler.postDelayed(
-                                    () -> MasterflixLoginAssist.fillAndSubmitIfSafe(
+                                    () -> StvPlusLoginAssist.fillAndSubmitIfSafe(
                                             context,
                                             webView,
                                             result -> {
