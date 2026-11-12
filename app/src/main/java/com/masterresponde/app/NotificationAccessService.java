@@ -1495,6 +1495,27 @@ public class NotificationAccessService extends NotificationListenerService {
                         notification
                 );
 
+        SharedPreferences stvPrefs =
+                getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+
+        if (handlePendingStvResellerFlow(
+                notification,
+                resellerContactKey,
+                incoming,
+                stvPrefs
+        )) {
+            return;
+        }
+
+        if (isNewStvResellerRequest(incoming)) {
+            beginNewStvResellerFlow(
+                    notification,
+                    resellerContactKey,
+                    stvPrefs
+            );
+            return;
+        }
+
         if (handlePendingResellerFlow(
                 notification,
                 resellerContactKey,
@@ -1729,6 +1750,263 @@ public class NotificationAccessService extends NotificationListenerService {
             return false;
         }
     }
+
+    private boolean isNewStvResellerRequest(
+            String incoming
+    ) {
+        SharedPreferences prefs =
+                getSharedPreferences(
+                        "master_responde_stv",
+                        MODE_PRIVATE
+                );
+
+        return MessageSettings.matchesAnyTrigger(
+                prefs,
+                MessageSettings.KEY_STV_RESELLER_TRIGGERS,
+                MessageSettings.DEFAULT_STV_RESELLER_TRIGGERS,
+                incoming
+        );
+    }
+
+    private void beginNewStvResellerFlow(
+            Notification notification,
+            String contactKey,
+            SharedPreferences prefs
+    ) {
+        String state =
+                prefs.getString(
+                        "stv_reseller_state_" + contactKey,
+                        ""
+                );
+
+        if ("REVIEW_REQUIRED".equals(state)) {
+            MessageSettings.send(
+                    this,
+                    notification,
+                    prefs,
+                    MessageSettings.MSG_STV_RESELLER_REVIEW,
+                    MessageSettings.DEFAULT_STV_RESELLER_REVIEW
+            );
+
+            return;
+        }
+
+        if ("COMPLETE".equals(state)) {
+            MessageSettings.send(
+                    this,
+                    notification,
+                    prefs,
+                    MessageSettings.MSG_STV_RESELLER_ALREADY_LINKED,
+                    MessageSettings.DEFAULT_STV_RESELLER_ALREADY_LINKED
+            );
+
+            return;
+        }
+
+        String signupLink =
+                prefs.getString(
+                        "stv_reseller_signup_link",
+                        ResellersActivity.DEFAULT_STV_SIGNUP_LINK
+                );
+
+        prefs.edit()
+                .putString(
+                        "stv_reseller_state_" + contactKey,
+                        "WAITING_EMAIL"
+                )
+                .putString(
+                        "last_stv_reseller_status",
+                        "Revenda: aguardando e-mail do cadastro"
+                )
+                .apply();
+
+        MessageSettings.send(
+                this,
+                notification,
+                prefs,
+                MessageSettings.MSG_STV_RESELLER_SIGNUP,
+                MessageSettings.DEFAULT_STV_RESELLER_SIGNUP,
+                MessageSettings.variables(
+                        "LINK_CADASTRO",
+                        signupLink
+                )
+        );
+    }
+
+    private boolean handlePendingStvResellerFlow(
+            Notification notification,
+            String contactKey,
+            String incoming,
+            SharedPreferences prefs
+    ) {
+        String state =
+                prefs.getString(
+                        "stv_reseller_state_" + contactKey,
+                        ""
+                );
+
+        if (state.isEmpty()
+                || "COMPLETE".equals(state)
+                || "ERROR".equals(state)
+                || "REVIEW_REQUIRED".equals(state)) {
+            return false;
+        }
+
+        if (MessageSettings.matchesAnyTrigger(
+                prefs,
+                MessageSettings.KEY_STV_RESELLER_CANCEL_TRIGGER,
+                MessageSettings.DEFAULT_STV_RESELLER_CANCEL_TRIGGER,
+                incoming
+        )) {
+            StvPlusResellerAutomation.cancelFind(
+                    contactKey
+            );
+
+            BackgroundRuntime.clearResellerPending(
+                    prefs
+            );
+
+            prefs.edit()
+                    .remove(
+                            "stv_reseller_state_" + contactKey
+                    )
+                    .putString(
+                            "last_stv_reseller_status",
+                            "Revenda: fluxo cancelado"
+                    )
+                    .apply();
+
+            try {
+                new SecureStore(this).remove(
+                        "stv_pending_reseller_email_" + contactKey
+                );
+            } catch (Exception ignored) {
+            }
+
+            MessageSettings.send(
+                    this,
+                    notification,
+                    prefs,
+                    MessageSettings.MSG_STV_RESELLER_CANCELLED,
+                    MessageSettings.DEFAULT_STV_RESELLER_CANCELLED
+            );
+
+            return true;
+        }
+
+        if ("WAITING_EMAIL".equals(state)) {
+            if (isNewStvResellerRequest(
+                    incoming
+            )) {
+                return true;
+            }
+
+            String email =
+                    incoming == null
+                            ? ""
+                            : incoming.trim().toLowerCase(Locale.ROOT);
+
+            if (!isValidEmail(email)) {
+                MessageSettings.send(
+                        this,
+                        notification,
+                        prefs,
+                        MessageSettings.MSG_STV_RESELLER_INVALID_EMAIL,
+                        MessageSettings.DEFAULT_STV_RESELLER_INVALID_EMAIL
+                );
+
+                return true;
+            }
+
+            try {
+                new SecureStore(this).put(
+                        "stv_pending_reseller_email_" + contactKey,
+                        email
+                );
+
+            } catch (Exception e) {
+                MessageSettings.send(
+                        this,
+                        notification,
+                        prefs,
+                        MessageSettings.MSG_STV_RESELLER_SAVE_ERROR,
+                        MessageSettings.DEFAULT_STV_RESELLER_SAVE_ERROR
+                );
+
+                return true;
+            }
+
+            prefs.edit()
+                    .putString(
+                            "stv_reseller_state_" + contactKey,
+                            "SEARCHING"
+                    )
+                    .putString(
+                            "last_stv_reseller_status",
+                            "Revenda: verificando e-mail cadastrado no painel Sigma"
+                    )
+                    .apply();
+
+            MessageSettings.send(
+                    this,
+                    notification,
+                    prefs,
+                    MessageSettings.MSG_STV_RESELLER_VERIFYING,
+                    MessageSettings.DEFAULT_STV_RESELLER_VERIFYING
+            );
+
+            BackgroundRuntime.markResellerPending(
+                    prefs,
+                    notification,
+                    contactKey
+            );
+
+            boolean started =
+                    StvPlusResellerAutomation.findReseller(
+                            this,
+                            notification,
+                            prefs,
+                            contactKey,
+                            email
+                    );
+
+            if (!started) {
+                BackgroundRuntime.clearResellerPending(
+                        prefs
+                );
+                prefs.edit()
+                        .putString(
+                                "stv_reseller_state_" + contactKey,
+                                "WAITING_EMAIL"
+                        )
+                        .putString(
+                                "last_stv_reseller_status",
+                                "Revenda: verificação ocupada"
+                        )
+                        .apply();
+
+                MessageSettings.send(
+                        this,
+                        notification,
+                        prefs,
+                        MessageSettings.MSG_STV_RESELLER_BUSY,
+                        MessageSettings.DEFAULT_STV_RESELLER_BUSY
+                );
+            }
+
+            return true;
+        }
+
+        if ("SEARCHING".equals(state)
+                || "ADDING".equals(state)) {
+            // Não responde a republicações/atualizações da notificação
+            // enquanto a automação já está trabalhando.
+            return true;
+        }
+
+        return false;
+    }
+
 
     private boolean isNewResellerRequest(
             String incoming
