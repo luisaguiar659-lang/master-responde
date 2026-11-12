@@ -226,106 +226,6 @@ public class MessageSettingsActivity extends Activity {
                 true
         );
 
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_TRIGGER,
-                "Comando principal dos grupos",
-                "Exemplo: @infor",
-                MessageSettings.DEFAULT_GROUP_TRIGGER,
-                false,
-                true
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_1,
-                "Grupo opção 1 — Tutoriais",
-                "Comandos recebidos que abrem a opção 1. Um por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_1,
-                false,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_2,
-                "Grupo opção 2 — Promoções e Planos",
-                "Um comando por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_2,
-                false,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_3,
-                "Grupo opção 3 — Aplicativos Parceiros",
-                "Um comando por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_3,
-                false,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_4,
-                "Grupo opção 4 — Banners",
-                "Um comando por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_4,
-                false,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_5,
-                "Grupo opção 5 — Avisos",
-                "Um comando por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_5,
-                false,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_6,
-                "Grupo opção 6 — Apresentação",
-                "Um comando por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_6,
-                false,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_7,
-                "Grupo opção 7 — Créditos",
-                "Um comando por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_7,
-                false,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_8,
-                "Grupo opção 8 — Teste",
-                "Um comando por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_8,
-                false,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.KEY_GROUP_OPTION_0,
-                "Grupo opção 0 — Suporte",
-                "Um comando por linha.",
-                MessageSettings.DEFAULT_GROUP_OPTION_0,
-                false,
-                false
-        );
-
         addSection(
                 content,
                 "TEMPOS — SEGUNDOS"
@@ -369,22 +269,6 @@ public class MessageSettingsActivity extends Activity {
                 "Bloqueio de regra repetida",
                 "Evita executar a mesma regra novamente logo em seguida.",
                 MessageSettings.DEFAULT_RULE_DUPLICATE_SECONDS
-        );
-
-        addNumberSetting(
-                content,
-                MessageSettings.KEY_GROUP_DUPLICATE_SECONDS,
-                "Bloqueio de repetição em grupos",
-                "Proteção contra republicações do WhatsApp em grupos.",
-                MessageSettings.DEFAULT_GROUP_DUPLICATE_SECONDS
-        );
-
-        addNumberSetting(
-                content,
-                MessageSettings.KEY_GROUP_MENU_SECONDS,
-                "Tempo que o menu do grupo fica aberto",
-                "Depois de abrir o menu, por quantos segundos aceita 1, 2, 3...",
-                MessageSettings.DEFAULT_GROUP_MENU_SECONDS
         );
 
         addSection(
@@ -518,56 +402,6 @@ public class MessageSettingsActivity extends Activity {
                 "Revenda — verificação ocupada",
                 "",
                 MessageSettings.DEFAULT_RESELLER_BUSY,
-                true,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.MSG_GROUP_MENU,
-                "Grupo — menu",
-                "Use {COMANDO_MENU} para mostrar o comando configurado acima.",
-                MessageSettings.DEFAULT_GROUP_MENU,
-                true,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.MSG_GROUP_CATEGORY_MISSING,
-                "Grupo — categoria não configurada",
-                "Use {CATEGORIA}.",
-                MessageSettings.DEFAULT_GROUP_CATEGORY_MISSING,
-                true,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.MSG_GROUP_FUTURE,
-                "Grupo — opção ainda indisponível",
-                "",
-                MessageSettings.DEFAULT_GROUP_FUTURE,
-                true,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.MSG_GROUP_SUPPORT,
-                "Grupo — falar com suporte",
-                "",
-                MessageSettings.DEFAULT_GROUP_SUPPORT,
-                true,
-                false
-        );
-
-        addTextSetting(
-                content,
-                MessageSettings.MSG_GROUP_UNKNOWN,
-                "Grupo — opção não reconhecida",
-                "Use {COMANDO_MENU}.",
-                MessageSettings.DEFAULT_GROUP_UNKNOWN,
                 true,
                 false
         );
