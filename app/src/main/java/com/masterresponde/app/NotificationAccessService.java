@@ -1783,8 +1783,11 @@ public class NotificationAccessService extends NotificationListenerService {
             String trigger = normalizeTriggerForStv(line);
             if (trigger.isEmpty()) continue;
 
-            // Aceita o gatilho isolado ou dentro de uma frase maior.
-            if (message.equals(trigger) || message.contains(trigger)) {
+            // Gatilhos de revenda STV+ devem ser mensagens isoladas.
+            // Não procurar por trecho: o conteúdo de um teste MasterFlix pode
+            // conter nomes/códigos de aplicativos parceiros (ex.: STV+),
+            // mas isso não representa um pedido de revenda.
+            if (message.equals(trigger)) {
                 return true;
             }
         }
