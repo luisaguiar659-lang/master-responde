@@ -1472,6 +1472,16 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
+        // Auditoria passiva: registra apenas o evento, sem armazenar o texto
+        // recebido nem interferir no roteamento das automações.
+        EventLog.add(
+                this,
+                "MENSAGEM RECEBIDA",
+                "WhatsApp Business",
+                "Nova mensagem privada identificada",
+                "RECEBIDA"
+        );
+
         if (MessageSettings.matchesAnyTrigger(
                 prefs,
                 MessageSettings.KEY_DIAGNOSTIC_TRIGGER,
@@ -3349,6 +3359,16 @@ public class NotificationAccessService extends NotificationListenerService {
         if (!reserveFingerprint(fingerprint)) return;
 
         boolean sent = reply(notification, message);
+
+        EventLog.add(
+                this,
+                sent ? "RESPOSTA ENVIADA" : "FALHA",
+                ruleKey != null && ruleKey.toLowerCase(Locale.ROOT).contains("stv")
+                        ? "STV+"
+                        : "Regras e respostas",
+                "Resposta automática processada",
+                sent ? "ENVIADA" : "ENVIO NÃO DISPONÍVEL"
+        );
 
         updateStatus(
                 sent
