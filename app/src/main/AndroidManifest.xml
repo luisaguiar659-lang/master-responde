@@ -20,6 +20,11 @@
             android:exported="false"/>
 
         <activity
+            android:name=".TriggerSimulatorActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".EventHistoryActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>
