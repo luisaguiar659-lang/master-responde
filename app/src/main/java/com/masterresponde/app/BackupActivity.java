@@ -22,7 +22,7 @@ import java.util.Map;
 public class BackupActivity extends Activity {
     private static final int CREATE_BACKUP = 701;
     private static final int RESTORE_BACKUP = 702;
-    private final int bg = Color.rgb(8, 11, 16);
+    private final int bg = Color.rgb(5, 17, 11);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
 
