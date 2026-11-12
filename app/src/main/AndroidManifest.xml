@@ -15,6 +15,31 @@
         android:roundIcon="@drawable/ic_launcher_master_responde">
 
         <activity
+            android:name=".MonitoringActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DiagnosticsActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".BackupActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".TriggerSimulatorActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".EventHistoryActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
             android:exported="true">

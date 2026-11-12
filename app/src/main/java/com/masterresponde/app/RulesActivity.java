@@ -158,6 +158,32 @@ public class RulesActivity extends Activity {
             response.setPadding(0, dp(10), 0, dp(8));
             c.addView(response);
 
+            boolean enabled = rule.optBoolean("enabled", true);
+            c.addView(text(
+                    enabled ? "STATUS: ATIVA" : "STATUS: PAUSADA",
+                    11,
+                    enabled ? Color.rgb(0, 190, 150) : Color.rgb(255, 170, 40),
+                    true
+            ));
+
+            if (categoryId.isEmpty()) {
+                Button toggle = actionButton(enabled ? "DESATIVAR REGRA" : "ATIVAR REGRA", false);
+                toggle.setOnClickListener(v -> toggleRule(id));
+                c.addView(toggle);
+
+                Button duplicate = actionButton("DUPLICAR REGRA", false);
+                duplicate.setOnClickListener(v -> duplicateRule(id));
+                c.addView(duplicate);
+
+                Button up = actionButton("MOVER PARA CIMA (MAIOR PRIORIDADE)", false);
+                up.setOnClickListener(v -> moveRule(id, -1));
+                c.addView(up);
+
+                Button down = actionButton("MOVER PARA BAIXO", false);
+                down.setOnClickListener(v -> moveRule(id, 1));
+                c.addView(down);
+            }
+
             if (categoryId.isEmpty()) {
                 Button edit = actionButton("EDITAR REGRA", true);
                 edit.setOnClickListener(v -> showEditDialog(id));
@@ -338,6 +364,57 @@ public class RulesActivity extends Activity {
         }
 
         saveRules(newRules);
+    }
+
+    private void toggleRule(String id) {
+        JSONArray rules = loadRules();
+        for (int i = 0; i < rules.length(); i++) {
+            JSONObject rule = rules.optJSONObject(i);
+            if (rule == null || !id.equals(rule.optString("id"))) continue;
+            try { rule.put("enabled", !rule.optBoolean("enabled", true)); }
+            catch (Exception ignored) { }
+            break;
+        }
+        saveRules(rules);
+        renderRules();
+    }
+
+    private void duplicateRule(String id) {
+        JSONArray rules = loadRules();
+        for (int i = 0; i < rules.length(); i++) {
+            JSONObject rule = rules.optJSONObject(i);
+            if (rule == null || !id.equals(rule.optString("id"))) continue;
+            try {
+                JSONObject copy = new JSONObject(rule.toString());
+                copy.put("id", UUID.randomUUID().toString());
+                copy.put("enabled", true);
+                copy.put("trigger", rule.optString("trigger") + " (cópia)");
+                rules.put(i + 1, copy);
+                saveRules(rules);
+                Toast.makeText(this, "Regra duplicada. Edite o novo gatilho antes de ativá-la.", Toast.LENGTH_LONG).show();
+                renderRules();
+            } catch (Exception ignored) { }
+            return;
+        }
+    }
+
+    private void moveRule(String id, int direction) {
+        JSONArray rules = loadRules();
+        int from = -1;
+        for (int i = 0; i < rules.length(); i++) {
+            JSONObject rule = rules.optJSONObject(i);
+            if (rule != null && id.equals(rule.optString("id"))) { from = i; break; }
+        }
+        int to = from + direction;
+        if (from < 0 || to < 0 || to >= rules.length()) return;
+        JSONArray reordered = new JSONArray();
+        for (int i = 0; i < rules.length(); i++) {
+            if (i == to) reordered.put(rules.optJSONObject(from));
+            else if (i == from) reordered.put(rules.optJSONObject(to));
+            else reordered.put(rules.optJSONObject(i));
+        }
+        saveRules(reordered);
+        renderRules();
     }
 
     private JSONArray loadRules() {
