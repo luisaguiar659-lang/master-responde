@@ -52,6 +52,7 @@ public class MasterflixActivity extends Activity {
     private int clipboardAttempts = 0;
     private int copyScrollAttempts = 0;
     private boolean loginAssistAttempted = false;
+    private int loginFillAttempts = 0;
     private volatile String capturedCopyText = "";
 
     private boolean autoResellerRequested = false;
@@ -2293,6 +2294,8 @@ public class MasterflixActivity extends Activity {
     }
 
     private void fillSavedLogin() {
+        if (webView == null) return;
+
         final String user =
                 secureStore.get(
                         "masterflix_user"
@@ -2303,62 +2306,76 @@ public class MasterflixActivity extends Activity {
                         "masterflix_pass"
                 );
 
-        if (user.isEmpty()
-                || pass.isEmpty()) {
-
+        if (user.isEmpty() || pass.isEmpty()) {
             Toast.makeText(
                     this,
                     "Salve primeiro o usuário e a senha.",
                     Toast.LENGTH_LONG
             ).show();
-
             return;
         }
 
-        if (webView.getUrl() == null
-                || !webView.getUrl()
-                .startsWith(
-                        SigmaPanelConfig.getBaseUrl(
-                                this
-                        )
-                )) {
-
-            openLogin();
-        }
-
-        final String userJson =
-                JSONObject.quote(user);
-
-        final String passJson =
-                JSONObject.quote(pass);
+        final String userJson = JSONObject.quote(user);
+        final String passJson = JSONObject.quote(pass);
 
         String script =
                 "(function(){" +
-                        "var inputs=document.querySelectorAll('input');" +
-                        "var user=null,pass=null;" +
-                        "for(var i=0;i<inputs.length;i++){" +
-                        "var t=(inputs[i].type||'').toLowerCase();" +
-                        "if(t==='password'&&!pass){pass=inputs[i];}" +
-                        "else if((t==='text'||t==='email'||!t)&&!user){user=inputs[i];}" +
-                        "}" +
-                        "function set(el,v){" +
-                        "if(!el)return false;" +
-                        "var setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;" +
-                        "setter.call(el,v);" +
-                        "el.dispatchEvent(new Event('input',{bubbles:true}));" +
-                        "el.dispatchEvent(new Event('change',{bubbles:true}));" +
-                        "return true;" +
-                        "}" +
-                        "return set(user," + userJson + ")&&set(pass," + passJson + ");" +
-                        "})();";
+                "var inputs=document.querySelectorAll('input');" +
+                "var user=null,pass=null;" +
+                "for(var i=0;i<inputs.length;i++){" +
+                "var t=(inputs[i].type||'').toLowerCase();" +
+                "var a=(inputs[i].getAttribute('autocomplete')||'').toLowerCase();" +
+                "var n=(inputs[i].name||'').toLowerCase();" +
+                "var id=(inputs[i].id||'').toLowerCase();" +
+                "if(t==='password'&&!pass){pass=inputs[i];}" +
+                "else if(!user&&(t==='email'||a==='username'||t==='text'||" +
+                "n.indexOf('user')>=0||id.indexOf('user')>=0)){user=inputs[i];}" +
+                "}" +
+                "function set(el,v){" +
+                "if(!el)return false;" +
+                "var d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');" +
+                "if(!d||!d.set)return false;" +
+                "d.set.call(el,v);" +
+                "el.dispatchEvent(new Event('input',{bubbles:true}));" +
+                "el.dispatchEvent(new Event('change',{bubbles:true}));" +
+                "return true;" +
+                "}" +
+                "return set(user," + userJson + ")&&set(pass," + passJson + ");" +
+                "})();";
 
         webView.evaluateJavascript(
                 script,
-                value -> Toast.makeText(
-                        this,
-                        "Campos preenchidos. Conclua “Verificado” e toque em Continuar.",
-                        Toast.LENGTH_LONG
-                ).show()
+                value -> {
+                    if (isFinishing() || isDestroyed()) return;
+
+                    String result = decodeJavascriptString(value);
+                    if ("true".equals(result)) {
+                        loginFillAttempts = 0;
+                        Toast.makeText(
+                                this,
+                                "Usuário e senha preenchidos. Conclua a verificação de segurança e toque em Continuar.",
+                                Toast.LENGTH_LONG
+                        ).show();
+                        return;
+                    }
+
+                    // Formulários SPA podem aparecer depois do onPageFinished.
+                    // Tenta novamente por alguns segundos, sem contornar CAPTCHA.
+                    if (loginFillAttempts < 15 && webView != null) {
+                        loginFillAttempts++;
+                        automationHandler.postDelayed(
+                                this::fillSavedLogin,
+                                700L
+                        );
+                    } else {
+                        loginFillAttempts = 0;
+                        Toast.makeText(
+                                this,
+                                "Não encontrei o formulário de login. Confira se o painel carregou corretamente.",
+                                Toast.LENGTH_LONG
+                        ).show();
+                    }
+                }
         );
     }
 
