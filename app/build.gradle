@@ -10,8 +10,8 @@ android {
         applicationId 'com.masterresponde.app'
         minSdk 26
         targetSdk 35
-        versionCode 1012
-        versionName '2.0.6'
+        versionCode 1013
+        versionName '2.0.7'
     }
 
     compileOptions {
