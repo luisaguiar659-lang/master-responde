@@ -38,7 +38,7 @@ public class TriggerSimulatorActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(18), dp(16), dp(16));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
         root.addView(text("SIMULADOR DE GATILHOS", 21, white, true));
         root.addView(text("Teste uma mensagem sem enviá-la ao WhatsApp.", 12, muted, false));
 
