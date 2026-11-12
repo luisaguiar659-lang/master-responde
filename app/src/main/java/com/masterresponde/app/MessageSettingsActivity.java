@@ -29,6 +29,12 @@ public class MessageSettingsActivity extends Activity {
     private final Map<String, EditText> textFields =
             new LinkedHashMap<>();
 
+    private final Map<String, EditText> stvTextFields =
+            new LinkedHashMap<>();
+
+    private final Map<String, CheckBox> stvEnabledFields =
+            new LinkedHashMap<>();
+
     private final Map<String, CheckBox> enabledFields =
             new LinkedHashMap<>();
 
@@ -222,6 +228,20 @@ public class MessageSettingsActivity extends Activity {
                 MessageSettings.DEFAULT_RESELLER_TRIGGERS,
                 false,
                 false
+        );
+
+        addSection(content, "GATILHOS RECEBIDOS — REVENDA STV+");
+        addStvTriggerTextSetting(
+                content,
+                MessageSettings.KEY_STV_RESELLER_TRIGGERS,
+                "Gatilhos para nova revenda STV+",
+                MessageSettings.DEFAULT_STV_RESELLER_TRIGGERS
+        );
+        addStvTriggerTextSetting(
+                content,
+                MessageSettings.KEY_STV_RESELLER_CANCEL_TRIGGER,
+                "Comando para cancelar revenda STV+",
+                MessageSettings.DEFAULT_STV_RESELLER_CANCEL_TRIGGER
         );
 
         addTextSetting(
@@ -539,6 +559,18 @@ public class MessageSettingsActivity extends Activity {
                 true,
                 false
         );
+
+        addSection(content, "MENSAGENS ENVIADAS — REVENDA STV+");
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_SIGNUP, "Revenda STV+ — link de cadastro", "Use {LINK_CADASTRO} para inserir o link STV+ salvo.", MessageSettings.DEFAULT_STV_RESELLER_SIGNUP, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_VERIFYING, "Revenda STV+ — verificando e-mail", "Enviada depois que o cliente manda o e-mail.", MessageSettings.DEFAULT_STV_RESELLER_VERIFYING, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_CONFIRMED, "Revenda STV+ — cadastro confirmado", "Use {LINK_GRUPO} para inserir o grupo de suporte STV+.", MessageSettings.DEFAULT_STV_RESELLER_CONFIRMED, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_NOT_FOUND, "Revenda STV+ — não confirmado", "Use {MOTIVO} para incluir o motivo retornado pela automação.", MessageSettings.DEFAULT_STV_RESELLER_NOT_FOUND, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_CANCELLED, "Revenda STV+ — cancelado", "", MessageSettings.DEFAULT_STV_RESELLER_CANCELLED, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_ALREADY_LINKED, "Revenda STV+ — já vinculada", "", MessageSettings.DEFAULT_STV_RESELLER_ALREADY_LINKED, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_REVIEW, "Revenda STV+ — revisão manual", "", MessageSettings.DEFAULT_STV_RESELLER_REVIEW, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_INVALID_EMAIL, "Revenda STV+ — e-mail inválido", "", MessageSettings.DEFAULT_STV_RESELLER_INVALID_EMAIL, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_SAVE_ERROR, "Revenda STV+ — erro ao salvar e-mail", "", MessageSettings.DEFAULT_STV_RESELLER_SAVE_ERROR, true);
+        addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_BUSY, "Revenda STV+ — verificação ocupada", "", MessageSettings.DEFAULT_STV_RESELLER_BUSY, true);
 
         addTextSetting(
                 content,
@@ -867,6 +899,71 @@ public class MessageSettingsActivity extends Activity {
         );
     }
 
+    private void addStvTriggerTextSetting(
+            LinearLayout content,
+            String key,
+            String title,
+            String defaultValue
+    ) {
+        LinearLayout c = card();
+        c.addView(text(title, 15, Color.WHITE, true));
+        TextView desc = text("Um por linha.", 11, Color.rgb(145, 155, 165), false);
+        desc.setPadding(0, dp(3), 0, dp(6));
+        c.addView(desc);
+        EditText field = new EditText(this);
+        field.setTextColor(Color.WHITE);
+        field.setHintTextColor(Color.rgb(120, 130, 140));
+        field.setTextSize(13);
+        field.setSingleLine(false);
+        field.setMinLines(3);
+        field.setGravity(Gravity.TOP);
+        field.setText(stvPrefs.getString(key, defaultValue));
+        stvTriggerFields.put(key, field);
+        c.addView(field);
+        content.addView(c);
+        gap(content, 10);
+    }
+
+    private void addStvTextSetting(
+            LinearLayout content,
+            String key,
+            String title,
+            String description,
+            String defaultValue,
+            boolean withEnabled
+    ) {
+        LinearLayout c = card();
+        c.addView(text(title, 15, Color.WHITE, true));
+        if (description != null && !description.trim().isEmpty()) {
+            TextView desc = text(description, 11, Color.rgb(145, 155, 165), false);
+            desc.setPadding(0, dp(3), 0, dp(6));
+            c.addView(desc);
+        }
+        if (withEnabled) {
+            CheckBox enabled = new CheckBox(this);
+            enabled.setText("Enviar esta mensagem");
+            enabled.setTextColor(Color.rgb(205, 215, 220));
+            enabled.setChecked(stvPrefs.getBoolean(
+                    MessageSettings.enabledKey(key),
+                    MessageSettings.defaultEnabled(key)
+            ));
+            stvEnabledFields.put(key, enabled);
+            c.addView(enabled);
+        }
+        EditText field = new EditText(this);
+        field.setTextColor(Color.WHITE);
+        field.setHintTextColor(Color.rgb(120, 130, 140));
+        field.setTextSize(13);
+        field.setSingleLine(false);
+        field.setMinLines(3);
+        field.setGravity(Gravity.TOP);
+        field.setText(stvPrefs.getString(key, defaultValue));
+        stvTextFields.put(key, field);
+        c.addView(field);
+        content.addView(c);
+        gap(content, 10);
+    }
+
     private void addStvTriggerSetting(
             LinearLayout content
     ) {
@@ -1093,6 +1190,12 @@ public class MessageSettingsActivity extends Activity {
                     triggers
             );
         }
+        for (Map.Entry<String, EditText> entry : stvTextFields.entrySet()) {
+            stvEditor.putString(entry.getKey(), entry.getValue().getText().toString().trim());
+        }
+        for (Map.Entry<String, CheckBox> entry : stvEnabledFields.entrySet()) {
+            stvEditor.putBoolean(MessageSettings.enabledKey(entry.getKey()), entry.getValue().isChecked());
+        }
         stvEditor.apply();
 
         Toast.makeText(
@@ -1131,9 +1234,14 @@ public class MessageSettingsActivity extends Activity {
 
         editor.apply();
 
-        stvPrefs.edit()
-                .remove(StvTriggerSettingsActivity.KEY_TRIGGERS)
-                .apply();
+        SharedPreferences.Editor stvRestore = stvPrefs.edit();
+        stvRestore.remove(StvTriggerSettingsActivity.KEY_TRIGGERS);
+        for (String key : stvTriggerFields.keySet()) stvRestore.remove(key);
+        for (String key : stvTextFields.keySet()) {
+            stvRestore.remove(key);
+            stvRestore.remove(MessageSettings.enabledKey(key));
+        }
+        stvRestore.apply();
 
         Toast.makeText(
                 this,
