@@ -21,9 +21,18 @@ public class ResellersActivity extends Activity {
     public static final String DEFAULT_SUPPORT_GROUP_LINK =
             "https://chat.whatsapp.com/IWHogXDJTem2VgJTJhsTA0?s=cl&p=a&mlu=0&ilr=1";
 
+    public static final String DEFAULT_STV_SIGNUP_LINK =
+            "https://stvmais.sigma.vin/#/rs/kaL4rJVWgr/ANKWP35DPR";
+
+    public static final String DEFAULT_STV_SUPPORT_GROUP_LINK =
+            "https://chat.whatsapp.com/IWHogXDJTem2VgJTJhsTA0?s=cl&p=a&mlu=0&ilr=1";
+
     private SharedPreferences prefs;
+    private SharedPreferences stvPrefs;
     private EditText linkField;
     private EditText supportGroupField;
+    private EditText stvLinkField;
+    private EditText stvSupportGroupField;
     private TextView status;
 
     @Override
@@ -32,6 +41,10 @@ public class ResellersActivity extends Activity {
 
         prefs = getSharedPreferences(
                 "master_responde",
+                MODE_PRIVATE
+        );
+        stvPrefs = getSharedPreferences(
+                "master_responde_stv",
                 MODE_PRIVATE
         );
 
@@ -232,6 +245,45 @@ public class ResellersActivity extends Activity {
 
         gap(content, 12);
 
+        LinearLayout stvCard = card();
+        stvCard.addView(text("REVENDA STV+ — LINK DE CADASTRO", 11, Color.rgb(255, 150, 0), true));
+        stvLinkField = new EditText(this);
+        stvLinkField.setTextColor(Color.WHITE);
+        stvLinkField.setHintTextColor(Color.rgb(130, 140, 150));
+        stvLinkField.setTextSize(13);
+        stvLinkField.setSingleLine(false);
+        stvLinkField.setMinLines(2);
+        stvLinkField.setText(stvPrefs.getString("stv_reseller_signup_link", DEFAULT_STV_SIGNUP_LINK));
+        stvCard.addView(stvLinkField);
+
+        Button saveStvLink = actionButton("SALVAR LINK STV+", true);
+        saveStvLink.setOnClickListener(v -> saveStvLink());
+        stvCard.addView(saveStvLink);
+
+        stvCard.addView(text("GRUPO DE SUPORTE STV+", 11, Color.rgb(255, 150, 0), true));
+        stvSupportGroupField = new EditText(this);
+        stvSupportGroupField.setTextColor(Color.WHITE);
+        stvSupportGroupField.setHintTextColor(Color.rgb(130, 140, 150));
+        stvSupportGroupField.setTextSize(13);
+        stvSupportGroupField.setSingleLine(false);
+        stvSupportGroupField.setMinLines(2);
+        stvSupportGroupField.setText(stvPrefs.getString("stv_reseller_support_group_link", DEFAULT_STV_SUPPORT_GROUP_LINK));
+        stvCard.addView(stvSupportGroupField);
+
+        Button saveStvGroup = actionButton("SALVAR GRUPO STV+", true);
+        saveStvGroup.setOnClickListener(v -> saveStvSupportGroupLink());
+        stvCard.addView(saveStvGroup);
+
+        stvCard.addView(text(
+                "Links e grupo de suporte exclusivos do STV+. Eles não alteram os dados da revenda MasterFlix.",
+                12,
+                Color.rgb(150, 160, 170),
+                false
+        ));
+        content.addView(stvCard);
+
+        gap(content, 12);
+
         LinearLayout credit = card();
 
         credit.addView(
@@ -398,14 +450,40 @@ public class ResellersActivity extends Activity {
         ).show();
     }
 
+    private void saveStvLink() {
+        String value = stvLinkField.getText().toString().trim();
+        if (value.isEmpty() || !value.startsWith("https://")) {
+            stvLinkField.setError("Informe um link https:// válido.");
+            return;
+        }
+        stvPrefs.edit().putString("stv_reseller_signup_link", value).apply();
+        Toast.makeText(this, "Link de cadastro STV+ salvo.", Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveStvSupportGroupLink() {
+        String value = stvSupportGroupField.getText().toString().trim();
+        if (!value.isEmpty() && !value.startsWith("https://")) {
+            stvSupportGroupField.setError("Informe um link https:// válido ou deixe vazio.");
+            return;
+        }
+        stvPrefs.edit().putString("stv_reseller_support_group_link", value).apply();
+        Toast.makeText(this, "Grupo de suporte STV+ salvo.", Toast.LENGTH_SHORT).show();
+    }
+
     private void refreshStatus() {
         if (status == null) return;
 
+        String masterStatus = prefs.getString(
+                "last_reseller_status",
+                "Nenhuma operação de revenda realizada."
+        );
+        String stvStatus = stvPrefs.getString(
+                "last_stv_reseller_status",
+                "Nenhuma operação de revenda STV+ realizada."
+        );
         status.setText(
-                prefs.getString(
-                        "last_reseller_status",
-                        "Nenhuma operação de revenda realizada."
-                )
+                "MASTERFLIX\n" + masterStatus
+                        + "\n\nSTV+\n" + stvStatus
         );
     }
 
