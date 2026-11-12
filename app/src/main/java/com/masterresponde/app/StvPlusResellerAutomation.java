@@ -639,7 +639,7 @@ public class StvPlusResellerAutomation {
 
         try {
             SecureStore secureStore =
-                    new SecureStore(
+                    new StvSecureStore(
                             context
                     );
 
@@ -1604,7 +1604,7 @@ public class StvPlusResellerAutomation {
 
         try {
             SecureStore secureStore =
-                    new SecureStore(
+                    new StvSecureStore(
                             context
                     );
 
@@ -1808,7 +1808,7 @@ public class StvPlusResellerAutomation {
                     );
 
                     try {
-                        new SecureStore(
+                        new StvSecureStore(
                                 context
                         ).remove(
                                 "stv_pending_reseller_email_" + contactKey
