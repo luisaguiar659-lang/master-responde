@@ -244,7 +244,7 @@ public class MasterflixActivity extends Activity {
     private void buildScreen() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(7, 9, 11));
+        root.setBackgroundColor(Color.rgb(5, 17, 11));
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
@@ -329,7 +329,7 @@ public class MasterflixActivity extends Activity {
                 text(
                         "SESSÃO",
                         11,
-                        Color.rgb(255, 150, 0),
+                        Color.rgb(0, 214, 143),
                         true
                 )
         );
@@ -359,7 +359,7 @@ public class MasterflixActivity extends Activity {
                 text(
                         "CREDENCIAIS",
                         11,
-                        Color.rgb(255, 150, 0),
+                        Color.rgb(0, 214, 143),
                         true
                 )
         );
