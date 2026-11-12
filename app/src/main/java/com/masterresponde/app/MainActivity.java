@@ -194,9 +194,11 @@ public class MainActivity extends Activity {
                         this
                 );
 
-        shell.setBackgroundColor(
-                backgroundColor()
-        );
+        if (isLightTheme()) {
+            shell.setBackgroundColor(backgroundColor());
+        } else {
+            shell.setBackgroundResource(R.drawable.app_background);
+        }
 
         LinearLayout root =
                 new LinearLayout(
@@ -207,9 +209,11 @@ public class MainActivity extends Activity {
                 LinearLayout.VERTICAL
         );
 
-        root.setBackgroundColor(
-                backgroundColor()
-        );
+        if (isLightTheme()) {
+            root.setBackgroundColor(backgroundColor());
+        } else {
+            root.setBackgroundResource(R.drawable.app_background);
+        }
 
         LinearLayout header =
                 new LinearLayout(
