@@ -7,21 +7,17 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 public class RulesActivity extends Activity {
@@ -65,7 +61,7 @@ public class RulesActivity extends Activity {
         titles.setOrientation(LinearLayout.VERTICAL);
         titles.addView(text("REGRAS", 21, Color.WHITE, true));
         titles.addView(text(
-                "Resposta única ou categoria com sequência",
+                "Respostas automáticas privadas",
                 12,
                 Color.rgb(150, 160, 170),
                 false
@@ -102,7 +98,7 @@ public class RulesActivity extends Activity {
         gap(12);
 
         content.addView(text(
-                "REGRAS são usadas para respostas privadas simples. As categorias de MÍDIAS são exclusivas do menu @infor nos grupos e não podem ser usadas aqui.",
+                "Cadastre palavras ou frases para enviar respostas automáticas em conversas privadas.",
                 12,
                 Color.rgb(145, 155, 165),
                 false
@@ -148,10 +144,7 @@ public class RulesActivity extends Activity {
 
             String destination;
             if (!categoryId.isEmpty()) {
-                destination =
-                        "DESATIVADA — categoria \"" +
-                                categoryName +
-                                "\" agora é exclusiva do @infor em grupos.";
+                destination = "DESATIVADA — regra antiga vinculada à categoria de mídia: " + categoryName;
             } else {
                 destination = "Resposta: " + reply;
             }
@@ -220,138 +213,6 @@ public class RulesActivity extends Activity {
         dialog.show();
     }
 
-    private void showCategoryRuleDialog() {
-        JSONArray categories = loadCategories();
-
-        List<JSONObject> available = new ArrayList<>();
-        List<String> names = new ArrayList<>();
-
-        for (int i = 0; i < categories.length(); i++) {
-            JSONObject category = categories.optJSONObject(i);
-            if (category == null) continue;
-
-            JSONArray responses = category.optJSONArray("responses");
-            if (responses == null || !hasSendableResponse(responses)) continue;
-
-            available.add(category);
-            names.add(category.optString("name"));
-        }
-
-        if (available.isEmpty()) {
-            Toast.makeText(
-                    this,
-                    "Crie primeiro uma categoria com pelo menos um texto ou link no módulo Mídias.",
-                    Toast.LENGTH_LONG
-            ).show();
-            return;
-        }
-
-        LinearLayout box = dialogBox();
-
-        EditText trigger = field("Palavra ou frase");
-        box.addView(trigger);
-
-        TextView label = text(
-                "Categoria que será enviada:",
-                12,
-                Color.rgb(60, 60, 60),
-                true
-        );
-        box.addView(label);
-
-        Spinner spinner = new Spinner(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                names
-        );
-        spinner.setAdapter(adapter);
-        box.addView(spinner);
-
-        CheckBox exact = exactCheck();
-        box.addView(exact);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Regra com categoria")
-                .setView(box)
-                .setNegativeButton("CANCELAR", null)
-                .setPositiveButton("SALVAR", null)
-                .create();
-
-        dialog.setOnShowListener(d -> {
-            Button save = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-            save.setOnClickListener(v -> {
-                String t = trigger.getText().toString().trim();
-
-                if (t.isEmpty()) {
-                    trigger.setError("Informe a palavra ou frase.");
-                    return;
-                }
-
-                int position = spinner.getSelectedItemPosition();
-
-                if (position < 0 || position >= available.size()) {
-                    return;
-                }
-
-                JSONObject selected = available.get(position);
-
-                addCategoryRule(
-                        t,
-                        selected.optString("id"),
-                        selected.optString("name"),
-                        exact.isChecked()
-                );
-
-                dialog.dismiss();
-                renderRules();
-            });
-        });
-
-        dialog.show();
-    }
-
-    private boolean hasSendableResponse(JSONArray responses) {
-        if (responses == null) {
-            return false;
-        }
-
-        for (int i = 0; i < responses.length(); i++) {
-            JSONObject response = responses.optJSONObject(i);
-            if (response == null) continue;
-
-            String type =
-                    response.optString(
-                            "type",
-                            "text"
-                    );
-
-            if ("link".equals(type)) {
-                if (!response.optString(
-                        "url",
-                        ""
-                ).trim().isEmpty()) {
-                    return true;
-                }
-
-                continue;
-            }
-
-            if ("photo".equals(type)) {
-                continue;
-            }
-
-            if (!response.optString(
-                    "text",
-                    ""
-            ).trim().isEmpty()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private void addSimpleRule(String trigger, String reply, boolean exact) {
         JSONArray rules = loadRules();
 
@@ -365,30 +226,6 @@ public class RulesActivity extends Activity {
             rules.put(rule);
             saveRules(rules);
             Toast.makeText(this, "Regra salva.", Toast.LENGTH_SHORT).show();
-        } catch (Exception ignored) {
-        }
-    }
-
-    private void addCategoryRule(
-            String trigger,
-            String categoryId,
-            String categoryName,
-            boolean exact
-    ) {
-        JSONArray rules = loadRules();
-
-        JSONObject rule = new JSONObject();
-
-        try {
-            rule.put("id", UUID.randomUUID().toString());
-            rule.put("trigger", trigger);
-            rule.put("reply", "");
-            rule.put("category_id", categoryId);
-            rule.put("category_name", categoryName);
-            rule.put("exact", exact);
-            rules.put(rule);
-            saveRules(rules);
-            Toast.makeText(this, "Regra com categoria salva.", Toast.LENGTH_SHORT).show();
         } catch (Exception ignored) {
         }
     }
