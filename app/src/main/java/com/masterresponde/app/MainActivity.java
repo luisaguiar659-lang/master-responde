@@ -1229,21 +1229,20 @@ public class MainActivity extends Activity {
                             "stvplus_credentials_saved",
                             stvPrefs.getBoolean("credentials_saved", false)
                     );
-            String lastStatus =
-                    getSharedPreferences("master_responde_stv", MODE_PRIVATE)
-                            .getString("last_stv_status", "");
+            boolean activeSession =
+                    stvPrefs.getBoolean("stvplus_session_active", false);
 
             if (StvPlusBackgroundAutomation.isRunning()) {
                 stvStatus.setText("● Gerando teste");
                 stvStatus.setTextColor(Color.rgb(0, 184, 255));
-            } else if (!credentials) {
-                stvStatus.setText("● Login necessário");
-                stvStatus.setTextColor(Color.rgb(255, 145, 0));
-            } else if (lastStatus != null && lastStatus.toLowerCase().contains("enviado")) {
-                stvStatus.setText("● Último teste enviado");
+            } else if (activeSession) {
+                stvStatus.setText("● Sessão ativa");
                 stvStatus.setTextColor(Color.rgb(0, 184, 255));
-            } else {
+            } else if (credentials) {
                 stvStatus.setText("● Login salvo");
+                stvStatus.setTextColor(Color.rgb(255, 145, 0));
+            } else {
+                stvStatus.setText("● Login necessário");
                 stvStatus.setTextColor(Color.rgb(255, 145, 0));
             }
         }
