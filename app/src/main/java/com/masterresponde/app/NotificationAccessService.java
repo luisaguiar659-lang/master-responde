@@ -1492,6 +1492,16 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
+        // Prioriza as regras definidas pelo usuário antes dos comandos internos.
+        if (handleConfiguredTextRule(
+                notification,
+                notificationKey,
+                incoming,
+                prefs
+        )) {
+            return;
+        }
+
         if (MessageSettings.matchesAnyTrigger(
                 prefs,
                 MessageSettings.KEY_DIAGNOSTIC_TRIGGER,
@@ -1570,55 +1580,83 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
+        if (handleConfiguredTextRule(
+                notification,
+                notificationKey,
+                incoming,
+                prefs
+        )) {
+            return;
+        }
+    }
+
+    /**
+     * Regras cadastradas pelo usuário têm prioridade sobre comandos internos
+     * (diagnóstico, teste e revenda). Assim, um texto configurado em REGRAS
+     * não é interceptado por outro fluxo antes da comparação.
+     */
+    private boolean handleConfiguredTextRule(
+            Notification notification,
+            String notificationKey,
+            String incoming,
+            SharedPreferences prefs
+    ) {
         try {
             JSONArray rules = new JSONArray(
                     prefs.getString("text_rules", "[]")
             );
 
+            String normalizedIncoming = normalizeRuleText(incoming);
+            if (normalizedIncoming.isEmpty()) return false;
+
             for (int i = 0; i < rules.length(); i++) {
                 JSONObject rule = rules.optJSONObject(i);
                 if (rule == null) continue;
 
-                String trigger = normalize(
+                String trigger = normalizeRuleText(
                         rule.optString("trigger", "")
                 );
-
-                boolean exact = rule.optBoolean("exact", false);
                 if (trigger.isEmpty()) continue;
 
+                boolean exact = rule.optBoolean("exact", false);
                 boolean match = exact
-                        ? incoming.equals(trigger)
-                        : incoming.contains(trigger);
+                        ? normalizedIncoming.equals(trigger)
+                        : normalizedIncoming.contains(trigger);
 
                 if (!match) continue;
 
-                String ruleId = rule.optString("id", String.valueOf(i));
+                // Regras antigas vinculadas a categorias de mídia continuam
+                // preservadas, mas não disparam no atendimento privado.
                 String categoryId = rule.optString("category_id", "");
-
-                // v1.13.1: categorias de MÍDIAS são exclusivas do menu @infor
-                // em grupos. Regras privadas antigas com categoria ficam
-                // ignoradas e não enviam nada.
-                if (!categoryId.isEmpty()) {
-                    continue;
-                }
+                if (!categoryId.isEmpty()) continue;
 
                 String response = rule.optString("reply", "").trim();
+                if (response.isEmpty()) return true;
 
-                if (!response.isEmpty()) {
-                    sendSingleWithProtection(
-                            notification,
-                            notificationKey,
-                            "rule|" + ruleId,
-                            incoming,
-                            response
-                    );
-                }
-
-                return;
+                String ruleId = rule.optString("id", String.valueOf(i));
+                sendSingleWithProtection(
+                        notification,
+                        notificationKey,
+                        "rule|" + ruleId,
+                        incoming,
+                        response
+                );
+                return true;
             }
-
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            updateStatus("Erro ao ler as regras cadastradas");
         }
+
+        return false;
+    }
+
+    private String normalizeRuleText(String value) {
+        if (value == null) return "";
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .trim()
+                .replaceAll("\\s+", " ");
     }
 
     private boolean isDuplicatePrivateMessage(
