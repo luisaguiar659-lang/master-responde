@@ -473,11 +473,17 @@ public class ResellersActivity extends Activity {
     private void refreshStatus() {
         if (status == null) return;
 
+        String masterStatus = prefs.getString(
+                "last_reseller_status",
+                "Nenhuma operação de revenda realizada."
+        );
+        String stvStatus = stvPrefs.getString(
+                "last_stv_reseller_status",
+                "Nenhuma operação de revenda STV+ realizada."
+        );
         status.setText(
-                prefs.getString(
-                        "last_reseller_status",
-                        "Nenhuma operação de revenda realizada."
-                )
+                "MASTERFLIX\n" + masterStatus
+                        + "\n\nSTV+\n" + stvStatus
         );
     }
 
