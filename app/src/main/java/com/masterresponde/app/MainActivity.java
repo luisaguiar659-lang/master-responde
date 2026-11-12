@@ -908,7 +908,7 @@ public class MainActivity extends Activity {
 
         info.addView(
                 text(
-                        "PAINEL SIGMA",
+                        "STATUS DAS AUTOMAÇÕES",
                         12,
                         Color.rgb(
                                 255,
@@ -917,30 +917,6 @@ public class MainActivity extends Activity {
                         ),
                         true
                 )
-        );
-
-        TextView credentialsInfo =
-                text(
-                        prefs.getBoolean(
-                                "masterflix_credentials_saved",
-                                false
-                        )
-                                ? "Credenciais salvas para " + SigmaPanelConfig.getPanelName(this) + ". Se a sessão expirar, o bot tentará entrar automaticamente."
-                                : "Nenhuma credencial salva. Abra PAINEL SIGMA no menu para configurar URL, usuário e senha.",
-                        12,
-                        secondaryTextColor(),
-                        false
-                );
-
-        credentialsInfo.setPadding(
-                0,
-                dp(8),
-                0,
-                0
-        );
-
-        info.addView(
-                credentialsInfo
         );
 
         TextView lastTest =
