@@ -20,6 +20,11 @@
             android:exported="false"/>
 
         <activity
+            android:name=".DiagnosticsActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".BackupActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>
