@@ -20,6 +20,23 @@ public class MessageSettings {
     public static final String KEY_RESELLER_CANCEL_TRIGGER =
             "cfg_reseller_cancel_trigger";
 
+    public static final String KEY_STV_RESELLER_TRIGGERS =
+            "cfg_stv_reseller_triggers";
+
+    public static final String KEY_STV_RESELLER_CANCEL_TRIGGER =
+            "cfg_stv_reseller_cancel_trigger";
+
+    public static final String MSG_STV_RESELLER_SIGNUP = "msg_stv_reseller_signup";
+    public static final String MSG_STV_RESELLER_VERIFYING = "msg_stv_reseller_verifying";
+    public static final String MSG_STV_RESELLER_CONFIRMED = "msg_stv_reseller_confirmed";
+    public static final String MSG_STV_RESELLER_NOT_FOUND = "msg_stv_reseller_not_found";
+    public static final String MSG_STV_RESELLER_CANCELLED = "msg_stv_reseller_cancelled";
+    public static final String MSG_STV_RESELLER_ALREADY_LINKED = "msg_stv_reseller_already_linked";
+    public static final String MSG_STV_RESELLER_REVIEW = "msg_stv_reseller_review";
+    public static final String MSG_STV_RESELLER_INVALID_EMAIL = "msg_stv_reseller_invalid_email";
+    public static final String MSG_STV_RESELLER_SAVE_ERROR = "msg_stv_reseller_save_error";
+    public static final String MSG_STV_RESELLER_BUSY = "msg_stv_reseller_busy";
+
     public static final String KEY_DIAGNOSTIC_TRIGGER =
             "cfg_diagnostic_trigger";
 
@@ -143,6 +160,33 @@ public class MessageSettings {
 
     public static final String DEFAULT_RESELLER_CANCEL_TRIGGER =
             "cancelar";
+
+    public static final String DEFAULT_STV_RESELLER_TRIGGERS =
+            "quero ser revenda stv+\\n" +
+            "quero ser revenda stv\\n" +
+            "quero revenda stv+\\n" +
+            "revenda stv+";
+
+    public static final String DEFAULT_STV_RESELLER_CANCEL_TRIGGER = "cancelar";
+
+    public static final String DEFAULT_STV_RESELLER_SIGNUP =
+            "🚀 Para ser Revenda STV+, faça seu cadastro pelo link:\\n\\n{LINK_CADASTRO}\\n\\nApós concluir, envie o e-mail usado no cadastro.";
+
+    public static final String DEFAULT_STV_RESELLER_VERIFYING =
+            "Recebi seu e-mail. Verificando seu cadastro de revenda STV+, aguarde...";
+
+    public static final String DEFAULT_STV_RESELLER_CONFIRMED =
+            "✅ Cadastro de revenda STV+ confirmado!\\n\\nEntre no grupo de suporte e solicite a ativação do painel.\\n\\n📲 Grupo de suporte:\\n{LINK_GRUPO}";
+
+    public static final String DEFAULT_STV_RESELLER_NOT_FOUND =
+            "Não consegui confirmar seu cadastro de revenda STV+ no painel.\\n\\n{MOTIVO}";
+
+    public static final String DEFAULT_STV_RESELLER_CANCELLED = "Fluxo de revenda STV+ cancelado.";
+    public static final String DEFAULT_STV_RESELLER_ALREADY_LINKED = "✅ Este WhatsApp já possui uma revenda STV+ vinculada.";
+    public static final String DEFAULT_STV_RESELLER_REVIEW = "⚠️ Existe uma operação anterior dessa revenda STV+ que precisa ser conferida manualmente no painel antes de iniciar outra.";
+    public static final String DEFAULT_STV_RESELLER_INVALID_EMAIL = "Envie somente o mesmo e-mail usado no cadastro da revenda STV+.";
+    public static final String DEFAULT_STV_RESELLER_SAVE_ERROR = "Não consegui salvar o e-mail da revenda STV+ com segurança. Tente novamente.";
+    public static final String DEFAULT_STV_RESELLER_BUSY = "O MASTER RESPONDE está concluindo outra verificação. Envie o e-mail novamente em alguns instantes.";
 
     public static final String DEFAULT_DIAGNOSTIC_TRIGGER =
             "teste bot";
