@@ -500,7 +500,7 @@ public class MessageSettings {
         // em vez de quebras de linha reais.
         if (messageKey != null
                 && messageKey.startsWith("msg_stv_reseller")) {
-            message = message.replace("\\\\n", "\\n");
+            message = message.replace("\\n", "\n");
         }
 
         if (message.trim().isEmpty()) {
