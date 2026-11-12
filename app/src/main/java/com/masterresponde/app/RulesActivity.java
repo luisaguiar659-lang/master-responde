@@ -271,6 +271,7 @@ public class RulesActivity extends Activity {
         exact.setChecked(selected.optBoolean("exact", false));
         box.addView(exact);
 
+        final JSONObject editableRule = selected;
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Editar regra")
                 .setView(box)
@@ -298,10 +299,10 @@ public class RulesActivity extends Activity {
                 }
 
                 try {
-                    selected.put("trigger", newTrigger);
-                    selected.put("exact", exact.isChecked());
+                    editableRule.put("trigger", newTrigger);
+                    editableRule.put("exact", exact.isChecked());
                     if (replyField != null) {
-                        selected.put("reply", newReply);
+                        editableRule.put("reply", newReply);
                     }
                     saveRules(rules);
                     Toast.makeText(this, "Regra atualizada.", Toast.LENGTH_SHORT).show();
