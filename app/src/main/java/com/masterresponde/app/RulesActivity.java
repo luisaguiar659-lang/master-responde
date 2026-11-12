@@ -140,7 +140,7 @@ public class RulesActivity extends Activity {
             c.addView(text(trigger, 17, Color.WHITE, true));
 
             c.addView(text(
-                    exact ? "Correspondência: EXATA" : "Correspondência: CONTÉM",
+                    exact ? "MODO: MENSAGEM EXATA" : "MODO: CONTÉM O GATILHO",
                     11,
                     Color.rgb(255, 150, 0),
                     true
@@ -164,6 +164,10 @@ public class RulesActivity extends Activity {
             );
             response.setPadding(0, dp(10), 0, dp(8));
             c.addView(response);
+
+            Button edit = actionButton("EDITAR REGRA", true);
+            edit.setOnClickListener(v -> showEditRuleDialog(id));
+            c.addView(edit);
 
             Button delete = actionButton("EXCLUIR", false);
             delete.setOnClickListener(v -> confirmDelete(id));
@@ -214,6 +218,98 @@ public class RulesActivity extends Activity {
                 addSimpleRule(t, r, exact.isChecked());
                 dialog.dismiss();
                 renderRules();
+            });
+        });
+
+        dialog.show();
+    }
+
+
+    private void showEditRuleDialog(String id) {
+        JSONArray rules = loadRules();
+        JSONObject selected = null;
+
+        for (int i = 0; i < rules.length(); i++) {
+            JSONObject item = rules.optJSONObject(i);
+            if (item != null && id.equals(item.optString("id"))) {
+                selected = item;
+                break;
+            }
+        }
+
+        if (selected == null) {
+            Toast.makeText(this, "Regra não encontrada.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        LinearLayout box = dialogBox();
+        EditText trigger = field("Palavra ou frase que ativa a regra");
+        trigger.setText(selected.optString("trigger", ""));
+        box.addView(trigger);
+
+        String categoryId = selected.optString("category_id", "");
+        EditText reply = null;
+
+        if (categoryId.isEmpty()) {
+            reply = field("Resposta automática");
+            reply.setMinLines(3);
+            reply.setGravity(Gravity.TOP);
+            reply.setText(selected.optString("reply", ""));
+            box.addView(reply);
+        } else {
+            TextView categoryInfo = text(
+                    "Categoria vinculada: " + selected.optString("category_name", "Categoria")
+                            + "\\nA edição preserva essa categoria.",
+                    12,
+                    Color.rgb(60, 60, 60),
+                    false
+            );
+            box.addView(categoryInfo);
+        }
+
+        CheckBox exact = exactCheck();
+        exact.setChecked(selected.optBoolean("exact", false));
+        box.addView(exact);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Editar regra")
+                .setView(box)
+                .setNegativeButton("CANCELAR", null)
+                .setPositiveButton("SALVAR ALTERAÇÕES", null)
+                .create();
+
+        final EditText replyField = reply;
+        dialog.setOnShowListener(d -> {
+            Button save = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            save.setOnClickListener(v -> {
+                String newTrigger = trigger.getText().toString().trim();
+                if (newTrigger.isEmpty()) {
+                    trigger.setError("Informe a palavra ou frase.");
+                    return;
+                }
+
+                String newReply = replyField == null
+                        ? ""
+                        : replyField.getText().toString().trim();
+
+                if (replyField != null && newReply.isEmpty()) {
+                    replyField.setError("Informe a resposta.");
+                    return;
+                }
+
+                try {
+                    selected.put("trigger", newTrigger);
+                    selected.put("exact", exact.isChecked());
+                    if (replyField != null) {
+                        selected.put("reply", newReply);
+                    }
+                    saveRules(rules);
+                    Toast.makeText(this, "Regra atualizada.", Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                    renderRules();
+                } catch (Exception ignored) {
+                    Toast.makeText(this, "Não foi possível salvar a regra.", Toast.LENGTH_SHORT).show();
+                }
             });
         });
 
@@ -449,7 +545,7 @@ public class RulesActivity extends Activity {
 
     private CheckBox exactCheck() {
         CheckBox exact = new CheckBox(this);
-        exact.setText("Responder somente se a mensagem for exatamente igual");
+        exact.setText("MENSAGEM EXATA — responder somente se a mensagem inteira for igual ao gatilho");
         exact.setTextColor(Color.rgb(40, 40, 40));
         return exact;
     }
