@@ -12,11 +12,11 @@ import android.widget.TextView;
 import org.json.JSONArray;
 
 public class MonitoringActivity extends Activity {
-    private final int bg = Color.rgb(8, 11, 16);
-    private final int card = Color.rgb(20, 27, 36);
+    private final int bg = Color.rgb(5, 17, 11);
+    private final int card = Color.rgb(10, 27, 17);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
-    private final int green = Color.rgb(0, 200, 150);
+    private final int green = Color.rgb(0, 214, 143);
     private LinearLayout content;
 
     @Override protected void onCreate(Bundle state) {
@@ -33,7 +33,7 @@ public class MonitoringActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(18), dp(16), dp(18));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
         root.addView(text("MONITORAMENTO", 22, white, true));
         root.addView(text("Visão geral do funcionamento", 13, muted, false));
         ScrollView scroll = new ScrollView(this);

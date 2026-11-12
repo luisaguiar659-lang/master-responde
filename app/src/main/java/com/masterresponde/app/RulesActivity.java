@@ -42,7 +42,7 @@ public class RulesActivity extends Activity {
     private void buildScreen() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(7, 9, 11));
+        root.setBackgroundResource(R.drawable.app_background);
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
@@ -162,7 +162,7 @@ public class RulesActivity extends Activity {
             c.addView(text(
                     enabled ? "STATUS: ATIVA" : "STATUS: PAUSADA",
                     11,
-                    enabled ? Color.rgb(0, 190, 150) : Color.rgb(255, 170, 40),
+                    enabled ? Color.rgb(0, 214, 143) : Color.rgb(255, 170, 40),
                     true
             ));
 

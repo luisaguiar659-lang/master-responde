@@ -22,7 +22,7 @@ import java.util.Map;
 public class BackupActivity extends Activity {
     private static final int CREATE_BACKUP = 701;
     private static final int RESTORE_BACKUP = 702;
-    private final int bg = Color.rgb(8, 11, 16);
+    private final int bg = Color.rgb(5, 17, 11);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
 
@@ -31,7 +31,7 @@ public class BackupActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(18), dp(22), dp(18), dp(18));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
         TextView title = text("BACKUP E RESTAURAÇÃO", 21, white, true);
         root.addView(title);
         root.addView(text("Salve e recupere suas regras e configurações sem alterar os módulos durante a operação.", 13, muted, false));

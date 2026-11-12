@@ -194,9 +194,11 @@ public class MainActivity extends Activity {
                         this
                 );
 
-        shell.setBackgroundColor(
-                backgroundColor()
-        );
+        if (isLightTheme()) {
+            shell.setBackgroundColor(backgroundColor());
+        } else {
+            shell.setBackgroundResource(R.drawable.app_background);
+        }
 
         LinearLayout root =
                 new LinearLayout(
@@ -207,9 +209,11 @@ public class MainActivity extends Activity {
                 LinearLayout.VERTICAL
         );
 
-        root.setBackgroundColor(
-                backgroundColor()
-        );
+        if (isLightTheme()) {
+            root.setBackgroundColor(backgroundColor());
+        } else {
+            root.setBackgroundResource(R.drawable.app_background);
+        }
 
         LinearLayout header =
                 new LinearLayout(
@@ -1637,31 +1641,31 @@ public class MainActivity extends Activity {
     private int backgroundColor() {
         return isLightTheme()
                 ? Color.rgb(244, 247, 250)
-                : Color.rgb(7, 9, 11);
+                : Color.rgb(5, 17, 11);
     }
 
     private int surfaceColor() {
         return isLightTheme()
                 ? Color.WHITE
-                : Color.rgb(14, 19, 26);
+                : Color.rgb(10, 27, 17);
     }
 
     private int drawerColor() {
         return isLightTheme()
                 ? Color.rgb(248, 250, 252)
-                : Color.rgb(13, 18, 23);
+                : Color.rgb(8, 22, 14);
     }
 
     private int buttonColor() {
         return isLightTheme()
                 ? Color.rgb(235, 240, 245)
-                : Color.rgb(18, 26, 35);
+                : Color.rgb(14, 35, 23);
     }
 
     private int borderColor() {
         return isLightTheme()
                 ? Color.rgb(205, 214, 223)
-                : Color.rgb(52, 69, 84);
+                : Color.rgb(32, 73, 48);
     }
 
     private int primaryTextColor() {

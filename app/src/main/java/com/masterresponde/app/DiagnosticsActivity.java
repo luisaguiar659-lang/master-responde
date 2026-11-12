@@ -14,11 +14,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class DiagnosticsActivity extends Activity {
-    private final int bg = Color.rgb(8, 11, 16);
-    private final int panel = Color.rgb(20, 27, 36);
+    private final int bg = Color.rgb(5, 17, 11);
+    private final int panel = Color.rgb(10, 27, 17);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
-    private final int green = Color.rgb(0, 200, 150);
+    private final int green = Color.rgb(0, 214, 143);
     private final int warn = Color.rgb(255, 170, 40);
     private LinearLayout list;
 
@@ -36,7 +36,7 @@ public class DiagnosticsActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(20), dp(16), dp(18));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
         root.addView(text("CENTRAL DE DIAGNÓSTICO", 21, white, true));
         root.addView(text("Verificações do aparelho e do motor de atendimento", 12, muted, false));
         list = new LinearLayout(this);

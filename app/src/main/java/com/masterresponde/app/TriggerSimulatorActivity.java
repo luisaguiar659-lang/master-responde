@@ -20,11 +20,11 @@ import java.text.Normalizer;
 import java.util.Locale;
 
 public class TriggerSimulatorActivity extends Activity {
-    private final int bg = Color.rgb(8, 11, 16);
-    private final int panel = Color.rgb(20, 27, 36);
+    private final int bg = Color.rgb(5, 17, 11);
+    private final int panel = Color.rgb(10, 27, 17);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
-    private final int accent = Color.rgb(0, 190, 160);
+    private final int accent = Color.rgb(0, 214, 143);
     private EditText message;
     private CheckBox masterExact, stvExact;
     private LinearLayout result;
@@ -38,7 +38,7 @@ public class TriggerSimulatorActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(18), dp(16), dp(16));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
         root.addView(text("SIMULADOR DE GATILHOS", 21, white, true));
         root.addView(text("Teste uma mensagem sem enviá-la ao WhatsApp.", 12, muted, false));
 
