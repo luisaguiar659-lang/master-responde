@@ -743,6 +743,14 @@ public class MasterflixBackgroundAutomation {
                         fullContent
                 );
 
+        EventLog.add(
+                context,
+                sent ? "RESPOSTA ENVIADA" : "FALHA",
+                "MasterFlix",
+                "Geração de teste concluída",
+                sent ? "TESTE ENVIADO" : "FALHA NO ENVIO"
+        );
+
         prefs.edit()
                 .putString(
                         "last_test_status",
@@ -773,6 +781,14 @@ public class MasterflixBackgroundAutomation {
 
         finished =
                 true;
+
+        EventLog.add(
+                context,
+                "FALHA",
+                "MasterFlix",
+                "Geração de teste interrompida",
+                reason
+        );
 
         prefs.edit()
                 .putString(
