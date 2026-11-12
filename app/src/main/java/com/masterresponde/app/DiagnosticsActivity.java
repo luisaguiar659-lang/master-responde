@@ -36,7 +36,7 @@ public class DiagnosticsActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(20), dp(16), dp(18));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
         root.addView(text("CENTRAL DE DIAGNÓSTICO", 21, white, true));
         root.addView(text("Verificações do aparelho e do motor de atendimento", 12, muted, false));
         list = new LinearLayout(this);
