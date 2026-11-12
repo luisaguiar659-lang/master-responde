@@ -684,24 +684,14 @@ public class NotificationAccessService extends NotificationListenerService {
             return false;
         }
 
-        // Indicador oficial quando o WhatsApp o fornece.
-        if (notification.extras.getBoolean(
+        // Não usar EXTRA_CONVERSATION_TITLE isoladamente: em algumas versões
+        // do WhatsApp Business ele também aparece em notificações privadas.
+        // O indicador explícito evita desviar mensagens particulares para
+        // o fluxo de grupos e bloquear os gatilhos cadastrados em text_rules.
+        return notification.extras.getBoolean(
                 Notification.EXTRA_IS_GROUP_CONVERSATION,
                 false
-        )) {
-            return true;
-        }
-
-        // Em alguns aparelhos/versões do WhatsApp Business,
-        // a PRIMEIRA mensagem do grupo ainda não vem com o boolean acima.
-        // O título da conversa, porém, já vem preenchido.
-        CharSequence conversationTitle =
-                notification.extras.getCharSequence(
-                        Notification.EXTRA_CONVERSATION_TITLE
-                );
-
-        return conversationTitle != null
-                && conversationTitle.toString().trim().length() > 0;
+        );
     }
 
     private void handleGroup(
