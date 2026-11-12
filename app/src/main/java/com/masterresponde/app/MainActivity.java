@@ -574,14 +574,24 @@ public class MainActivity extends Activity {
                 )
         );
 
+        drawerSection(
+                "CONTROLE E DIAGNÓSTICO"
+        );
+
+        drawerItem(
+                "MONITORAMENTO",
+                true,
+                () -> launchFromMenu(
+                        new Intent(this, MonitoringActivity.class)
+                )
+        );
+
         drawerItem(
                 "HISTÓRICO",
                 false,
-                () -> Toast.makeText(
-                        this,
-                        "Histórico será conectado em uma próxima etapa.",
-                        Toast.LENGTH_SHORT
-                ).show()
+                () -> launchFromMenu(
+                        new Intent(this, EventHistoryActivity.class)
+                )
         );
 
         drawerItem(
