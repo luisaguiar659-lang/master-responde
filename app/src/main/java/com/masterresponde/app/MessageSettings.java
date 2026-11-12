@@ -170,13 +170,17 @@ public class MessageSettings {
     public static final String DEFAULT_STV_RESELLER_CANCEL_TRIGGER = "cancelar";
 
     public static final String DEFAULT_STV_RESELLER_SIGNUP =
-            "🚀 Para ser Revenda STV+, faça seu cadastro pelo link:\\n\\n{LINK_CADASTRO}\\n\\nApós concluir, envie o e-mail usado no cadastro.";
+            "🚀 Para ser Revenda STV+, faça seu cadastro pelo link:\\n\\n" +
+            "{LINK_CADASTRO}\\n\\n" +
+            "Após concluir, envie o e-mail usado no cadastro.";
 
     public static final String DEFAULT_STV_RESELLER_VERIFYING =
             "Recebi seu e-mail. Verificando seu cadastro de revenda STV+, aguarde...";
 
     public static final String DEFAULT_STV_RESELLER_CONFIRMED =
-            "✅ Cadastro de revenda STV+ confirmado!\\n\\nEntre no grupo de suporte e solicite a ativação do painel.\\n\\n📲 Grupo de suporte:\\n{LINK_GRUPO}";
+            "✅ Cadastro de revenda STV+ confirmado!\\n\\n" +
+            "Entre no grupo de suporte e solicite a ativação do painel.\\n\\n" +
+            "📲 Grupo de suporte:\\n{LINK_GRUPO}";
 
     public static final String DEFAULT_STV_RESELLER_NOT_FOUND =
             "Não consegui confirmar seu cadastro de revenda STV+ no painel.\\n\\n{MOTIVO}";
@@ -491,6 +495,13 @@ public class MessageSettings {
                         message,
                         variables
                 );
+
+        // Corrige templates STV+ antigos que salvaram os caracteres \\n
+        // em vez de quebras de linha reais.
+        if (messageKey != null
+                && messageKey.startsWith("msg_stv_reseller")) {
+            message = message.replace("\\\\n", "\\n");
+        }
 
         if (message.trim().isEmpty()) {
             return true;
