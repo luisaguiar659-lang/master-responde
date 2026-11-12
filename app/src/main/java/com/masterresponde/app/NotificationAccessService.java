@@ -1782,8 +1782,11 @@ public class NotificationAccessService extends NotificationListenerService {
             String trigger = normalizeTriggerForStv(line);
             if (trigger.isEmpty()) continue;
 
-            // Aceita o gatilho isolado ou dentro de uma frase maior.
-            if (message.equals(trigger) || message.contains(trigger)) {
+            // Solicitação de revenda é um comando explícito.
+            // Não usar contains(): textos de teste, mensagens do painel ou
+            // respostas do próprio bot podem mencionar "revenda STV+" e
+            // iniciar indevidamente o fluxo de cadastro.
+            if (message.equals(trigger)) {
                 return true;
             }
         }
