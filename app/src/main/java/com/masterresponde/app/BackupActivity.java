@@ -31,7 +31,7 @@ public class BackupActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(18), dp(22), dp(18), dp(18));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
         TextView title = text("BACKUP E RESTAURAÇÃO", 21, white, true);
         root.addView(title);
         root.addView(text("Salve e recupere suas regras e configurações sem alterar os módulos durante a operação.", 13, muted, false));
