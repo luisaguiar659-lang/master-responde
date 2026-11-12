@@ -393,6 +393,8 @@ public class MainActivity extends Activity {
                 )
         );
 
+        buildBottomNavigation(root);
+
         shell.addView(
                 root,
                 new FrameLayout.LayoutParams(
@@ -711,292 +713,175 @@ public class MainActivity extends Activity {
     private void buildDashboard() {
         content.removeAllViews();
 
-        LinearLayout hero =
-                card();
+        LinearLayout hero = card();
+        hero.setPadding(dp(20), dp(18), dp(18), dp(18));
+        hero.addView(text("CENTRAL DE CONTROLE", 11, Color.rgb(0, 214, 143), true));
+        LinearLayout heroRow = new LinearLayout(this);
+        heroRow.setOrientation(LinearLayout.HORIZONTAL);
+        heroRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout titleBlock = new LinearLayout(this);
+        titleBlock.setOrientation(LinearLayout.VERTICAL);
+        TextView title = text("MASTER RESPONDE", 22, primaryTextColor(), true);
+        titleBlock.addView(title);
+        titleBlock.addView(text("Atendimento inteligente • Painel geral", 12, secondaryTextColor(), false));
+        heroRow.addView(titleBlock, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        LinearLayout heroRow =
-                new LinearLayout(
-                        this
-                );
+        botSwitch = new Switch(this);
+        botSwitch.setChecked(prefs.getBoolean("bot_enabled", false));
+        botSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            prefs.edit().putBoolean("bot_enabled", isChecked).apply();
+            if (isChecked) BackgroundRuntime.requestListenerRebind(this);
+            refreshStatus();
+            Toast.makeText(this, isChecked ? "Bot ativado." : "Bot desativado.", Toast.LENGTH_SHORT).show();
+        });
+        heroRow.addView(botSwitch);
+        hero.addView(heroRow);
+        LinearLayout.LayoutParams heroLp = new LinearLayout.LayoutParams(-1, -2);
+        heroLp.bottomMargin = dp(18);
+        content.addView(hero, heroLp);
 
-        heroRow.setOrientation(
-                LinearLayout.HORIZONTAL
-        );
+        section("STATUS DO SISTEMA");
+        GridLayout statusGrid = new GridLayout(this);
+        statusGrid.setColumnCount(2);
+        botStatus = addStatus(statusGrid, "BOT", "● Desativado",
+                Color.rgb(0, 184, 255), null);
+        waStatus = addStatus(statusGrid, "WHATSAPP BUSINESS", "● Verificando",
+                Color.rgb(0, 184, 255), this::openNotificationAccess);
+        masterflixStatus = addStatus(statusGrid, "MASTERFLIX", "● Login necessário",
+                Color.rgb(255, 145, 0), () -> startActivity(new Intent(this, MasterflixActivity.class)));
+        stvStatus = addStatus(statusGrid, "STV+", "● Configuração necessária",
+                Color.rgb(255, 145, 0), () -> startActivity(new Intent(this, StvPlusActivity.class)));
+        engineStatus = addStatus(statusGrid, "MOTOR EM 2º PLANO", "● Verificando",
+                Color.rgb(255, 145, 0), this::openNotificationAccess);
+        content.addView(statusGrid);
 
-        heroRow.setGravity(
-                Gravity.CENTER_VERTICAL
-        );
-
-        LinearLayout heroText =
-                new LinearLayout(
-                        this
-                );
-
-        heroText.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        heroText.addView(
-                text(
-                        "MASTER RESPONDE",
-                        24,
-                        primaryTextColor(),
-                        true
-                )
-        );
-
-        heroText.addView(
-                text(
-                        "Dashboard v1.17.12",
-                        14,
-                        Color.rgb(
-                                255,
-                                150,
-                                0
-                        ),
-                        true
-                )
-        );
-
-        heroRow.addView(
-                heroText,
-                new LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1f
-                )
-        );
-
-        botSwitch =
-                new Switch(
-                        this
-                );
-
-        botSwitch.setChecked(
-                prefs.getBoolean(
-                        "bot_enabled",
-                        false
-                )
-        );
-
-        botSwitch.setOnCheckedChangeListener(
-                (buttonView, isChecked) -> {
-                    prefs.edit()
-                            .putBoolean(
-                                    "bot_enabled",
-                                    isChecked
-                            )
-                            .apply();
-
-                    if (isChecked) {
-                        BackgroundRuntime.requestListenerRebind(
-                                this
-                        );
-                    }
-
-                    refreshStatus();
-
-                    Toast.makeText(
-                            this,
-                            isChecked
-                                    ? "Bot ativado."
-                                    : "Bot desativado.",
-                            Toast.LENGTH_SHORT
-                    ).show();
-                }
-        );
-
-        heroRow.addView(
-                botSwitch
-        );
-
-        hero.addView(
-                heroRow
-        );
-
-        content.addView(
-                hero
-        );
-
-        gap(
-                16
-        );
-
-        section(
-                "STATUS"
-        );
-
-        GridLayout statusGrid =
-                new GridLayout(
-                        this
-                );
-
-        statusGrid.setColumnCount(
-                2
-        );
-
-        botStatus =
-                addStatus(
-                        statusGrid,
-                        "Bot",
-                        "● Desativado",
-                        Color.rgb(
-                                0,
-                                184,
-                                255
-                        ),
-                        null
-                );
-
-        waStatus =
-                addStatus(
-                        statusGrid,
-                        "WhatsApp Business",
-                        "● Verificando",
-                        Color.rgb(
-                                0,
-                                184,
-                                255
-                        ),
-                        this::openNotificationAccess
-                );
-
-        masterflixStatus =
-                addStatus(
-                        statusGrid,
-                        "MASTERFLIX",
-                        "● Login necessário",
-                        Color.rgb(
-                                255,
-                                145,
-                                0
-                        ),
-                        () -> startActivity(
-                                new Intent(
-                                        this,
-                                        MasterflixActivity.class
-                                )
-                        )
-                );
-
-        stvStatus =
-                addStatus(
-                        statusGrid,
-                        "STV+",
-                        "● Configuração necessária",
-                        Color.rgb(255, 145, 0),
-                        () -> startActivity(
-                                new Intent(
-                                        this,
-                                        StvPlusActivity.class
-                                )
-                        )
-                );
-
-        engineStatus =
-                addStatus(
-                        statusGrid,
-                        "Motor",
-                        "● Verificando",
-                        Color.rgb(
-                                255,
-                                145,
-                                0
-                        ),
-                        this::openNotificationAccess
-                );
-
-        content.addView(
-                statusGrid
-        );
-
-        gap(
-                18
-        );
-
-        Button notificationButton =
-                fullButton(
-                        "LIBERAR ACESSO ÀS NOTIFICAÇÕES",
-                        true
-                );
-
-        notificationButton.setOnClickListener(
-                v -> openNotificationAccess()
-        );
-
-        content.addView(
-                notificationButton
-        );
-
-        gap(
-                12
-        );
-
-        LinearLayout info =
-                card();
-
-        info.addView(
-                text(
-                        "ÚLTIMO TESTE",
-                        12,
-                        Color.rgb(
-                                255,
-                                150,
-                                0
-                        ),
-                        true
-                )
-        );
-
-        TextView lastTest =
-                text(
-                        prefs.getString(
-                                "last_test_status",
-                                "Último teste: ainda não realizado"
-                        ),
-                        12,
-                        Color.rgb(
-                                0,
-                                184,
-                                255
-                        ),
-                        true
-                );
-
-        lastTest.setPadding(
-                0,
-                dp(12),
-                0,
-                0
-        );
-
-        info.addView(
-                lastTest
-        );
-
-        if (prefs.getBoolean(
-                "show_detailed_status",
-                true
-        )) {
-            content.addView(
-                    info
-            );
-
-            gap(
-                    10
-            );
-
-            content.addView(
-                    text(
-                            "Atalhos e módulos ficam no menu ☰ no canto superior direito.",
-                            11,
-                            secondaryTextColor(),
-                            false
-                    )
-            );
+        gap(18);
+        section("ATIVIDADE");
+        GridLayout metrics = new GridLayout(this);
+        metrics.setColumnCount(3);
+        org.json.JSONArray events = EventLog.read(this);
+        int received = 0, sent = 0, errors = 0;
+        for (int i = 0; i < events.length(); i++) {
+            org.json.JSONObject event = events.optJSONObject(i);
+            if (event == null) continue;
+            String type = event.optString("type");
+            if ("MENSAGEM RECEBIDA".equals(type)) received++;
+            if ("RESPOSTA ENVIADA".equals(type)) sent++;
+            if ("FALHA".equals(type)) errors++;
         }
+        addMetric(metrics, "RECEBIDAS", String.valueOf(received), Color.rgb(0, 184, 255));
+        addMetric(metrics, "RESPONDIDAS", String.valueOf(sent), Color.rgb(0, 214, 143));
+        addMetric(metrics, "FALHAS", String.valueOf(errors), errors > 0 ? Color.rgb(255, 110, 90) : secondaryTextColor());
+        content.addView(metrics);
+
+        gap(18);
+        section("MÓDULOS E AUTOMAÇÕES");
+        GridLayout modules = new GridLayout(this);
+        modules.setColumnCount(2);
+        addModuleCard(modules, "MASTERFLIX", "Gerar teste e acessar painel",
+                "↗", () -> startActivity(new Intent(this, MasterflixActivity.class)));
+        addModuleCard(modules, "STV+", "Testes e gestão de revendas",
+                "✦", () -> startActivity(new Intent(this, StvPlusActivity.class)));
+        addModuleCard(modules, "REGRAS", "Gatilhos e respostas automáticas",
+                "⌘", () -> startActivity(new Intent(this, RulesActivity.class)));
+        addModuleCard(modules, "MONITORAMENTO", "Acompanhar o funcionamento",
+                "◉", () -> startActivity(new Intent(this, MonitoringActivity.class)));
+        content.addView(modules);
+
+        gap(18);
+        section("ACESSO RÁPIDO");
+        LinearLayout access = card();
+        access.setPadding(dp(14), dp(12), dp(14), dp(12));
+        access.addView(text("WhatsApp Business", 15, primaryTextColor(), true));
+        access.addView(text("Libere o acesso às notificações para manter o motor conectado.", 12, secondaryTextColor(), false));
+        Button notificationButton = fullButton("CONFIGURAR ACESSO ÀS NOTIFICAÇÕES", true);
+        LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(-1, dp(48));
+        actionLp.topMargin = dp(10);
+        access.addView(notificationButton, actionLp);
+        notificationButton.setOnClickListener(v -> openNotificationAccess());
+        content.addView(access);
+
+        gap(14);
+        LinearLayout last = card();
+        last.setPadding(dp(15), dp(13), dp(15), dp(13));
+        last.addView(text("ÚLTIMA ATIVIDADE", 11, Color.rgb(255, 150, 0), true));
+        String lastStatus = prefs.getString("last_test_status", "Nenhum teste registrado até agora.");
+        last.addView(text(lastStatus, 13, primaryTextColor(), true));
+        content.addView(last);
 
         refreshStatus();
+    }
+
+    private void addMetric(GridLayout parent, String label, String value, int valueColor) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(12), dp(13), dp(8), dp(13));
+        box.setBackground(roundedBackground(surfaceColor(), borderColor(), 15));
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.width = 0;
+        lp.height = dp(76);
+        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+        lp.setMargins(dp(3), dp(3), dp(3), dp(3));
+        box.setLayoutParams(lp);
+        box.addView(text(label, 9, secondaryTextColor(), true));
+        box.addView(text(value, 22, valueColor, true));
+        parent.addView(box);
+    }
+
+    private void addModuleCard(GridLayout parent, String label, String description, String symbol, Runnable action) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(14), dp(13), dp(12), dp(13));
+        box.setBackground(roundedBackground(surfaceColor(), borderColor(), 16));
+        box.setClickable(true);
+        box.setFocusable(true);
+        box.setOnClickListener(v -> action.run());
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.width = 0;
+        lp.height = dp(112);
+        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+        lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+        box.setLayoutParams(lp);
+        TextView icon = text(symbol, 19, Color.rgb(0, 214, 143), true);
+        box.addView(icon);
+        box.addView(text(label, 12, primaryTextColor(), true));
+        box.addView(text(description, 10, secondaryTextColor(), false));
+        parent.addView(box);
+    }
+
+    private void buildBottomNavigation(LinearLayout root) {
+        LinearLayout nav = new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setGravity(Gravity.CENTER);
+        nav.setPadding(dp(5), dp(8), dp(5), dp(8));
+        nav.setBackground(roundedBackground(surfaceColor(), borderColor(), 22));
+
+        addNavItem(nav, "▦", "Painel", null);
+        addNavItem(nav, "☷", "Regras", () -> startActivity(new Intent(this, RulesActivity.class)));
+        addNavItem(nav, "✦", "Testes", () -> startActivity(new Intent(this, MasterflixActivity.class)));
+        addNavItem(nav, "◉", "Monitor", () -> startActivity(new Intent(this, MonitoringActivity.class)));
+        addNavItem(nav, "☰", "Módulos", this::openMenu);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(66));
+        lp.setMargins(dp(14), dp(5), dp(14), dp(8));
+        root.addView(nav, lp);
+    }
+
+    private void addNavItem(LinearLayout parent, String icon, String label, Runnable action) {
+        LinearLayout item = new LinearLayout(this);
+        item.setOrientation(LinearLayout.VERTICAL);
+        item.setGravity(Gravity.CENTER);
+        item.setPadding(dp(3), dp(2), dp(3), dp(2));
+        TextView symbol = text(icon, 19, Color.rgb(0, 214, 143), true);
+        symbol.setGravity(Gravity.CENTER);
+        item.addView(symbol);
+        TextView caption = text(label, 9, secondaryTextColor(), false);
+        caption.setGravity(Gravity.CENTER);
+        item.addView(caption);
+        item.setClickable(true);
+        item.setFocusable(true);
+        item.setOnClickListener(v -> { if (action != null) action.run(); });
+        parent.addView(item, new LinearLayout.LayoutParams(0, -1, 1f));
     }
 
     private void drawerSection(
@@ -1410,7 +1295,7 @@ public class MainActivity extends Activity {
                 0;
 
         lp.height =
-                dp(110);
+                dp(88);
 
         lp.columnSpec =
                 GridLayout.spec(
