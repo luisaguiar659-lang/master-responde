@@ -1580,14 +1580,6 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
-        if (handleConfiguredTextRule(
-                notification,
-                notificationKey,
-                incoming,
-                prefs
-        )) {
-            return;
-        }
     }
 
     /**
