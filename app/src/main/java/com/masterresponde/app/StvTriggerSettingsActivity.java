@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 public class StvTriggerSettingsActivity extends Activity {
     public static final String KEY_TRIGGERS = "cfg_stv_test_triggers";
+    public static final String KEY_MATCH_EXACT = "cfg_stv_test_match_exact";
     public static final String DEFAULT_TRIGGERS =
             "teste stv\\n" +
             "teste stv+\\n" +
