@@ -1,4 +1,4 @@
-name: Validate background and login fixes
+name: Build signed Android update (background and login fixes)
 
 on:
   push:
@@ -16,8 +16,8 @@ permissions:
   contents: read
 
 jobs:
-  build-debug:
-    name: Compile Android debug APK
+  build-release:
+    name: Build signed release APK for in-place update
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -36,25 +36,42 @@ jobs:
         with:
           gradle-version: "8.7"
 
-      - name: Validate project files
+      - name: Validate permanent signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          test -f settings.gradle
-          test -f build.gradle
-          test -f app/build.gradle
-          test -f app/src/main/AndroidManifest.xml
+          [ -n "$KEYSTORE_BASE64" ] || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
+          [ -n "$KEYSTORE_PASSWORD" ] || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          [ -n "$KEY_ALIAS" ] || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
+          [ -n "$KEY_PASSWORD" ] || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
 
-      - name: Compile debug APK
-        run: gradle :app:assembleDebug --stacktrace --no-daemon
-
-      - name: Verify APK
+      - name: Prepare same release signing key and higher version code
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          test -s app/build/outputs/apk/debug/app-debug.apk
-          ls -lh app/build/outputs/apk/debug/app-debug.apk
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/master-responde-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/master-responde-release.jks" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
 
-      - name: Upload debug APK
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --stacktrace --no-daemon
+
+      - name: Verify package and APK
+        run: |
+          test -s app/build/outputs/apk/release/app-release.apk
+          ls -lh app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload signed update APK
         uses: actions/upload-artifact@v4
         with:
-          name: master-responde-background-login-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: master-responde-background-login-signed-update
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
