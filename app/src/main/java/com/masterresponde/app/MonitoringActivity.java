@@ -54,8 +54,10 @@ public class MonitoringActivity extends Activity {
                 listener ? green : Color.rgb(255, 170, 40), "Acesso às notificações do WhatsApp Business");
         addCard("MASTERFLIX", prefs.getString("last_test_status", "Nenhum teste registrado"),
                 white, "Último estado informado pelo módulo");
-        addCard("STV+", stv.getString("last_stv_reseller_status", "Nenhuma atividade registrada"),
-                white, "Último estado informado pelo módulo STV+");
+        addCard("STV+ — TESTES", stv.getString("last_stv_status", "Nenhum teste registrado"),
+                white, "Último estado de geração de teste");
+        addCard("STV+ — REVENDAS", stv.getString("last_stv_reseller_status", "Nenhuma atividade registrada"),
+                white, "Último estado do fluxo de revendas");
 
         JSONArray events = EventLog.read(this);
         int received = 0, sent = 0, errors = 0;
