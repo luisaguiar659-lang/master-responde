@@ -20,11 +20,11 @@ import java.text.Normalizer;
 import java.util.Locale;
 
 public class TriggerSimulatorActivity extends Activity {
-    private final int bg = Color.rgb(8, 11, 16);
-    private final int panel = Color.rgb(20, 27, 36);
+    private final int bg = Color.rgb(5, 17, 11);
+    private final int panel = Color.rgb(10, 27, 17);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
-    private final int accent = Color.rgb(0, 190, 160);
+    private final int accent = Color.rgb(0, 214, 143);
     private EditText message;
     private CheckBox masterExact, stvExact;
     private LinearLayout result;
