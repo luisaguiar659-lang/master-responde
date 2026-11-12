@@ -33,7 +33,7 @@ public class MonitoringActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(18), dp(16), dp(18));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
         root.addView(text("MONITORAMENTO", 22, white, true));
         root.addView(text("Visão geral do funcionamento", 13, muted, false));
         ScrollView scroll = new ScrollView(this);
