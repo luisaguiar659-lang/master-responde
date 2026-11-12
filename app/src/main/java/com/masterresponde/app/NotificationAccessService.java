@@ -1765,20 +1765,20 @@ public class NotificationAccessService extends NotificationListenerService {
                 MessageSettings.DEFAULT_STV_RESELLER_TRIGGERS
         );
 
-        // Aceita linhas reais, separador ';' e o texto literal "\\n"
+        // Aceita linhas reais, separador ';' e o texto literal "\n"
         // que pode ter sido salvo por versões anteriores.
         String allTriggers =
                 ((configured == null || configured.trim().isEmpty())
                         ? MessageSettings.DEFAULT_STV_RESELLER_TRIGGERS
                         : configured)
-                .replace("\\\\n", "\\n")
-                + "\\n"
+                .replace("\\n", "\n")
+                + "\n"
                 + MessageSettings.DEFAULT_STV_RESELLER_TRIGGERS;
 
         String message = normalizeTriggerForStv(incoming);
         if (message.isEmpty()) return false;
 
-        for (String line : allTriggers.split("[\\\\n;]+")) {
+        for (String line : allTriggers.split("[\\n;]+")) {
             String trigger = normalizeTriggerForStv(line);
             if (trigger.isEmpty()) continue;
 
