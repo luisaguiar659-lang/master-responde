@@ -1809,6 +1809,21 @@ public class NotificationAccessService extends NotificationListenerService {
                         ResellersActivity.DEFAULT_STV_SIGNUP_LINK
                 );
 
+        if (signupLink == null || signupLink.trim().isEmpty()) {
+            prefs.edit()
+                    .putString(
+                            "last_stv_reseller_status",
+                            "Revenda STV+: link de cadastro não configurado"
+                    )
+                    .apply();
+            WhatsAppReply.send(
+                    this,
+                    notification,
+                    "A revenda STV+ ainda não está configurada. Cadastre o link de indicação na tela REVENDAS do MASTER RESPONDE."
+            );
+            return;
+        }
+
         prefs.edit()
                 .putString(
                         "stv_reseller_state_" + contactKey,
@@ -1816,7 +1831,7 @@ public class NotificationAccessService extends NotificationListenerService {
                 )
                 .putString(
                         "last_stv_reseller_status",
-                        "Revenda: aguardando e-mail do cadastro"
+                        "Revenda STV+: aguardando e-mail do cadastro"
                 )
                 .apply();
 
