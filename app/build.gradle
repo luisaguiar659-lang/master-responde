@@ -10,8 +10,8 @@ android {
         applicationId 'com.masterresponde.app'
         minSdk 26
         targetSdk 35
-        versionCode (System.getenv("VERSION_CODE") ?: "65").toInteger()
-        versionName '2.0.4'
+        versionCode = (System.getenv("VERSION_CODE") ?: "65").toInteger()
+        versionName = '2.0.4'
     }
 
     compileOptions {
@@ -23,10 +23,10 @@ android {
         release {
             def ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
             if (ksPath != null && !ksPath.isEmpty()) {
-                storeFile file(ksPath)
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                storeFile = file(ksPath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
             }
         }
     }
@@ -35,7 +35,7 @@ android {
         release {
             minifyEnabled false
             shrinkResources false
-            signingConfig signingConfigs.release
+            signingConfig = signingConfigs.release
         }
     }
 }
