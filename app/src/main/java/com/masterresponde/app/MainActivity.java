@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
     private TextView botStatus;
     private TextView waStatus;
     private TextView masterflixStatus;
+    private TextView stvStatus;
     private TextView engineStatus;
 
     private Switch botSwitch;
@@ -494,6 +495,17 @@ public class MainActivity extends Activity {
         );
 
         drawerItem(
+                "STV+",
+                true,
+                () -> launchFromMenu(
+                        new Intent(
+                                this,
+                                StvPlusActivity.class
+                        )
+                )
+        );
+
+        drawerItem(
                 "GERAR TESTE",
                 true,
                 () -> {
@@ -829,6 +841,20 @@ public class MainActivity extends Activity {
                         )
                 );
 
+        stvStatus =
+                addStatus(
+                        statusGrid,
+                        "STV+",
+                        "● Configuração necessária",
+                        Color.rgb(255, 145, 0),
+                        () -> startActivity(
+                                new Intent(
+                                        this,
+                                        StvPlusActivity.class
+                                )
+                        )
+                );
+
         engineStatus =
                 addStatus(
                         statusGrid,
@@ -1104,6 +1130,32 @@ public class MainActivity extends Activity {
                 BackgroundRuntime.requestListenerRebind(
                         this
                 );
+            }
+        }
+
+        if (stvStatus != null) {
+            SharedPreferences stvPrefs =
+                    getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+            boolean credentials =
+                    stvPrefs.getBoolean(
+                            "stvplus_credentials_saved",
+                            stvPrefs.getBoolean("credentials_saved", false)
+                    );
+            boolean activeSession =
+                    stvPrefs.getBoolean("stvplus_session_active", false);
+
+            if (StvPlusBackgroundAutomation.isRunning()) {
+                stvStatus.setText("● Gerando teste");
+                stvStatus.setTextColor(Color.rgb(0, 184, 255));
+            } else if (activeSession) {
+                stvStatus.setText("● Sessão ativa");
+                stvStatus.setTextColor(Color.rgb(0, 184, 255));
+            } else if (credentials) {
+                stvStatus.setText("● Login salvo");
+                stvStatus.setTextColor(Color.rgb(255, 145, 0));
+            } else {
+                stvStatus.setText("● Login necessário");
+                stvStatus.setTextColor(Color.rgb(255, 145, 0));
             }
         }
 
