@@ -1892,7 +1892,7 @@ public class NotificationAccessService extends NotificationListenerService {
                     .apply();
 
             try {
-                new SecureStore(this).remove(
+                new StvSecureStore(this).remove(
                         "stv_pending_reseller_email_" + contactKey
                 );
             } catch (Exception ignored) {
@@ -1934,7 +1934,7 @@ public class NotificationAccessService extends NotificationListenerService {
             }
 
             try {
-                new SecureStore(this).put(
+                new StvSecureStore(this).put(
                         "stv_pending_reseller_email_" + contactKey,
                         email
                 );
