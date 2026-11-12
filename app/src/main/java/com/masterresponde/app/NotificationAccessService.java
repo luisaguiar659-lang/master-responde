@@ -2716,6 +2716,18 @@ public class NotificationAccessService extends NotificationListenerService {
                 prefs
         );
 
+        SharedPreferences stvPrefs = getSharedPreferences(
+                "master_responde_stv",
+                MODE_PRIVATE
+        );
+        expireStalePendingTasks(stvPrefs);
+
+        if (!MasterflixAutomationGate.isBusy()
+                && BackgroundRuntime.hasFreshResellerPending(stvPrefs)
+                && recoverPendingStvReseller(stvPrefs)) {
+            return;
+        }
+
         if (MasterflixAutomationGate.isBusy()
                 || MasterflixBackgroundAutomation.isRunning()
                 || MasterflixResellerAutomation.isRunning()) {
@@ -2900,6 +2912,93 @@ public class NotificationAccessService extends NotificationListenerService {
             prefs.edit()
                     .putString(
                             "last_reseller_status",
+                            "Revenda: verificação recuperada pelo motor em segundo plano"
+                    )
+                    .apply();
+        }
+
+        return started;
+    }
+
+    private boolean recoverPendingStvReseller(
+            SharedPreferences prefs
+    ) {
+        String contactKey =
+                prefs.getString(
+                        BackgroundRuntime.KEY_RESELLER_CONTACT,
+                        ""
+                );
+
+        if (contactKey.isEmpty()) {
+            BackgroundRuntime.clearResellerPending(
+                    prefs
+            );
+
+            return false;
+        }
+
+        String email =
+                "";
+
+        try {
+            email =
+                    new StvSecureStore(
+                            this
+                    ).get(
+                            "stv_pending_reseller_email_" + contactKey
+                    );
+
+        } catch (Exception ignored) {
+        }
+
+        if (email == null
+                || email.trim().isEmpty()) {
+            BackgroundRuntime.clearResellerPending(
+                    prefs
+            );
+
+            prefs.edit()
+                    .putString(
+                            "stv_reseller_state_" + contactKey,
+                            "WAITING_EMAIL"
+                    )
+                    .putString(
+                            "last_stv_reseller_status",
+                            "Revenda: tarefa interrompida; aguardando o e-mail novamente"
+                    )
+                    .apply();
+
+            return false;
+        }
+
+        String locator =
+                prefs.getString(
+                        BackgroundRuntime.KEY_RESELLER_LOCATOR,
+                        ""
+                );
+
+        Notification notification =
+                findActiveWhatsAppNotification(
+                        locator
+                );
+
+        if (notification == null) {
+            return false;
+        }
+
+        boolean started =
+                StvPlusResellerAutomation.findReseller(
+                        this,
+                        notification,
+                        prefs,
+                        contactKey,
+                        email
+                );
+
+        if (started) {
+            prefs.edit()
+                    .putString(
+                            "last_stv_reseller_status",
                             "Revenda: verificação recuperada pelo motor em segundo plano"
                     )
                     .apply();
