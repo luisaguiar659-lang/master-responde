@@ -638,7 +638,7 @@ public class StvPlusResellerAutomation {
         );
 
         try {
-            SecureStore secureStore =
+            StvSecureStore secureStore =
                     new StvSecureStore(
                             context
                     );
@@ -1603,7 +1603,7 @@ public class StvPlusResellerAutomation {
         );
 
         try {
-            SecureStore secureStore =
+            StvSecureStore secureStore =
                     new StvSecureStore(
                             context
                     );
