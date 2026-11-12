@@ -21,6 +21,10 @@ import java.util.Map;
 public class MessageSettingsActivity extends Activity {
 
     private SharedPreferences prefs;
+    private SharedPreferences stvPrefs;
+
+    private final Map<String, EditText> stvTriggerFields =
+            new LinkedHashMap<>();
 
     private final Map<String, EditText> textFields =
             new LinkedHashMap<>();
@@ -38,6 +42,11 @@ public class MessageSettingsActivity extends Activity {
         prefs =
                 getSharedPreferences(
                         "master_responde",
+                        MODE_PRIVATE
+                );
+        stvPrefs =
+                getSharedPreferences(
+                        "master_responde_stv",
                         MODE_PRIVATE
                 );
 
@@ -194,6 +203,15 @@ public class MessageSettingsActivity extends Activity {
                 MessageSettings.DEFAULT_TEST_TRIGGERS,
                 false,
                 false
+        );
+
+        addSection(
+                content,
+                "GATILHOS RECEBIDOS — STV+"
+        );
+
+        addStvTriggerSetting(
+                content
         );
 
         addTextSetting(
@@ -849,6 +867,52 @@ public class MessageSettingsActivity extends Activity {
         );
     }
 
+    private void addStvTriggerSetting(
+            LinearLayout content
+    ) {
+        LinearLayout c = card();
+
+        c.addView(
+                text(
+                        "Gatilhos para gerar teste STV+",
+                        15,
+                        Color.WHITE,
+                        true
+                )
+        );
+
+        TextView desc = text(
+                "Um por linha. Estes comandos ativam somente o módulo STV+ e podem ser alterados independentemente dos gatilhos do MasterFlix.",
+                11,
+                Color.rgb(145, 155, 165),
+                false
+        );
+        desc.setPadding(0, dp(3), 0, dp(6));
+        c.addView(desc);
+
+        EditText field = new EditText(this);
+        field.setTextColor(Color.WHITE);
+        field.setHintTextColor(Color.rgb(120, 130, 140));
+        field.setTextSize(13);
+        field.setSingleLine(false);
+        field.setMinLines(4);
+        field.setGravity(Gravity.TOP);
+        field.setText(
+                stvPrefs.getString(
+                        StvTriggerSettingsActivity.KEY_TRIGGERS,
+                        StvTriggerSettingsActivity.DEFAULT_TRIGGERS
+                )
+        );
+
+        stvTriggerFields.put(
+                StvTriggerSettingsActivity.KEY_TRIGGERS,
+                field
+        );
+        c.addView(field);
+        content.addView(c);
+        gap(content, 10);
+    }
+
     private void addNumberSetting(
             LinearLayout content,
             String key,
@@ -1011,9 +1075,29 @@ public class MessageSettingsActivity extends Activity {
 
         editor.apply();
 
+        SharedPreferences.Editor stvEditor = stvPrefs.edit();
+        for (Map.Entry<String, EditText> entry
+                : stvTriggerFields.entrySet()) {
+            String triggers = entry.getValue()
+                    .getText()
+                    .toString()
+                    .trim();
+            if (triggers.isEmpty()) {
+                entry.getValue().setError(
+                        "Cadastre pelo menos um gatilho do STV+."
+                );
+                return;
+            }
+            stvEditor.putString(
+                    entry.getKey(),
+                    triggers
+            );
+        }
+        stvEditor.apply();
+
         Toast.makeText(
                 this,
-                "Mensagens e tempos salvos.",
+                "Mensagens, gatilhos e tempos salvos.",
                 Toast.LENGTH_SHORT
         ).show();
     }
@@ -1046,6 +1130,10 @@ public class MessageSettingsActivity extends Activity {
         }
 
         editor.apply();
+
+        stvPrefs.edit()
+                .remove(StvTriggerSettingsActivity.KEY_TRIGGERS)
+                .apply();
 
         Toast.makeText(
                 this,
