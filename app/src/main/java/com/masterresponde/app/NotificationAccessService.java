@@ -1568,6 +1568,7 @@ public class NotificationAccessService extends NotificationListenerService {
             for (int i = 0; i < rules.length(); i++) {
                 JSONObject rule = rules.optJSONObject(i);
                 if (rule == null) continue;
+                if (!rule.optBoolean("enabled", true)) continue;
 
                 String trigger = normalize(
                         rule.optString("trigger", "")
