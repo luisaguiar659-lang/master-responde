@@ -611,6 +611,14 @@ public class MainActivity extends Activity {
         );
 
         drawerItem(
+                "CENTRAL DE DIAGNÓSTICO",
+                false,
+                () -> launchFromMenu(
+                        new Intent(this, DiagnosticsActivity.class)
+                )
+        );
+
+        drawerItem(
                 "CONFIGURAÇÕES",
                 false,
                 () -> launchFromMenu(
