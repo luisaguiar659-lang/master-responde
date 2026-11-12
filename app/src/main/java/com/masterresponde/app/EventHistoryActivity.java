@@ -31,7 +31,7 @@ public class EventHistoryActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(18), dp(16), dp(16));
-        root.setBackgroundColor(bg);
+        root.setBackgroundResource(R.drawable.app_background);
 
         TextView title = text("HISTÓRICO DE ATIVIDADES", 20, white, true);
         root.addView(title);
