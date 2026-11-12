@@ -113,8 +113,8 @@ public class TriggerSimulatorActivity extends Activity {
         JSONArray rules = readRules(master);
         for (int i = 0; i < rules.length(); i++) {
             JSONObject rule = rules.optJSONObject(i);
-            if (rule == null) continue;
-            String trigger = normalize(rule.optString("trigger", ""));
+            if (rule == null || !rule.optBoolean("enabled", true)) continue;
+            String trigger = normalizeRule(rule.optString("trigger", ""));
             if (trigger.isEmpty()) continue;
             boolean exact = rule.optBoolean("exact", false);
             boolean match = exact ? incoming.equals(trigger) : incoming.contains(trigger);
@@ -154,6 +154,16 @@ public class TriggerSimulatorActivity extends Activity {
                 .toLowerCase(Locale.ROOT)
                 .replaceAll("[^a-z0-9 ]", " ")
                 .replaceAll("\\s+", " ").trim();
+    }
+
+    // Regras comuns usam a normalização do NotificationAccessService:
+    // acentos e caixa são ignorados, mas a pontuação é preservada.
+    private String normalizeRule(String value) {
+        if (value == null) return "";
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .trim();
     }
 
     private void addResult(String value, int color) {
