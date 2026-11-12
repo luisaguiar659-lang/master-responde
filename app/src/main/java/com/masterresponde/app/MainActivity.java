@@ -595,6 +595,14 @@ public class MainActivity extends Activity {
         );
 
         drawerItem(
+                "SIMULADOR DE GATILHOS",
+                false,
+                () -> launchFromMenu(
+                        new Intent(this, TriggerSimulatorActivity.class)
+                )
+        );
+
+        drawerItem(
                 "CONFIGURAÇÕES",
                 false,
                 () -> launchFromMenu(
