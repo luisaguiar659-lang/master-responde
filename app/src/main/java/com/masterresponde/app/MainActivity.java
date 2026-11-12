@@ -603,6 +603,14 @@ public class MainActivity extends Activity {
         );
 
         drawerItem(
+                "BACKUP / RESTAURAÇÃO",
+                false,
+                () -> launchFromMenu(
+                        new Intent(this, BackupActivity.class)
+                )
+        );
+
+        drawerItem(
                 "CONFIGURAÇÕES",
                 false,
                 () -> launchFromMenu(
