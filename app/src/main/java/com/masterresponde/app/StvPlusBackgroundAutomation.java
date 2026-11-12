@@ -95,6 +95,8 @@ public final class StvPlusBackgroundAutomation {
         if(finished)return;
         finished=true;
         boolean sent=WhatsAppReply.send(context,notification,"✅ *TESTE STV+*\n⏳ Validade: *1 hora*\n\n"+result);
+        EventLog.add(context, sent ? "RESPOSTA ENVIADA" : "FALHA", "STV+",
+                "Geração de teste concluída", sent ? "TESTE ENVIADO" : "FALHA NO ENVIO");
         status(sent?"Teste STV+ gerado e enviado.":"Teste STV+ gerado, mas o WhatsApp não confirmou o envio.");
         cleanup();
     }
@@ -104,7 +106,7 @@ public final class StvPlusBackgroundAutomation {
         String js="(function(){var a=Array.from(document.querySelectorAll('textarea,input,pre,code,[contenteditable=true]')).map(e=>e.value||e.innerText||e.textContent||'').filter(x=>x.trim().length>10);return a.sort((x,y)=>y.length-x.length)[0]||'';})();";
         web.evaluateJavascript(js,v->{String result=decode(v).trim();if(result.length()>10)sendResult(result);else fail("O painel não disponibilizou os dados do teste para leitura automática.");});
     }
-    private void fail(String reason){if(finished)return;finished=true;status(reason);WhatsAppReply.send(context,notification,"⚠️ STV+: "+reason);cleanup();}
+    private void fail(String reason){if(finished)return;finished=true;EventLog.add(context,"FALHA","STV+","Geração de teste interrompida",reason);status(reason);WhatsAppReply.send(context,notification,"⚠️ STV+: "+reason);cleanup();}
     private void status(String s){prefs.edit().putString("last_stv_status",s).apply();}
     private String decode(String v){if(v==null||"null".equals(v))return"";try{Object o=new org.json.JSONTokener(v).nextValue();return o==null?"":o.toString();}catch(Exception e){return v;}}
     private void cleanup(){handler.post(()->{try{if(web!=null){web.removeJavascriptInterface("StvBridge");web.stopLoading();web.loadUrl("about:blank");web.destroy();web=null;}}catch(Throwable ignored){}synchronized(LOCK){if(active==this)active=null;}});}
