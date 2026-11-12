@@ -12,11 +12,11 @@ import android.widget.TextView;
 import org.json.JSONArray;
 
 public class MonitoringActivity extends Activity {
-    private final int bg = Color.rgb(8, 11, 16);
-    private final int card = Color.rgb(20, 27, 36);
+    private final int bg = Color.rgb(5, 17, 11);
+    private final int card = Color.rgb(10, 27, 17);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
-    private final int green = Color.rgb(0, 200, 150);
+    private final int green = Color.rgb(0, 214, 143);
     private LinearLayout content;
 
     @Override protected void onCreate(Bundle state) {
