@@ -170,15 +170,46 @@ public class NotificationAccessService extends NotificationListenerService {
                 "auto_reconnect_engine",
                 true
         )) {
-            handler.postDelayed(
-                    () -> BackgroundRuntime.requestListenerRebind(
-                            this
-                    ),
-                    1500L
-            );
+            // O Android pode demorar a reanexar o NotificationListener.
+            // Faz tentativas limitadas e progressivas, sem loop infinito.
+            scheduleListenerReconnect(0);
         }
 
         super.onListenerDisconnected();
+    }
+
+    private void scheduleListenerReconnect(int attempt) {
+        final long[] delays = {
+                1500L,
+                5000L,
+                15000L,
+                30000L
+        };
+
+        if (attempt < 0 || attempt >= delays.length) return;
+
+        handler.postDelayed(() -> {
+            SharedPreferences prefs = getSharedPreferences(
+                    "master_responde",
+                    MODE_PRIVATE
+            );
+
+            if (!prefs.getBoolean("bot_enabled", false)
+                    || !prefs.getBoolean("auto_reconnect_engine", true)
+                    || !BackgroundRuntime.hasNotificationAccess(this)) {
+                return;
+            }
+
+            BackgroundRuntime.requestListenerRebind(this);
+
+            // Se o Android ainda não reconectou, agenda a próxima tentativa.
+            if (!prefs.getBoolean(
+                    BackgroundRuntime.KEY_LISTENER_CONNECTED,
+                    false
+            )) {
+                scheduleListenerReconnect(attempt + 1);
+            }
+        }, delays[attempt]);
     }
 
     @Override
