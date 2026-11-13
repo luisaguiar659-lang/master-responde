@@ -47,11 +47,17 @@ public class DiagnosticsActivity extends Activity {
         boolean bot = getSharedPreferences("master_responde", MODE_PRIVATE)
                 .getBoolean("bot_enabled", false);
         boolean notification = BackgroundRuntime.hasNotificationAccess(this);
+        boolean connected = getSharedPreferences("master_responde", MODE_PRIVATE)
+                .getBoolean(BackgroundRuntime.KEY_LISTENER_CONNECTED, false);
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         boolean battery = pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
+        long lastEvent = getSharedPreferences("master_responde", MODE_PRIVATE)
+                .getLong(BackgroundRuntime.KEY_LAST_EVENT_TIME, 0L);
 
         item("Motor de respostas", bot ? "ATIVADO" : "DESATIVADO", bot);
         item("Acesso às notificações", notification ? "PERMISSÃO LIBERADA" : "PERMISSÃO NECESSÁRIA", notification);
+        item("Serviço em segundo plano", connected ? "CONECTADO" : "DESCONECTADO / AGUARDANDO RECONEXÃO", connected);
+        item("Última notificação recebida", lastEvent > 0L ? EventLog.date(lastEvent) : "Nenhuma registrada", lastEvent > 0L);
         item("Otimização de bateria", battery ? "SEM RESTRIÇÃO" : "PODE LIMITAR O SEGUNDO PLANO", battery);
         item("WhatsApp Business", installed("com.whatsapp.w4b") ? "INSTALADO" : "NÃO LOCALIZADO", installed("com.whatsapp.w4b"));
         item("Histórico de eventos", EventLog.read(this).length() + " registros locais", true);
@@ -73,6 +79,20 @@ public class DiagnosticsActivity extends Activity {
             }
         });
         root.addView(batteryButton);
+
+        Button appSettings = new Button(this);
+        appSettings.setText("ABRIR CONFIGURAÇÕES DO MASTER RESPONDE");
+        appSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        });
+        root.addView(appSettings);
+
+        root.addView(text(
+                "IMPORTANTE PARA XIAOMI / REDMI (MIUI): habilite a Inicialização automática do MASTER RESPONDE e, em Bateria > Economia de bateria de apps, selecione Sem restrições. Depois, deixe o Acesso às notificações ativado. Os nomes dos menus podem variar conforme a versão da MIUI.",
+                12, muted, false
+        ));
         setContentView(root);
     }
 
