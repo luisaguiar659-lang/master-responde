@@ -1961,11 +1961,10 @@ public class NotificationAccessService extends NotificationListenerService {
                             : incoming.trim().toLowerCase(Locale.ROOT);
 
             if (!isValidEmail(email)) {
-                // Enquanto aguarda o e-mail, não trate qualquer mensagem comum
-                // como tentativa de cadastro. A orientação só é enviada quando
-                // o usuário realmente aparenta ter informado um endereço de e-mail.
-                // Isso evita respostas STV+ disparadas por conversas sem relação
-                // com o fluxo de revenda (inclusive quando há estado antigo pendente).
+                // Só consome a mensagem quando ela aparenta ser uma tentativa
+                // de informar e-mail. Mensagens comuns seguem para os demais
+                // gatilhos do MASTER RESPONDE, sem ficarem presas ao estado
+                // WAITING_EMAIL de uma conversa.
                 if (email.contains("@")) {
                     MessageSettings.send(
                             this,
@@ -1974,9 +1973,10 @@ public class NotificationAccessService extends NotificationListenerService {
                             MessageSettings.MSG_STV_RESELLER_INVALID_EMAIL,
                             MessageSettings.DEFAULT_STV_RESELLER_INVALID_EMAIL
                     );
+                    return true;
                 }
 
-                return true;
+                return false;
             }
 
             try {
