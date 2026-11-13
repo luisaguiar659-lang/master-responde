@@ -38,6 +38,7 @@ public class NotificationAccessService extends NotificationListenerService {
     private static final long PRIVATE_STABLE_EVENT_TTL_MS = 10L * 60L * 1000L;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private int listenerRebindAttempt = 0;
 
 
 
@@ -131,6 +132,7 @@ public class NotificationAccessService extends NotificationListenerService {
     @Override
     public void onListenerConnected() {
         super.onListenerConnected();
+        listenerRebindAttempt = 0;
 
         BackgroundRuntime.markListenerConnected(
                 this,
@@ -170,15 +172,52 @@ public class NotificationAccessService extends NotificationListenerService {
                 "auto_reconnect_engine",
                 true
         )) {
-            handler.postDelayed(
-                    () -> BackgroundRuntime.requestListenerRebind(
-                            this
-                    ),
-                    1500L
-            );
+            scheduleListenerRebindRetry();
         }
 
         super.onListenerDisconnected();
+    }
+
+    /**
+     * Tenta recuperar o NotificationListenerService com intervalos progressivos.
+     * O Android continua sendo responsável por vincular o serviço; o app apenas
+     * solicita o rebind enquanto a permissão permanece ativa.
+     */
+    private void scheduleListenerRebindRetry() {
+        final long[] delays = {
+                1500L,
+                5000L,
+                15000L,
+                30000L,
+                60000L
+        };
+
+        if (listenerRebindAttempt >= delays.length) {
+            return;
+        }
+
+        long delay = delays[listenerRebindAttempt++];
+
+        handler.postDelayed(() -> {
+            SharedPreferences currentPrefs =
+                    getSharedPreferences("master_responde", MODE_PRIVATE);
+
+            if (!currentPrefs.getBoolean("auto_reconnect_engine", true)
+                    || !BackgroundRuntime.hasNotificationAccess(this)) {
+                return;
+            }
+
+            if (currentPrefs.getBoolean(
+                    BackgroundRuntime.KEY_LISTENER_CONNECTED,
+                    false
+            )) {
+                listenerRebindAttempt = 0;
+                return;
+            }
+
+            BackgroundRuntime.requestListenerRebind(this);
+            scheduleListenerRebindRetry();
+        }, delay);
     }
 
     @Override
