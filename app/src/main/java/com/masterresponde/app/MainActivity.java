@@ -5,15 +5,22 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
+import android.os.Build;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.HorizontalScrollView;
-import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -24,45 +31,72 @@ import android.widget.Toast;
 import com.masterresponde.app.engines.AutomationCloudEngine;
 import com.masterresponde.app.engines.MasterIBOEngine;
 
+import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Set;
+
 public class MainActivity extends Activity {
+
+    // Paleta das telas de referência (fundo azul-marinho + ciano/laranja neon)
+    private static final int BG = Color.rgb(3, 10, 24);
+    private static final int CYAN = Color.rgb(0, 220, 255);
+    private static final int BLUE = Color.rgb(0, 140, 255);
+    private static final int GREEN = Color.rgb(0, 230, 125);
+    private static final int ORANGE = Color.rgb(255, 145, 20);
+    private static final int PURPLE = Color.rgb(176, 84, 255);
+    private static final int RED = Color.rgb(255, 65, 85);
+    private static final int YELLOW = Color.rgb(255, 196, 30);
+    private static final int GREY = Color.rgb(145, 158, 172);
+    private static final int PANEL_EDGE = Color.rgb(8, 78, 120);
 
     private LinearLayout content;
     private SharedPreferences prefs;
 
-    private TextView botStatus;
     private TextView dashboardBotBadge;
-    private TextView waStatus;
-    private TextView masterflixStatus;
-    private TextView stvStatus;
-    private TextView engineStatus;
+    private View bellDot;
+    private Chip botChip;
+    private Chip waChip;
+    private Chip masterflixChip;
+    private Chip stvChip;
+    private Chip engineChip;
 
     private Switch botSwitch;
-    private String appliedTheme = "";
+    private boolean skipNextRebuild;
 
     private FrameLayout menuOverlay;
+    private ScrollView drawerScroll;
     private LinearLayout drawerPanel;
+    private int drawerWidth;
+
+    /** Pílula de status: bolinha colorida + texto. */
+    private static final class Chip {
+        final TextView label;
+        final View dot;
+
+        Chip(TextView label, View dot) {
+            this.label = label;
+            this.dot = dot;
+        }
+
+        void set(String text, int color) {
+            label.setText(text);
+            GradientDrawable d = new GradientDrawable();
+            d.setShape(GradientDrawable.OVAL);
+            d.setColor(color);
+            dot.setBackground(d);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        prefs =
-                getSharedPreferences(
-                        "master_responde",
-                        MODE_PRIVATE
-                );
+        prefs = getSharedPreferences("master_responde", MODE_PRIVATE);
 
-        if (android.os.Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(
-                Manifest.permission.POST_NOTIFICATIONS
-        ) != PackageManager.PERMISSION_GRANTED) {
-
-            requestPermissions(
-                    new String[]{
-                            Manifest.permission.POST_NOTIFICATIONS
-                    },
-                    100
-            );
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
         }
 
         buildScreen();
@@ -86,13 +120,8 @@ public class MainActivity extends Activity {
             }, 800L);
         }
 
-        if (prefs.getBoolean(
-                "auto_reconnect_engine",
-                true
-        )) {
-            BackgroundRuntime.requestListenerRebind(
-                    this
-            );
+        if (prefs.getBoolean("auto_reconnect_engine", true)) {
+            BackgroundRuntime.requestListenerRebind(this);
         }
     }
 
@@ -100,58 +129,28 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
 
-        String currentTheme =
-                prefs.getString(
-                        "app_theme",
-                        "dark"
-                );
-
-        if (!currentTheme.equals(
-                appliedTheme
-        )
-                && content != null) {
-            buildScreen();
+        if (prefs.getBoolean("auto_reconnect_engine", true)) {
+            BackgroundRuntime.requestListenerRebind(this);
         }
-
-        if (prefs.getBoolean(
-                "auto_reconnect_engine",
-                true
-        )) {
-            BackgroundRuntime.requestListenerRebind(
-                    this
-            );
-        }
-
-        refreshStatus();
 
         if (content != null) {
-            content.postDelayed(
-                    this::refreshStatus,
-                    1200L
-            );
+            // Atualiza números e gráfico ao voltar de outra tela
+            if (skipNextRebuild) {
+                skipNextRebuild = false;
+            } else {
+                buildDashboard();
+            }
 
-            boolean returnToMenu =
-                    prefs.getBoolean(
-                            "return_to_menu_after_child",
-                            false
-                    );
+            refreshStatus();
+            content.postDelayed(this::refreshStatus, 1200L);
+
+            boolean returnToMenu = prefs.getBoolean("return_to_menu_after_child", false);
 
             if (returnToMenu) {
-                prefs.edit()
-                        .putBoolean(
-                                "return_to_menu_after_child",
-                                false
-                        )
-                        .apply();
+                prefs.edit().putBoolean("return_to_menu_after_child", false).apply();
 
-                if (prefs.getBoolean(
-                        "return_to_menu_enabled",
-                        true
-                )) {
-                    content.postDelayed(
-                            this::openMenu,
-                            180L
-                    );
+                if (prefs.getBoolean("return_to_menu_enabled", true)) {
+                    content.postDelayed(this::openMenu, 180L);
                 }
             }
         }
@@ -159,8 +158,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (menuOverlay != null
-                && menuOverlay.getVisibility() == View.VISIBLE) {
+        if (menuOverlay != null && menuOverlay.getVisibility() == View.VISIBLE) {
             closeMenu();
             return;
         }
@@ -168,363 +166,315 @@ public class MainActivity extends Activity {
         super.onBackPressed();
     }
 
+    // ------------------------------------------------------------------
+    // Estrutura da tela
+    // ------------------------------------------------------------------
+
     private void buildScreen() {
-        appliedTheme =
-                prefs.getString(
-                        "app_theme",
-                        "dark"
-                );
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(BG);
+        getWindow().getDecorView().setSystemUiVisibility(0);
 
-        getWindow().setStatusBarColor(
-                backgroundColor()
-        );
+        FrameLayout shell = new FrameLayout(this);
+        shell.setBackgroundResource(R.drawable.app_background);
 
-        getWindow().setNavigationBarColor(
-                backgroundColor()
-        );
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
 
-        if (android.os.Build.VERSION.SDK_INT >= 23) {
-            getWindow().getDecorView().setSystemUiVisibility(
-                    isLightTheme()
-                            ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                            : 0
-            );
-        }
+        root.addView(buildHeader(), new LinearLayout.LayoutParams(-1, dp(66)));
 
-        FrameLayout shell =
-                new FrameLayout(
-                        this
-                );
+        View line = new View(this);
+        line.setBackgroundResource(R.drawable.line);
+        root.addView(line, new LinearLayout.LayoutParams(-1, dp(2)));
 
-        if (isLightTheme()) {
-            shell.setBackgroundColor(backgroundColor());
-        } else {
-            shell.setBackgroundResource(R.drawable.app_background);
-        }
+        ScrollView scroll = new ScrollView(this);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setClipToPadding(false);
 
-        LinearLayout root =
-                new LinearLayout(
-                        this
-                );
+        content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(12), dp(10), dp(12), dp(14));
+        content.setClipChildren(false);
+        scroll.addView(content);
 
-        root.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        if (isLightTheme()) {
-            root.setBackgroundColor(backgroundColor());
-        } else {
-            root.setBackgroundResource(R.drawable.app_background);
-        }
-
-        LinearLayout header =
-                new LinearLayout(
-                        this
-                );
-
-        header.setOrientation(
-                LinearLayout.HORIZONTAL
-        );
-
-        header.setGravity(
-                Gravity.CENTER_VERTICAL
-        );
-
-        header.setPadding(
-                dp(14),
-                dp(8),
-                dp(10),
-                dp(8)
-        );
-        header.setBackground(neonPanel(Color.rgb(2, 15, 31), Color.rgb(0, 150, 210), Color.rgb(255, 135, 20), 0));
-
-        ImageView logo =
-                new ImageView(
-                        this
-                );
-
-        logo.setImageResource(
-                getResources().getIdentifier(
-                        "logo_master_responde",
-                        "drawable",
-                        getPackageName()
-                )
-        );
-
-        header.addView(
-                logo,
-                new LinearLayout.LayoutParams(
-                        dp(56),
-                        dp(56)
-                )
-        );
-
-        LinearLayout titles =
-                new LinearLayout(
-                        this
-                );
-
-        titles.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        titles.setPadding(
-                dp(10),
-                0,
-                0,
-                0
-        );
-
-        titles.addView(text("MASTER", 20, Color.WHITE, true));
-        titles.addView(text("RESPONDE", 20, Color.rgb(255, 151, 35), true));
-
-        titles.addView(
-                text(
-                        "Central inteligente de atendimento",
-                        12,
-                        secondaryTextColor(),
-                        false
-                )
-        );
-
-        header.addView(
-                titles,
-                new LinearLayout.LayoutParams(
-                        0,
-                        dp(62),
-                        1f
-                )
-        );
-
-        TextView menuButton =
-                text(
-                        "☰",
-                        28,
-                        primaryTextColor(),
-                        true
-                );
-
-        menuButton.setGravity(
-                Gravity.CENTER
-        );
-
-        menuButton.setPadding(
-                dp(10),
-                dp(6),
-                dp(10),
-                dp(6)
-        );
-
-        menuButton.setContentDescription(
-                "Abrir menu"
-        );
-
-        menuButton.setOnClickListener(
-                v -> openMenu()
-        );
-
-        header.addView(
-                menuButton,
-                new LinearLayout.LayoutParams(
-                        dp(52),
-                        dp(52)
-                )
-        );
-
-        root.addView(
-                header
-        );
-
-        View line =
-                new View(
-                        this
-                );
-
-        line.setBackgroundResource(
-                getResources().getIdentifier(
-                        "line",
-                        "drawable",
-                        getPackageName()
-                )
-        );
-
-        root.addView(
-                line,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(3)
-                )
-        );
-
-        ScrollView scroll =
-                new ScrollView(
-                        this
-                );
-
-        content =
-                new LinearLayout(
-                        this
-                );
-
-        content.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        content.setPadding(
-                dp(16),
-                dp(18),
-                dp(16),
-                dp(40)
-        );
-
-        scroll.addView(
-                content
-        );
-
-        root.addView(
-                scroll,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        0,
-                        1f
-                )
-        );
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         buildBottomNavigation(root);
 
-        shell.addView(
-                root,
-                new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT
-                )
-        );
+        shell.addView(root, new FrameLayout.LayoutParams(-1, -1));
+        buildDrawer(shell);
+        setContentView(shell);
 
-        buildDrawer(
-                shell
-        );
-
-        setContentView(
-                shell
-        );
-
+        skipNextRebuild = true;
         buildDashboard();
     }
 
+    private View buildHeader() {
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(6), 0, dp(6), 0);
+
+        GradientDrawable bg = new GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{Color.rgb(2, 12, 28), Color.rgb(4, 44, 84), Color.rgb(3, 14, 32), Color.rgb(70, 36, 6)});
+        header.setBackground(bg);
+
+        FrameLayout menuBtn = new FrameLayout(this);
+        menuBtn.addView(icon("menu", Color.WHITE), new FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER));
+        menuBtn.setContentDescription("Abrir menu");
+        menuBtn.setOnClickListener(v -> openMenu());
+        header.addView(menuBtn, new LinearLayout.LayoutParams(dp(46), dp(46)));
+
+        LinearLayout center = new LinearLayout(this);
+        center.setOrientation(LinearLayout.HORIZONTAL);
+        center.setGravity(Gravity.CENTER);
+
+        ImageView head = new ImageView(this);
+        head.setImageResource(R.drawable.mascot_head);
+        head.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        center.addView(head, new LinearLayout.LayoutParams(dp(58), dp(42)));
+
+        LinearLayout titles = new LinearLayout(this);
+        titles.setOrientation(LinearLayout.VERTICAL);
+        titles.setPadding(dp(6), 0, 0, 0);
+        TextView title = brandTitle(20, true);
+        title.setMaxLines(1);
+        autoFit(title, 12, 20);
+        titles.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        TextView sub = text("Central Inteligente de Atendimento", 11, CYAN, false);
+        sub.setMaxLines(1);
+        autoFit(sub, 8, 12);
+        titles.addView(sub, new LinearLayout.LayoutParams(-1, -2));
+        center.addView(titles, new LinearLayout.LayoutParams(0, -2, 1f));
+
+        header.addView(center, new LinearLayout.LayoutParams(0, -1, 1f));
+
+        FrameLayout bell = new FrameLayout(this);
+        bell.addView(icon("bell", Color.WHITE), new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER));
+        bellDot = new View(this);
+        GradientDrawable dotBg = new GradientDrawable();
+        dotBg.setShape(GradientDrawable.OVAL);
+        dotBg.setColor(Color.rgb(255, 60, 60));
+        bellDot.setBackground(dotBg);
+        bellDot.setVisibility(View.GONE);
+        FrameLayout.LayoutParams dotLp = new FrameLayout.LayoutParams(dp(9), dp(9), Gravity.TOP | Gravity.END);
+        dotLp.topMargin = dp(9);
+        dotLp.rightMargin = dp(10);
+        bell.addView(bellDot, dotLp);
+        bell.setContentDescription("Histórico de eventos");
+        bell.setOnClickListener(v -> startActivity(new Intent(this, EventHistoryActivity.class)));
+        header.addView(bell, new LinearLayout.LayoutParams(dp(46), dp(46)));
+
+        return header;
+    }
+
+    // ------------------------------------------------------------------
+    // Menu lateral
+    // ------------------------------------------------------------------
+
     private void buildDrawer(FrameLayout shell) {
         menuOverlay = new FrameLayout(this);
-        menuOverlay.setBackgroundColor(Color.argb(210, 0, 2, 10));
+        menuOverlay.setBackgroundColor(Color.argb(190, 0, 4, 12));
         menuOverlay.setVisibility(View.GONE);
         menuOverlay.setOnClickListener(v -> closeMenu());
 
-        ScrollView scroll = new ScrollView(this);
+        int screenW = getResources().getDisplayMetrics().widthPixels;
+        drawerWidth = Math.min(dp(360), Math.max(dp(290), Math.round(screenW * 0.72f)));
+
+        drawerScroll = new ScrollView(this);
+        drawerScroll.setVerticalScrollBarEnabled(false);
+        drawerScroll.setBackground(gradientBorder(
+                new int[]{CYAN, BLUE, ORANGE},
+                GradientDrawable.Orientation.TL_BR,
+                radii(0, 24, 24, 0), Color.rgb(4, 14, 32), Color.rgb(3, 9, 22), 2));
+        drawerScroll.setClickable(true);
+
         drawerPanel = new LinearLayout(this);
         drawerPanel.setOrientation(LinearLayout.VERTICAL);
-        drawerPanel.setPadding(dp(12), dp(12), dp(12), dp(24));
-        drawerPanel.setBackground(neonPanel(Color.rgb(3, 13, 29), Color.rgb(0, 190, 245), Color.rgb(255, 143, 20), 20));
-        drawerPanel.setClickable(true);
-        drawerPanel.setOnClickListener(v -> { });
+        drawerPanel.setPadding(dp(12), dp(6), dp(12), dp(24));
+        drawerScroll.addView(drawerPanel);
 
+        // Cabeçalho com o robô
         FrameLayout banner = new FrameLayout(this);
-        GradientDrawable bannerBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(2, 30, 54), Color.rgb(5, 13, 29), Color.rgb(49, 22, 7)});
-        bannerBg.setCornerRadius(dp(18));
-        bannerBg.setStroke(dp(1), Color.rgb(0, 185, 245));
-        banner.setBackground(bannerBg);
         ImageView mascot = new ImageView(this);
-        int logoId = getResources().getIdentifier("logo_master_responde", "drawable", getPackageName());
-        if (logoId != 0) mascot.setImageResource(logoId);
+        mascot.setImageResource(R.drawable.mascot_robot);
         mascot.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        banner.addView(mascot, new FrameLayout.LayoutParams(dp(88), dp(92), Gravity.START | Gravity.CENTER_VERTICAL));
+        banner.addView(mascot, new FrameLayout.LayoutParams(dp(112), dp(100), Gravity.START | Gravity.CENTER_VERTICAL));
+
         LinearLayout brand = new LinearLayout(this);
         brand.setOrientation(LinearLayout.VERTICAL);
-        brand.setPadding(dp(88), dp(10), dp(34), dp(8));
-        brand.addView(text("MASTER", 21, Color.WHITE, true));
-        brand.addView(text("RESPONDE", 21, Color.rgb(255, 151, 35), true));
-        brand.addView(text("Menu Principal", 12, Color.rgb(145, 190, 215), true));
-        banner.addView(brand, new FrameLayout.LayoutParams(-1, -2));
-        TextView close = text("×", 30, Color.WHITE, true);
-        close.setGravity(Gravity.CENTER);
-        close.setOnClickListener(v -> closeMenu());
-        banner.addView(close, new FrameLayout.LayoutParams(dp(38), dp(38), Gravity.END | Gravity.TOP));
-        LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(-1, dp(112));
-        bannerLp.bottomMargin = dp(13);
-        drawerPanel.addView(banner, bannerLp);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+        TextView master = text("MASTER", 24, Color.WHITE, true);
+        master.setTypeface(Typeface.create("sans-serif-black", Typeface.ITALIC));
+        TextView responde = text("RESPONDE", 24, ORANGE, true);
+        responde.setTypeface(Typeface.create("sans-serif-black", Typeface.ITALIC));
+        master.setMaxLines(1);
+        responde.setMaxLines(1);
+        autoFit(master, 14, 24);
+        autoFit(responde, 14, 24);
+        brand.addView(master, new LinearLayout.LayoutParams(-1, -2));
+        brand.addView(responde, new LinearLayout.LayoutParams(-1, -2));
+        brand.addView(text("Menu Principal", 14, Color.rgb(180, 205, 225), false));
+        FrameLayout.LayoutParams brandLp = new FrameLayout.LayoutParams(-1, -1);
+        brandLp.leftMargin = dp(108);
+        brandLp.rightMargin = dp(34);
+        banner.addView(brand, brandLp);
 
-        drawerSection("ATALHOS RÁPIDOS");
+        FrameLayout close = new FrameLayout(this);
+        close.addView(icon("close", Color.WHITE), new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER));
+        close.setContentDescription("Fechar menu");
+        close.setOnClickListener(v -> closeMenu());
+        banner.addView(close, new FrameLayout.LayoutParams(dp(40), dp(40), Gravity.END | Gravity.TOP));
+
+        drawerPanel.addView(banner, new LinearLayout.LayoutParams(-1, dp(104)));
+
+        // Atalhos rápidos
+        LinearLayout shortcutsBox = drawerBox("rocket", ORANGE, "ATALHOS RÁPIDOS", CYAN);
         LinearLayout shortcuts = new LinearLayout(this);
         shortcuts.setOrientation(LinearLayout.HORIZONTAL);
-        drawerShortcut(shortcuts, "STV+", "▶", Color.rgb(190, 67, 255), () ->
+        drawerShortcut(shortcuts, "play", PURPLE, "STV+", true, () ->
                 launchFromMenu(new Intent(this, StvPlusActivity.class)));
-        drawerShortcut(shortcuts, "GERAR TESTE", "▶", Color.rgb(255, 153, 24), () -> {
+        drawerShortcut(shortcuts, "play", ORANGE, "GERAR\nTESTE", false, () -> {
             Intent intent = new Intent(this, MasterflixActivity.class);
             intent.putExtra("auto_generate_test", true);
             launchFromMenu(intent);
         });
-        drawerShortcut(shortcuts, "NOVA REVENDA", "+", Color.rgb(0, 220, 125), () ->
+        drawerShortcut(shortcuts, "person_add", GREEN, "NOVA\nREVENDA", false, () ->
                 launchFromMenu(new Intent(this, ResellersActivity.class)));
-        LinearLayout.LayoutParams shortcutLp = new LinearLayout.LayoutParams(-1, dp(104));
-        shortcutLp.bottomMargin = dp(13);
-        drawerPanel.addView(shortcuts, shortcutLp);
+        shortcutsBox.addView(shortcuts, new LinearLayout.LayoutParams(-1, dp(88)));
 
-        drawerSection("MÓDULOS");
-        drawerLink("Regras", "▤", () -> launchFromMenu(new Intent(this, RulesActivity.class)));
-        drawerLink("Revendas", "♙", () -> launchFromMenu(new Intent(this, ResellersActivity.class)));
-        drawerLink("Mensagens e Tempos", "▣", () -> launchFromMenu(new Intent(this, MessageSettingsActivity.class)));
+        // Módulos
+        LinearLayout modules = drawerBox("layers", ORANGE, "MÓDULOS", CYAN);
+        drawerLink(modules, "Regras", "book", CYAN, () -> launchFromMenu(new Intent(this, RulesActivity.class)));
+        drawerLink(modules, "Revendas", "people", CYAN, () -> launchFromMenu(new Intent(this, ResellersActivity.class)));
+        drawerLink(modules, "Mensagens e Tempos", "msgtext", CYAN, () -> launchFromMenu(new Intent(this, MessageSettingsActivity.class)));
 
-        drawerSection("CONTROLE E DIAGNÓSTICO");
-        drawerLink("Monitoramento", "▱", () -> launchFromMenu(new Intent(this, MonitoringActivity.class)));
-        drawerLink("Histórico", "◷", () -> launchFromMenu(new Intent(this, EventHistoryActivity.class)));
-        drawerLink("Simulador de Gatilhos", "ϟ", () -> launchFromMenu(new Intent(this, TriggerSimulatorActivity.class)));
-        drawerLink("Backup / Restauração", "▤", () -> launchFromMenu(new Intent(this, BackupActivity.class)));
-        drawerLink("Central de Diagnóstico", "∿", () -> launchFromMenu(new Intent(this, DiagnosticsActivity.class)));
-        drawerLink("Configurações", "⚙", () -> launchFromMenu(new Intent(this, AppSettingsActivity.class)));
+        // Controle e diagnóstico
+        LinearLayout control = drawerBox("gear", ORANGE, "CONTROLE E DIAGNÓSTICO", ORANGE);
+        drawerLink(control, "Monitoramento", "monitor", CYAN, () -> launchFromMenu(new Intent(this, MonitoringActivity.class)));
+        drawerLink(control, "Histórico", "clock", CYAN, () -> launchFromMenu(new Intent(this, EventHistoryActivity.class)));
+        drawerLink(control, "Simulador de Gatilhos", "bolt", ORANGE, () -> launchFromMenu(new Intent(this, TriggerSimulatorActivity.class)));
+        drawerLink(control, "Backup / Restauração", "database", CYAN, () -> launchFromMenu(new Intent(this, BackupActivity.class)));
+        drawerLink(control, "Central de Diagnóstico", "pulse", CYAN, () -> launchFromMenu(new Intent(this, DiagnosticsActivity.class)));
 
-        scroll.addView(drawerPanel);
-        int panelWidth = Math.min(getResources().getDisplayMetrics().widthPixels - dp(28), dp(360));
-        menuOverlay.addView(scroll, new FrameLayout.LayoutParams(panelWidth, -1, Gravity.START));
+        // Configurações (destaque laranja)
+        LinearLayout settings = new LinearLayout(this);
+        settings.setOrientation(LinearLayout.HORIZONTAL);
+        settings.setGravity(Gravity.CENTER_VERTICAL);
+        settings.setPadding(dp(14), 0, dp(12), 0);
+        settings.setBackground(gradientBorder(
+                new int[]{ORANGE, Color.rgb(255, 190, 60), ORANGE},
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                radii(16, 16, 16, 16), Color.rgb(34, 22, 12), Color.rgb(8, 14, 28), 2));
+        settings.addView(icon("gear", ORANGE), new LinearLayout.LayoutParams(dp(26), dp(26)));
+        TextView settingsLabel = text("Configurações", 15, Color.WHITE, true);
+        settingsLabel.setPadding(dp(14), 0, 0, 0);
+        settings.addView(settingsLabel, new LinearLayout.LayoutParams(0, -2, 1f));
+        settings.addView(icon("chevron", Color.WHITE), new LinearLayout.LayoutParams(dp(20), dp(20)));
+        settings.setOnClickListener(v -> {
+            closeMenu();
+            launchFromMenu(new Intent(this, AppSettingsActivity.class));
+        });
+        LinearLayout.LayoutParams settingsLp = new LinearLayout.LayoutParams(-1, dp(54));
+        settingsLp.topMargin = dp(14);
+        drawerPanel.addView(settings, settingsLp);
+
+        menuOverlay.addView(drawerScroll, new FrameLayout.LayoutParams(drawerWidth, -1, Gravity.START));
         shell.addView(menuOverlay, new FrameLayout.LayoutParams(-1, -1));
     }
 
-    private void drawerShortcut(LinearLayout parent, String label, String symbol, int accent, Runnable action) {
+    /** Caixa com título (ícone + nome + traços decorativos) onde entram os itens do menu. */
+    private LinearLayout drawerBox(String iconName, int iconColor, String title, int slashColor) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(8), dp(4), dp(8), dp(8));
+        box.setBackground(gradientBorder(
+                new int[]{CYAN, BLUE, Color.rgb(0, 90, 150)},
+                GradientDrawable.Orientation.TL_BR,
+                radii(20, 20, 20, 20), Color.rgb(6, 22, 44), Color.rgb(4, 14, 32), 1));
+
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        head.setPadding(dp(4), dp(6), dp(4), dp(8));
+        head.addView(icon(iconName, iconColor), new LinearLayout.LayoutParams(dp(24), dp(24)));
+        TextView t = text(title, 14, Color.WHITE, true);
+        t.setPadding(dp(10), 0, 0, 0);
+        t.setMaxLines(1);
+        autoFit(t, 10, 14);
+        head.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        head.addView(icon("slashes", slashColor), new LinearLayout.LayoutParams(dp(26), dp(20)));
+        box.addView(head, new LinearLayout.LayoutParams(-1, -2));
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(12);
+        drawerPanel.addView(box, lp);
+        return box;
+    }
+
+    private void drawerShortcut(LinearLayout parent, String iconName, int accent, String label, boolean stv, Runnable action) {
         LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setGravity(Gravity.CENTER);
-        tile.setPadding(dp(3), dp(7), dp(3), dp(5));
-        tile.setBackground(neonPanel(Color.rgb(9, 22, 46), accent, accent, 14));
-        TextView icon = text(symbol, 22, accent, true);
-        icon.setGravity(Gravity.CENTER);
-        tile.addView(icon);
-        TextView title = text(label, 8, Color.WHITE, true);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(5), 0, 0);
-        tile.addView(title);
-        tile.setClickable(true);
-        tile.setOnClickListener(v -> action.run());
+        tile.setPadding(dp(3), dp(6), dp(3), dp(6));
+        tile.setBackground(gradientBorder(
+                new int[]{accent, accent},
+                GradientDrawable.Orientation.TL_BR,
+                radii(16, 16, 16, 16), tint(accent, 0.28f), Color.rgb(5, 12, 28), 2));
+        glow(tile, accent);
+
+        tile.addView(icon(iconName, accent), new LinearLayout.LayoutParams(dp(34), dp(34)));
+
+        TextView caption;
+        if (stv) {
+            SpannableString s = new SpannableString("STV+");
+            s.setSpan(new ForegroundColorSpan(ORANGE), 3, 4, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            caption = text("", 15, Color.WHITE, true);
+            caption.setText(s);
+        } else {
+            caption = text(label, 11, Color.WHITE, true);
+        }
+        caption.setGravity(Gravity.CENTER);
+        caption.setPadding(0, dp(4), 0, 0);
+        tile.addView(caption);
+
+        tile.setOnClickListener(v -> {
+            closeMenu();
+            action.run();
+        });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1f);
         lp.setMargins(dp(3), 0, dp(3), 0);
         parent.addView(tile, lp);
     }
 
-    private void drawerLink(String label, String symbol, Runnable action) {
+    private void drawerLink(LinearLayout parent, String label, String iconName, int iconColor, Runnable action) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(11), dp(6), dp(11), dp(6));
-        row.setBackground(neonPanel(Color.rgb(7, 27, 47), Color.rgb(0, 133, 185), Color.rgb(0, 133, 185), 13));
-        TextView icon = text(symbol, 20, Color.rgb(0, 211, 245), true);
-        icon.setGravity(Gravity.CENTER);
-        row.addView(icon, new LinearLayout.LayoutParams(dp(34), -1));
-        TextView title = text(label, 12, Color.WHITE, true);
-        title.setPadding(dp(9), 0, 0, 0);
+        row.setPadding(dp(12), 0, dp(10), 0);
+        row.setBackground(gradientBorder(
+                new int[]{Color.rgb(0, 170, 235), Color.rgb(0, 110, 190)},
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                radii(13, 13, 13, 13), Color.rgb(8, 34, 58), Color.rgb(6, 24, 46), 1));
+        row.addView(icon(iconName, iconColor), new LinearLayout.LayoutParams(dp(24), dp(24)));
+        TextView title = text(label, 14, Color.WHITE, true);
+        title.setPadding(dp(14), 0, 0, 0);
+        title.setMaxLines(1);
+        title.setEllipsize(TextUtils.TruncateAt.END);
         row.addView(title, new LinearLayout.LayoutParams(0, -2, 1f));
-        row.addView(text("›", 24, Color.WHITE, false));
+        row.addView(icon("chevron", Color.WHITE), new LinearLayout.LayoutParams(dp(18), dp(18)));
         row.setClickable(true);
         row.setFocusable(true);
-        row.setOnClickListener(v -> { closeMenu(); if (action != null) action.run(); });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(47));
-        lp.setMargins(dp(2), dp(3), dp(2), dp(4));
-        drawerPanel.addView(row, lp);
+        row.setOnClickListener(v -> {
+            closeMenu();
+            if (action != null) {
+                action.run();
+            }
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(44));
+        lp.setMargins(0, dp(2), 0, dp(4));
+        parent.addView(row, lp);
     }
 
     private void openMenu() {
@@ -532,681 +482,553 @@ public class MainActivity extends Activity {
             return;
         }
 
-        menuOverlay.setVisibility(
-                View.VISIBLE
-        );
-
-        menuOverlay.setAlpha(
-                0f
-        );
-
-        menuOverlay.animate()
-                .alpha(
-                        1f
-                )
-                .setDuration(
-                        160L
-                )
-                .start();
+        menuOverlay.setVisibility(View.VISIBLE);
+        menuOverlay.setAlpha(0f);
+        drawerScroll.setTranslationX(-drawerWidth * 0.35f);
+        menuOverlay.animate().alpha(1f).setDuration(170L).start();
+        drawerScroll.animate().translationX(0f).setDuration(190L).start();
     }
 
     private void closeMenu() {
-        if (menuOverlay == null
-                || menuOverlay.getVisibility() != View.VISIBLE) {
+        if (menuOverlay == null || menuOverlay.getVisibility() != View.VISIBLE) {
             return;
         }
 
+        drawerScroll.animate().translationX(-drawerWidth * 0.35f).setDuration(130L).start();
         menuOverlay.animate()
-                .alpha(
-                        0f
-                )
-                .setDuration(
-                        130L
-                )
-                .withEndAction(
-                        () -> {
-                            menuOverlay.setVisibility(
-                                    View.GONE
-                            );
-
-                            menuOverlay.setAlpha(
-                                    1f
-                            );
-                        }
-                )
+                .alpha(0f)
+                .setDuration(130L)
+                .withEndAction(() -> {
+                    menuOverlay.setVisibility(View.GONE);
+                    menuOverlay.setAlpha(1f);
+                    drawerScroll.setTranslationX(0f);
+                })
                 .start();
     }
 
+    // ------------------------------------------------------------------
+    // Dashboard
+    // ------------------------------------------------------------------
 
     private void buildDashboard() {
         content.removeAllViews();
-        final int cyan = Color.rgb(0, 220, 255);
-        final int blue = Color.rgb(0, 132, 255);
-        final int green = Color.rgb(0, 230, 125);
-        final int orange = Color.rgb(255, 145, 20);
-        final int purple = Color.rgb(181, 67, 255);
-        final int red = Color.rgb(255, 65, 85);
 
-        LinearLayout hero = new LinearLayout(this);
-        hero.setOrientation(LinearLayout.HORIZONTAL);
-        hero.setGravity(Gravity.CENTER_VERTICAL);
-        hero.setPadding(dp(10), dp(10), dp(10), dp(10));
-        hero.setBackground(neonPanel(Color.rgb(2, 13, 30), orange, cyan, 18));
-        ImageView mascot = new ImageView(this);
-        int logoId = getResources().getIdentifier("logo_master_responde", "drawable", getPackageName());
-        if (logoId != 0) mascot.setImageResource(logoId);
-        mascot.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        hero.addView(mascot, new LinearLayout.LayoutParams(dp(76), dp(92)));
-        LinearLayout heroText = new LinearLayout(this);
-        heroText.setOrientation(LinearLayout.VERTICAL);
-        heroText.setPadding(dp(8), 0, dp(4), 0);
-        TextView eyebrow = text("CENTRAL DE AUTOMAÇÃO", 8, cyan, true);
-        eyebrow.setLetterSpacing(0.1f);
-        heroText.addView(eyebrow);
-        TextView heroTitle = text("MASTER RESPONDE", 15, Color.WHITE, true);
-        heroTitle.setPadding(0, dp(4), 0, dp(3));
-        heroText.addView(heroTitle);
-        heroText.addView(text("Atendimentos automáticos, testes e gestão de revendas em um só lugar.", 9, Color.rgb(185, 204, 224), false));
-        hero.addView(heroText, new LinearLayout.LayoutParams(0, -2, 1f));
-        LinearLayout toggleColumn = new LinearLayout(this);
-        toggleColumn.setOrientation(LinearLayout.VERTICAL);
-        toggleColumn.setGravity(Gravity.CENTER);
-        dashboardBotBadge = text(prefs.getBoolean("bot_enabled", false) ? "● BOT ATIVO" : "● BOT PAUSADO", 8, prefs.getBoolean("bot_enabled", false) ? green : orange, true);
-        dashboardBotBadge.setGravity(Gravity.CENTER);
-        dashboardBotBadge.setPadding(dp(7), dp(6), dp(7), dp(6));
-        dashboardBotBadge.setBackground(roundedBackground(Color.rgb(4, 34, 39), green, 18));
-        toggleColumn.addView(dashboardBotBadge);
-        botSwitch = new Switch(this);
-        botSwitch.setChecked(prefs.getBoolean("bot_enabled", false));
-        botSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
-            prefs.edit().putBoolean("bot_enabled", checked).apply();
-            if (checked) BackgroundRuntime.requestListenerRebind(this);
-            refreshStatus();
-            Toast.makeText(this, checked ? "Bot ativado." : "Bot desativado.", Toast.LENGTH_SHORT).show();
-        });
-        toggleColumn.addView(botSwitch);
-        hero.addView(toggleColumn);
-        LinearLayout.LayoutParams heroLp = new LinearLayout.LayoutParams(-1, -2);
-        heroLp.bottomMargin = dp(17);
-        content.addView(hero, heroLp);
-
-        section("STATUS DO SISTEMA");
-        GridLayout statusGrid = new GridLayout(this);
-        statusGrid.setColumnCount(2);
-        botStatus = addReferenceStatus(statusGrid, "BOT", "● Verificando", blue, "◎", null);
-        waStatus = addReferenceStatus(statusGrid, "WHATSAPP BUSINESS", "● Verificando", green, "◉", this::openNotificationAccess);
-        masterflixStatus = addReferenceStatus(statusGrid, "MASTERFLIX", "● Verificando", orange, "▶", () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        stvStatus = addReferenceStatus(statusGrid, "STV+", "● Verificando", purple, "STV", () -> startActivity(new Intent(this, StvPlusActivity.class)));
-        engineStatus = addReferenceStatus(statusGrid, "2º PLANO", "● Verificando", Color.rgb(255, 195, 30), "▱", this::openNotificationAccess);
-        content.addView(statusGrid);
-
-        gap(17);
-        section("ATIVIDADE DO ATENDIMENTO");
+        // ---- Dados ----
         org.json.JSONArray events = EventLog.read(this);
-        int received = 0, sent = 0, errors = 0;
-        long now = System.currentTimeMillis();
+        int received = 0;
+        int sent = 0;
+        int errors = 0;
+        int receivedToday = 0;
+        int sentToday = 0;
+        int errorsToday = 0;
+        int tests = 0;
         int[] daily = new int[7];
+        long now = System.currentTimeMillis();
+        long dayMs = 86400000L;
+        long todayStart = startOfDay(now);
         for (int i = 0; i < events.length(); i++) {
             org.json.JSONObject event = events.optJSONObject(i);
-            if (event == null) continue;
+            if (event == null) {
+                continue;
+            }
             String type = event.optString("type");
-            if ("MENSAGEM RECEBIDA".equals(type)) received++;
-            if ("RESPOSTA ENVIADA".equals(type)) sent++;
-            if ("FALHA".equals(type)) errors++;
             long time = event.optLong("time", 0L);
-            long age = now - time;
-            if (time > 0 && age >= 0 && age < 7L * 86400000L) {
-                int day = (int)(age / 86400000L);
-                daily[6 - Math.min(6, day)]++;
+            boolean last24h = time > 0 && now - time >= 0 && now - time < dayMs;
+            if ("MENSAGEM RECEBIDA".equals(type)) {
+                received++;
+                if (last24h) {
+                    receivedToday++;
+                }
+                if (time > 0) {
+                    int ago = (int) Math.round((todayStart - startOfDay(time)) / (double) dayMs);
+                    if (ago >= 0 && ago < 7) {
+                        daily[6 - ago]++;
+                    }
+                }
+            }
+            if ("RESPOSTA ENVIADA".equals(type)) {
+                sent++;
+                if (last24h) {
+                    sentToday++;
+                }
+                if ("TESTE ENVIADO".equals(event.optString("result"))) {
+                    tests++;
+                }
+            }
+            if ("FALHA".equals(type)) {
+                errors++;
+                if (last24h) {
+                    errorsToday++;
+                }
             }
         }
-        GridLayout activityGrid = new GridLayout(this);
-        activityGrid.setColumnCount(3);
-        addReferenceMetric(activityGrid, "RECEBIDAS", String.valueOf(received), cyan);
-        addReferenceMetric(activityGrid, "RESPONDIDAS", String.valueOf(sent), green);
-        addReferenceMetric(activityGrid, "FALHAS", String.valueOf(errors), errors > 0 ? red : Color.rgb(160, 175, 190));
-        content.addView(activityGrid);
+        int rateToday = receivedToday <= 0 ? 0 : Math.min(100, Math.round(sentToday * 100f / receivedToday));
+        int resellers = countResellers();
 
-        gap(17);
-        section("DESEMPENHO");
-        LinearLayout performance = card();
-        performance.setOrientation(LinearLayout.HORIZONTAL);
-        performance.setGravity(Gravity.CENTER_VERTICAL);
-        performance.setPadding(dp(15), dp(12), dp(15), dp(12));
-        performance.addView(text("TAXA DE RESPOSTA", 10, Color.WHITE, true), new LinearLayout.LayoutParams(0, -2, 1f));
-        int responseRate = received <= 0 ? 0 : Math.min(100, Math.round(sent * 100f / received));
-        performance.addView(text(responseRate + "%", 25, green, true));
-        content.addView(performance);
-
-        gap(17);
-        section("ACESSO RÁPIDO");
-        GridLayout quickGrid = new GridLayout(this);
-        quickGrid.setColumnCount(2);
-        addReferenceQuick(quickGrid, "Gerar Teste MasterFlix", "▶", blue, () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        addReferenceQuick(quickGrid, "Gerar Teste STV+", "▶", purple, () -> startActivity(new Intent(this, StvPlusActivity.class)));
-        addReferenceQuick(quickGrid, "Cadastrar Revenda", "+", orange, () -> startActivity(new Intent(this, ResellersActivity.class)));
-        addReferenceQuick(quickGrid, "Regras do Bot", "≡", cyan, () -> startActivity(new Intent(this, RulesActivity.class)));
-        addReferenceQuick(quickGrid, "Configurações", "⚙", blue, () -> startActivity(new Intent(this, AppSettingsActivity.class)));
-        content.addView(quickGrid);
-
-        gap(17);
-        section("RESUMO GERAL");
-        LinearLayout summary = card();
-        summary.setPadding(dp(12), dp(11), dp(12), dp(12));
-        addSummaryRow(summary, "Total de atendimentos recebidos", String.valueOf(received), cyan);
-        addSummaryRow(summary, "Respostas enviadas", String.valueOf(sent), green);
-        addSummaryRow(summary, "Falhas registradas", String.valueOf(errors), errors > 0 ? red : Color.rgb(170, 185, 200));
-        addSummaryRow(summary, "Eventos armazenados", String.valueOf(events.length()), Color.WHITE);
-        content.addView(summary);
-
-        gap(12);
-        LinearLayout chart = card();
-        chart.setPadding(dp(12), dp(11), dp(12), dp(10));
-        chart.addView(text("USO DIÁRIO — ÚLTIMOS 7 DIAS", 9, cyan, true));
-        LinearLayout bars = new LinearLayout(this);
-        bars.setOrientation(LinearLayout.HORIZONTAL);
-        bars.setGravity(Gravity.BOTTOM);
-        int max = 1;
-        for (int value : daily) max = Math.max(max, value);
-        String[] days = {"6d", "5d", "4d", "3d", "2d", "Ontem", "Hoje"};
-        for (int i = 0; i < daily.length; i++) {
-            LinearLayout col = new LinearLayout(this);
-            col.setOrientation(LinearLayout.VERTICAL);
-            col.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-            col.addView(text(String.valueOf(daily[i]), 7, secondaryTextColor(), false));
-            View bar = new View(this);
-            bar.setBackground(roundedBackground(blue, cyan, 5));
-            LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(dp(17), dp(daily[i] == 0 ? 3 : Math.max(7, (int)(52f * daily[i] / max))));
-            barLp.topMargin = dp(3);
-            col.addView(bar, barLp);
-            TextView day = text(days[i], 7, secondaryTextColor(), false);
-            day.setPadding(0, dp(4), 0, 0);
-            col.addView(day);
-            bars.addView(col, new LinearLayout.LayoutParams(0, dp(82), 1f));
+        if (bellDot != null) {
+            bellDot.setVisibility(errorsToday > 0 ? View.VISIBLE : View.GONE);
         }
-        chart.addView(bars);
-        content.addView(chart);
+
+        // ---- Hero ----
+        content.addView(buildHero(), lp(-1, dp(144), 0, 0, 0, dp(10)));
+
+        // ---- Status do sistema ----
+        LinearLayout statusBox = sectionBox();
+        statusBox.addView(sectionHeader("pulse", CYAN, "STATUS DO SISTEMA", ""));
+        LinearLayout statusRow = new LinearLayout(this);
+        statusRow.setOrientation(LinearLayout.HORIZONTAL);
+        waChip = addStatusCard(statusRow, "whatsapp", GREEN, "WhatsApp Business", GREEN, this::openNotificationAccess);
+        masterflixChip = addStatusCard(statusRow, "play", ORANGE, "MasterFlix", ORANGE,
+                () -> startActivity(new Intent(this, MasterflixActivity.class)));
+        stvChip = addStatusCard(statusRow, "stv", PURPLE, "STV+", PURPLE,
+                () -> startActivity(new Intent(this, StvPlusActivity.class)));
+        botChip = addStatusCard(statusRow, "robot", CYAN, "BOT", BLUE, null);
+        engineChip = addStatusCard(statusRow, "layers", YELLOW, "2º Plano", YELLOW, this::openNotificationAccess);
+        statusBox.addView(statusRow, lp(-1, -2, 0, dp(8), 0, 0));
+        content.addView(statusBox, lp(-1, -2, 0, 0, 0, dp(10)));
+
+        // ---- Atividade + desempenho ----
+        LinearLayout activityRow = new LinearLayout(this);
+        activityRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        LinearLayout activityBox = sectionBox();
+        activityBox.addView(sectionHeader("bars", BLUE, "ATIVIDADE DO ATENDIMENTO", ""));
+        LinearLayout metrics = new LinearLayout(this);
+        metrics.setOrientation(LinearLayout.HORIZONTAL);
+        addMetric(metrics, "chat", BLUE, "Recebidas", String.valueOf(received), BLUE);
+        addMetric(metrics, "reply", GREEN, "Respondidas", String.valueOf(sent), GREEN);
+        addMetric(metrics, "warning", RED, "Falhas", String.valueOf(errors), RED);
+        activityBox.addView(metrics, lp(-1, dp(96), 0, dp(8), 0, 0));
+        activityRow.addView(activityBox, new LinearLayout.LayoutParams(0, -1, 1.62f));
+
+        LinearLayout perfBox = sectionBox();
+        perfBox.addView(sectionHeader("stopwatch", CYAN, "DESEMPENHO", "(HOJE)"));
+        NeonRingView ring = new NeonRingView(this);
+        ring.setPercent(rateToday);
+        perfBox.addView(ring, lp(-1, dp(98), 0, dp(6), 0, 0));
+        LinearLayout.LayoutParams perfLp = new LinearLayout.LayoutParams(0, -1, 1f);
+        perfLp.leftMargin = dp(8);
+        activityRow.addView(perfBox, perfLp);
+
+        content.addView(activityRow, lp(-1, -2, 0, 0, 0, dp(10)));
+
+        // ---- Acesso rápido ----
+        LinearLayout quickBox = sectionBox();
+        quickBox.addView(sectionHeader("rocket", CYAN, "ACESSO RÁPIDO", ""));
+        LinearLayout quickRow = new LinearLayout(this);
+        quickRow.setOrientation(LinearLayout.HORIZONTAL);
+        addQuick(quickRow, "play", BLUE, "Gerar Teste\nMasterFlix",
+                () -> startActivity(new Intent(this, MasterflixActivity.class)));
+        addQuick(quickRow, "play", PURPLE, "Gerar Teste\nSTV+",
+                () -> startActivity(new Intent(this, StvPlusActivity.class)));
+        addQuick(quickRow, "person_add", ORANGE, "Cadastrar\nRevenda",
+                () -> startActivity(new Intent(this, ResellersActivity.class)));
+        addQuick(quickRow, "people", CYAN, "Clientes\nAtivos",
+                () -> startActivity(new Intent(this, EventHistoryActivity.class)));
+        addQuick(quickRow, "gear", BLUE, "Configurações\ndo BOT",
+                () -> startActivity(new Intent(this, AppSettingsActivity.class)));
+        quickBox.addView(quickRow, lp(-1, dp(84), 0, dp(8), 0, 0));
+        content.addView(quickBox, lp(-1, -2, 0, 0, 0, dp(10)));
+
+        // ---- Resumo + gráfico ----
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        LinearLayout summaryBox = sectionBox();
+        summaryBox.addView(sectionHeader("clipboard", CYAN, "RESUMO GERAL", ""));
+        addSummaryRow(summaryBox, "chat", CYAN, "Total de atendimentos", String.valueOf(received));
+        addSummaryRow(summaryBox, "person", GREEN, "Clientes ativos", String.valueOf(receivedToday));
+        addSummaryRow(summaryBox, "key", GREEN, "Testes gerados", String.valueOf(tests));
+        addSummaryRow(summaryBox, "people", GREEN, "Revendas cadastradas", String.valueOf(resellers));
+        bottomRow.addView(summaryBox, new LinearLayout.LayoutParams(0, -1, 1.1f));
+
+        LinearLayout chartBox = sectionBox();
+        chartBox.addView(sectionHeader("bars", CYAN, "USO DIÁRIO", "(ÚLTIMOS 7 DIAS)"));
+        NeonBarChartView chart = new NeonBarChartView(this);
+        chart.setData(daily, lastSevenDayLabels());
+        chartBox.addView(chart, lp(-1, dp(124), 0, dp(8), 0, 0));
+        LinearLayout.LayoutParams chartLp = new LinearLayout.LayoutParams(0, -1, 1f);
+        chartLp.leftMargin = dp(8);
+        bottomRow.addView(chartBox, chartLp);
+
+        content.addView(bottomRow, lp(-1, -2, 0, 0, 0, 0));
+
         refreshStatus();
     }
 
-    private GradientDrawable neonPanel(int fill, int edgeA, int edgeB, int radius) {
-        GradientDrawable drawable = new GradientDrawable(
+    private View buildHero() {
+        FrameLayout frame = new FrameLayout(this);
+        frame.setClipChildren(false);
+
+        FrameLayout panel = new FrameLayout(this);
+        panel.setBackground(gradientBorder(
+                new int[]{ORANGE, Color.rgb(90, 80, 120), CYAN},
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                radii(20, 20, 20, 20), Color.rgb(8, 22, 46), Color.rgb(3, 10, 26), 2));
+        frame.addView(panel, new FrameLayout.LayoutParams(-1, dp(118), Gravity.BOTTOM));
+
+        ImageView mascot = new ImageView(this);
+        mascot.setImageResource(R.drawable.mascot_robot);
+        mascot.setScaleType(ImageView.ScaleType.FIT_END);
+        mascot.setAdjustViewBounds(true);
+        frame.addView(mascot, new FrameLayout.LayoutParams(dp(146), dp(128), Gravity.BOTTOM | Gravity.START));
+
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.setGravity(Gravity.CENTER_VERTICAL);
+        TextView eyebrow = text("CENTRAL DE AUTOMAÇÃO", 9, Color.rgb(190, 215, 235), false);
+        eyebrow.setLetterSpacing(0.14f);
+        eyebrow.setMaxLines(1);
+        texts.addView(eyebrow);
+        TextView title = brandTitle(24, false);
+        title.setMaxLines(1);
+        autoFit(title, 14, 24);
+        texts.addView(title, lp(-1, -2, 0, dp(2), 0, dp(2)));
+        TextView sub = text("Atendimentos automáticos, testes e gestão de revendas em um só lugar.", 11.5f, Color.rgb(205, 222, 238), false);
+        texts.addView(sub, lp(-1, -2, 0, 0, dp(84), 0));
+        FrameLayout.LayoutParams textsLp = new FrameLayout.LayoutParams(-1, -1);
+        textsLp.leftMargin = dp(140);
+        textsLp.rightMargin = dp(12);
+        textsLp.topMargin = dp(6);
+        textsLp.bottomMargin = dp(8);
+        panel.addView(texts, textsLp);
+
+        boolean enabled = prefs.getBoolean("bot_enabled", false);
+        dashboardBotBadge = text(enabled ? "● BOT ATIVO" : "● BOT PAUSADO", 10, enabled ? GREEN : ORANGE, true);
+        dashboardBotBadge.setGravity(Gravity.CENTER);
+        dashboardBotBadge.setPadding(dp(10), dp(4), dp(10), dp(4));
+        dashboardBotBadge.setBackground(roundedBackground(Color.rgb(4, 36, 38), enabled ? GREEN : ORANGE, 12, 2));
+        FrameLayout.LayoutParams badgeLp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
+        badgeLp.topMargin = dp(10);
+        badgeLp.rightMargin = dp(10);
+        panel.addView(dashboardBotBadge, badgeLp);
+
+        botSwitch = new Switch(this);
+        botSwitch.setChecked(enabled);
+        styleSwitch(botSwitch);
+        botSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
+            prefs.edit().putBoolean("bot_enabled", checked).apply();
+            if (checked) {
+                BackgroundRuntime.requestListenerRebind(this);
+            }
+            refreshStatus();
+            Toast.makeText(this, checked ? "Bot ativado." : "Bot desativado.", Toast.LENGTH_SHORT).show();
+        });
+        FrameLayout.LayoutParams swLp = new FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.BOTTOM);
+        swLp.rightMargin = dp(16);
+        swLp.bottomMargin = dp(26);
+        panel.addView(botSwitch, swLp);
+
+        View underline = new View(this);
+        underline.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{ORANGE, Color.argb(0, 255, 145, 20)}));
+        FrameLayout.LayoutParams ulLp = new FrameLayout.LayoutParams(-1, dp(2), Gravity.BOTTOM);
+        ulLp.leftMargin = dp(140);
+        ulLp.rightMargin = dp(70);
+        ulLp.bottomMargin = dp(10);
+        panel.addView(underline, ulLp);
+
+        return frame;
+    }
+
+    private void styleSwitch(Switch s) {
+        s.setScaleX(1.25f);
+        s.setScaleY(1.25f);
+        int[][] states = new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}};
+        s.setTrackTintList(new ColorStateList(states, new int[]{GREEN, Color.rgb(60, 72, 88)}));
+        s.setThumbTintList(new ColorStateList(states, new int[]{Color.WHITE, Color.rgb(200, 210, 220)}));
+    }
+
+    private LinearLayout sectionBox() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(10), dp(10), dp(10), dp(10));
+        box.setBackground(gradientBorder(
+                new int[]{PANEL_EDGE, Color.rgb(12, 50, 84)},
                 GradientDrawable.Orientation.TL_BR,
-                new int[]{fill, Color.rgb(5, 12, 28), Color.rgb(20, 18, 30)}
-        );
-        drawable.setCornerRadius(dp(radius));
-        drawable.setStroke(dp(1), edgeA);
-        return drawable;
+                radii(18, 18, 18, 18), Color.rgb(6, 20, 40), Color.rgb(3, 12, 28), 1));
+        return box;
     }
 
-    private TextView addReferenceStatus(GridLayout parent, String label, String value, int accent, String symbol, Runnable click) {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setGravity(Gravity.CENTER);
-        box.setPadding(dp(8), dp(10), dp(8), dp(10));
-        box.setBackground(neonPanel(Color.rgb(4, 18, 37), accent, accent, 15));
-        TextView icon = text(symbol, 21, accent, true);
-        icon.setGravity(Gravity.CENTER);
-        box.addView(icon);
-        TextView name = text(label, 9, Color.WHITE, true);
-        name.setGravity(Gravity.CENTER);
-        name.setPadding(0, dp(5), 0, dp(7));
-        box.addView(name);
-        TextView status = text(value, 8, accent, true);
-        status.setGravity(Gravity.CENTER);
-        status.setPadding(dp(5), dp(5), dp(5), dp(5));
-        status.setBackground(roundedBackground(Color.rgb(4, 37, 40), Color.rgb(20, 115, 92), 16));
-        box.addView(status);
-        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-        lp.width = 0;
-        lp.height = dp(105);
-        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        lp.setMargins(dp(3), dp(3), dp(3), dp(3));
-        parent.addView(box, lp);
-        if (click != null) {
-            box.setClickable(true);
-            box.setFocusable(true);
-            box.setOnClickListener(v -> click.run());
-        }
-        return status;
-    }
-
-    private void addReferenceMetric(GridLayout parent, String label, String value, int accent) {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setGravity(Gravity.CENTER_VERTICAL);
-        box.setPadding(dp(9), dp(10), dp(5), dp(10));
-        box.setBackground(neonPanel(Color.rgb(4, 20, 40), accent, accent, 14));
-        box.addView(text(label, 8, Color.rgb(180, 200, 218), true));
-        box.addView(text(value, 22, accent, true));
-        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-        lp.width = 0;
-        lp.height = dp(78);
-        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        lp.setMargins(dp(3), dp(2), dp(3), dp(2));
-        parent.addView(box, lp);
-    }
-
-    private void addReferenceQuick(GridLayout parent, String label, String symbol, int accent, Runnable action) {
-        LinearLayout tile = new LinearLayout(this);
-        tile.setOrientation(LinearLayout.VERTICAL);
-        tile.setGravity(Gravity.CENTER);
-        tile.setPadding(dp(8), dp(10), dp(8), dp(10));
-        tile.setBackground(neonPanel(Color.rgb(5, 19, 39), accent, accent, 15));
-        TextView icon = text(symbol, 24, accent, true);
-        icon.setGravity(Gravity.CENTER);
-        tile.addView(icon);
-        TextView caption = text(label, 10, Color.WHITE, true);
-        caption.setGravity(Gravity.CENTER);
-        caption.setMaxLines(2);
-        caption.setPadding(0, dp(6), 0, 0);
-        tile.addView(caption);
-        tile.setClickable(true);
-        tile.setFocusable(true);
-        tile.setOnClickListener(v -> action.run());
-        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-        lp.width = 0;
-        lp.height = dp(94);
-        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        lp.setMargins(dp(3), dp(3), dp(3), dp(3));
-        parent.addView(tile, lp);
-    }
-
-    private void addSummaryRow(LinearLayout parent, String label, String value, int accent) {
+    private View sectionHeader(String iconName, int iconColor, String title, String suffix) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(9), dp(7), dp(9), dp(7));
-        row.setBackground(roundedBackground(Color.rgb(7, 25, 43), Color.rgb(26, 76, 105), 10));
-        row.addView(text(label, 10, Color.WHITE, false), new LinearLayout.LayoutParams(0, -2, 1f));
-        row.addView(text(value, 12, accent, true));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.topMargin = dp(5);
-        parent.addView(row, lp);
+        row.addView(icon(iconName, iconColor), new LinearLayout.LayoutParams(dp(22), dp(22)));
+
+        TextView t = text(title, 12.5f, Color.WHITE, true);
+        t.setLetterSpacing(0.04f);
+        if (!suffix.isEmpty()) {
+            SpannableString s = new SpannableString(title + " " + suffix);
+            s.setSpan(new ForegroundColorSpan(Color.rgb(175, 195, 215)), title.length(), s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            t.setText(s);
+        }
+        t.setPadding(dp(8), 0, 0, 0);
+        t.setMaxLines(1);
+        autoFit(t, 8, 13);
+        row.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        return row;
+    }
+
+    private Chip addStatusCard(LinearLayout parent, String iconName, int iconColor, String name, int border, Runnable click) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        card.setPadding(dp(3), dp(8), dp(3), dp(7));
+        card.setBackground(gradientBorder(
+                new int[]{border, tint(border, 0.4f)},
+                GradientDrawable.Orientation.TL_BR,
+                radii(14, 14, 14, 14), tint(border, 0.22f), Color.rgb(4, 14, 30), 2));
+        glow(card, border);
+
+        if ("stv".equals(iconName)) {
+            SpannableString s = new SpannableString("STV+");
+            s.setSpan(new ForegroundColorSpan(YELLOW), 3, 4, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            TextView logo = text("", 19, Color.WHITE, true);
+            logo.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
+            logo.setText(s);
+            logo.setGravity(Gravity.CENTER);
+            logo.setMaxLines(1);
+            autoFit(logo, 12, 19);
+            card.addView(logo, new LinearLayout.LayoutParams(-1, dp(30)));
+        } else {
+            card.addView(icon(iconName, iconColor), new LinearLayout.LayoutParams(dp(30), dp(30)));
+        }
+
+        TextView label = text(name, 10.5f, Color.WHITE, true);
+        label.setGravity(Gravity.CENTER);
+        label.setMaxLines(2);
+        autoFit(label, 8, 11);
+        card.addView(label, lp(-1, dp(30), 0, dp(3), 0, dp(3)));
+
+        LinearLayout pill = new LinearLayout(this);
+        pill.setOrientation(LinearLayout.HORIZONTAL);
+        pill.setGravity(Gravity.CENTER);
+        pill.setPadding(dp(4), dp(3), dp(4), dp(3));
+        pill.setBackground(roundedBackground(Color.rgb(3, 34, 34), Color.rgb(14, 100, 78), 12, 1));
+        View dot = new View(this);
+        TextView state = text("...", 8.5f, Color.WHITE, false);
+        state.setMaxLines(1);
+        autoFit(state, 6, 9);
+        state.setPadding(dp(3), 0, 0, 0);
+        pill.addView(dot, new LinearLayout.LayoutParams(dp(6), dp(6)));
+        pill.addView(state, new LinearLayout.LayoutParams(0, -2, 1f));
+        card.addView(pill, new LinearLayout.LayoutParams(-1, dp(20)));
+
+        if (click != null) {
+            card.setClickable(true);
+            card.setFocusable(true);
+            card.setOnClickListener(v -> click.run());
+        }
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(104), 1f);
+        lp.setMargins(dp(2), 0, dp(2), 0);
+        parent.addView(card, lp);
+        return new Chip(state, dot);
+    }
+
+    private void addMetric(LinearLayout parent, String iconName, int iconColor, String label, String value, int accent) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(dp(3), dp(6), dp(3), dp(6));
+        box.setBackground(gradientBorder(
+                new int[]{accent, tint(accent, 0.5f)},
+                GradientDrawable.Orientation.TL_BR,
+                radii(14, 14, 14, 14), tint(accent, 0.26f), Color.rgb(4, 14, 30), 2));
+        box.addView(icon(iconName, iconColor), new LinearLayout.LayoutParams(dp(24), dp(24)));
+        TextView l = text(label, 10.5f, Color.WHITE, false);
+        l.setGravity(Gravity.CENTER);
+        l.setMaxLines(1);
+        autoFit(l, 7, 11);
+        box.addView(l, lp(-1, -2, 0, dp(2), 0, 0));
+        TextView v = text(value, 24, accent, true);
+        v.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
+        v.setGravity(Gravity.CENTER);
+        v.setMaxLines(1);
+        autoFit(v, 14, 26);
+        box.addView(v, new LinearLayout.LayoutParams(-1, 0, 1f));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1f);
+        lp.setMargins(dp(2), 0, dp(2), 0);
+        parent.addView(box, lp);
+    }
+
+    private void addQuick(LinearLayout parent, String iconName, int accent, String label, Runnable action) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setPadding(dp(2), dp(6), dp(2), dp(6));
+        tile.setBackground(gradientBorder(
+                new int[]{accent, tint(accent, 0.5f)},
+                GradientDrawable.Orientation.TL_BR,
+                radii(14, 14, 14, 14), tint(accent, 0.24f), Color.rgb(4, 14, 30), 2));
+        glow(tile, accent);
+        tile.addView(icon(iconName, accent), new LinearLayout.LayoutParams(dp(28), dp(28)));
+        TextView caption = text(label, 10, Color.WHITE, true);
+        caption.setGravity(Gravity.CENTER);
+        caption.setMaxLines(2);
+        autoFit(caption, 7, 10);
+        tile.addView(caption, lp(-1, 0, 0, dp(4), 0, 0));
+        ((LinearLayout.LayoutParams) caption.getLayoutParams()).weight = 1f;
+        tile.setClickable(true);
+        tile.setFocusable(true);
+        tile.setOnClickListener(v -> action.run());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1f);
+        lp.setMargins(dp(2), 0, dp(2), 0);
+        parent.addView(tile, lp);
+    }
+
+    private void addSummaryRow(LinearLayout parent, String iconName, int iconColor, String label, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(8), 0, dp(8), 0);
+        row.setBackground(roundedBackground(Color.rgb(7, 26, 46), Color.rgb(20, 70, 105), 10, 1));
+        row.addView(icon(iconName, iconColor), new LinearLayout.LayoutParams(dp(16), dp(16)));
+        TextView l = text(label, 11, Color.WHITE, false);
+        l.setPadding(dp(8), 0, dp(4), 0);
+        l.setMaxLines(1);
+        autoFit(l, 7, 11);
+        row.addView(l, new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView v = text(value, 13, Color.WHITE, true);
+        v.setMaxLines(1);
+        row.addView(v);
+        parent.addView(row, lp(-1, dp(35), 0, dp(6), 0, 0));
     }
 
     private void buildBottomNavigation(LinearLayout root) {
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setGravity(Gravity.CENTER);
-        nav.setPadding(dp(3), dp(5), dp(3), dp(5));
-        nav.setBackground(neonPanel(Color.rgb(3, 15, 30), Color.rgb(0, 165, 235), Color.rgb(255, 139, 20), 17));
-        nav.setElevation(dp(5));
-        addNavItem(nav, "⌂", "Dashboard", null);
-        addNavItem(nav, "▣", "Atend.", () -> startActivity(new Intent(this, EventHistoryActivity.class)));
-        addNavItem(nav, "▱", "Módulos", this::openMenu);
-        addNavItem(nav, "♙", "Revendas", () -> startActivity(new Intent(this, ResellersActivity.class)));
-        addNavItem(nav, "▥", "Relatórios", () -> startActivity(new Intent(this, MonitoringActivity.class)));
-        addNavItem(nav, "⚙", "Config.", () -> startActivity(new Intent(this, AppSettingsActivity.class)));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(60));
-        lp.setMargins(dp(6), dp(4), dp(6), dp(7));
+        nav.setPadding(dp(4), dp(5), dp(4), dp(5));
+        nav.setBackground(gradientBorder(
+                new int[]{CYAN, BLUE, ORANGE},
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                radii(20, 20, 20, 20), Color.rgb(4, 16, 34), Color.rgb(3, 10, 24), 2));
+        addNavItem(nav, "home", "Dashboard", true, null);
+        addNavItem(nav, "robot", "Atendimentos", false, () -> startActivity(new Intent(this, EventHistoryActivity.class)));
+        addNavItem(nav, "layers", "Módulos", false, this::openMenu);
+        addNavItem(nav, "people", "Revendas", false, () -> startActivity(new Intent(this, ResellersActivity.class)));
+        addNavItem(nav, "bars", "Relatórios", false, () -> startActivity(new Intent(this, MonitoringActivity.class)));
+        addNavItem(nav, "gear", "Configurações", false, () -> startActivity(new Intent(this, AppSettingsActivity.class)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(64));
+        lp.setMargins(dp(8), dp(4), dp(8), dp(8));
         root.addView(nav, lp);
     }
 
-    private void addNavItem(LinearLayout parent, String icon, String label, Runnable action) {
+    private void addNavItem(LinearLayout parent, String iconName, String label, boolean selected, Runnable action) {
         LinearLayout item = new LinearLayout(this);
         item.setOrientation(LinearLayout.VERTICAL);
         item.setGravity(Gravity.CENTER);
-        item.setPadding(dp(1), dp(2), dp(1), dp(2));
-        TextView symbol = text(icon, 16, Color.rgb(0, 211, 246), true);
-        symbol.setGravity(Gravity.CENTER);
-        item.addView(symbol);
-        TextView caption = text(label, 7, Color.rgb(205, 218, 231), false);
+        item.setPadding(dp(1), dp(3), dp(1), dp(3));
+        int color = selected ? ORANGE : CYAN;
+        if (selected) {
+            item.setBackground(gradientBorder(
+                    new int[]{ORANGE, Color.rgb(255, 190, 60)},
+                    GradientDrawable.Orientation.TL_BR,
+                    radii(14, 14, 14, 14), Color.rgb(60, 32, 8), Color.rgb(26, 16, 10), 2));
+        }
+        item.addView(icon(iconName, color), new LinearLayout.LayoutParams(dp(24), dp(24)));
+        TextView caption = text(label, 9, selected ? ORANGE : Color.rgb(210, 224, 236), false);
         caption.setGravity(Gravity.CENTER);
-        item.addView(caption);
+        caption.setMaxLines(1);
+        autoFit(caption, 6, 9);
+        item.addView(caption, lp(-1, -2, 0, dp(2), 0, 0));
         item.setClickable(true);
-        item.setOnClickListener(v -> { if (action != null) action.run(); });
-        parent.addView(item, new LinearLayout.LayoutParams(0, -1, 1f));
+        item.setOnClickListener(v -> {
+            if (action != null) {
+                action.run();
+            }
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1f);
+        lp.setMargins(dp(1), 0, dp(1), 0);
+        parent.addView(item, lp);
     }
 
-    private void drawerSection(
-            String value
-    ) {
-        TextView section =
-                text(
-                        value,
-                        11,
-                        Color.rgb(0, 211, 245),
-                        true
-                );
-
-        section.setLetterSpacing(
-                0.08f
-        );
-
-        section.setPadding(
-                dp(5),
-                dp(12),
-                0,
-                dp(8)
-        );
-
-        drawerPanel.addView(
-                section
-        );
-    }
-
-    private void drawerItem(
-            String label,
-            boolean orange,
-            Runnable action
-    ) {
-        Button button =
-                fullButton(
-                        label,
-                        false
-                );
-
-        LinearLayout.LayoutParams lp =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(54)
-                );
-
-        lp.setMargins(
-                0,
-                0,
-                0,
-                dp(8)
-        );
-
-        button.setLayoutParams(
-                lp
-        );
-
-        button.setOnClickListener(
-                v -> {
-                    closeMenu();
-
-                    if (action != null) {
-                        action.run();
-                    }
-                }
-        );
-
-        drawerPanel.addView(
-                button
-        );
-    }
+    // ------------------------------------------------------------------
+    // Status
+    // ------------------------------------------------------------------
 
     private void refreshStatus() {
-        if (botStatus != null) {
-            boolean enabled =
-                    prefs.getBoolean(
-                            "bot_enabled",
-                            false
-                    );
+        boolean enabled = prefs.getBoolean("bot_enabled", false);
+        boolean access = hasNotificationAccess();
+        boolean connected = prefs.getBoolean(BackgroundRuntime.KEY_LISTENER_CONNECTED, false);
 
-            botStatus.setText(
-                    enabled
-                            ? "● Ativo"
-                            : "● Desativado"
-            );
-
-            botStatus.setTextColor(
-                    enabled
-                            ? Color.rgb(
-                            0,
-                            184,
-                            255
-                    )
-                            : Color.rgb(
-                            145,
-                            155,
-                            165
-                    )
-            );
-
-            if (dashboardBotBadge != null) {
-                dashboardBotBadge.setText(enabled ? "● BOT ATIVO" : "● BOT PAUSADO");
-                dashboardBotBadge.setTextColor(enabled
-                        ? Color.rgb(0, 245, 154)
-                        : Color.rgb(255, 174, 66));
-            }
+        if (botChip != null) {
+            botChip.set(enabled ? "Ativo" : "Desativado", enabled ? GREEN : GREY);
         }
 
-        if (waStatus != null) {
-            boolean installed =
-                    isPackageInstalled(
-                            "com.whatsapp.w4b"
-                    );
+        if (dashboardBotBadge != null) {
+            dashboardBotBadge.setText(enabled ? "● BOT ATIVO" : "● BOT PAUSADO");
+            dashboardBotBadge.setTextColor(enabled ? GREEN : ORANGE);
+            dashboardBotBadge.setBackground(roundedBackground(Color.rgb(4, 36, 38), enabled ? GREEN : ORANGE, 12, 2));
+        }
 
-            boolean access =
-                    hasNotificationAccess();
-
-            boolean connected =
-                    prefs.getBoolean(
-                            BackgroundRuntime.KEY_LISTENER_CONNECTED,
-                            false
-                    );
-
+        if (waChip != null) {
+            boolean installed = isPackageInstalled("com.whatsapp.w4b");
             if (!installed) {
-                waStatus.setText(
-                        "● Não instalado"
-                );
-
-                waStatus.setTextColor(
-                        Color.rgb(
-                                255,
-                                145,
-                                0
-                        )
-                );
-
+                waChip.set("Não instalado", ORANGE);
             } else if (!access) {
-                waStatus.setText(
-                        "● Permissão necessária"
-                );
-
-                waStatus.setTextColor(
-                        Color.rgb(
-                                255,
-                                145,
-                                0
-                        )
-                );
-
+                waChip.set("Sem permissão", ORANGE);
             } else if (connected) {
-                waStatus.setText(
-                        "● Motor conectado"
-                );
-
-                waStatus.setTextColor(
-                        Color.rgb(
-                                0,
-                                184,
-                                255
-                        )
-                );
-
+                waChip.set("Conectado", GREEN);
             } else {
-                waStatus.setText(
-                        "● Reconectando"
-                );
-
-                waStatus.setTextColor(
-                        Color.rgb(
-                                255,
-                                145,
-                                0
-                        )
-                );
-
-                BackgroundRuntime.requestListenerRebind(
-                        this
-                );
+                waChip.set("Reconectando", ORANGE);
+                BackgroundRuntime.requestListenerRebind(this);
             }
         }
 
-        if (stvStatus != null) {
-            SharedPreferences stvPrefs =
-                    getSharedPreferences("master_responde_stv", MODE_PRIVATE);
-            boolean credentials =
-                    stvPrefs.getBoolean(
-                            "stvplus_credentials_saved",
-                            stvPrefs.getBoolean("credentials_saved", false)
-                    );
-            boolean activeSession =
-                    stvPrefs.getBoolean("stvplus_session_active", false);
+        if (stvChip != null) {
+            SharedPreferences stvPrefs = getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+            boolean credentials = stvPrefs.getBoolean("stvplus_credentials_saved",
+                    stvPrefs.getBoolean("credentials_saved", false));
+            boolean activeSession = stvPrefs.getBoolean("stvplus_session_active", false);
 
             if (StvPlusBackgroundAutomation.isRunning()) {
-                stvStatus.setText("● Gerando teste");
-                stvStatus.setTextColor(Color.rgb(0, 184, 255));
+                stvChip.set("Gerando teste", CYAN);
             } else if (activeSession) {
-                stvStatus.setText("● Sessão ativa");
-                stvStatus.setTextColor(Color.rgb(0, 184, 255));
+                stvChip.set("Sessão ativa", GREEN);
             } else if (credentials) {
-                stvStatus.setText("● Login salvo");
-                stvStatus.setTextColor(Color.rgb(255, 145, 0));
+                stvChip.set("Login salvo", ORANGE);
             } else {
-                stvStatus.setText("● Login necessário");
-                stvStatus.setTextColor(Color.rgb(255, 145, 0));
+                stvChip.set("Login necessário", ORANGE);
             }
         }
 
-        if (engineStatus != null) {
-            boolean access =
-                    hasNotificationAccess();
-
-            boolean connected =
-                    prefs.getBoolean(
-                            BackgroundRuntime.KEY_LISTENER_CONNECTED,
-                            false
-                    );
-
-            boolean enabled =
-                    prefs.getBoolean(
-                            "bot_enabled",
-                            false
-                    );
-
+        if (engineChip != null) {
             if (!enabled) {
-                engineStatus.setText(
-                        "● Bot desligado"
-                );
-
-                engineStatus.setTextColor(
-                        Color.rgb(
-                                145,
-                                155,
-                                165
-                        )
-                );
-
+                engineChip.set("Desligado", GREY);
             } else if (!access) {
-                engineStatus.setText(
-                        "● Sem permissão"
-                );
-
-                engineStatus.setTextColor(
-                        Color.rgb(
-                                255,
-                                145,
-                                0
-                        )
-                );
-
+                engineChip.set("Sem permissão", ORANGE);
             } else if (connected) {
-                engineStatus.setText(
-                        "● 2º plano ativo"
-                );
-
-                engineStatus.setTextColor(
-                        Color.rgb(
-                                0,
-                                184,
-                                255
-                        )
-                );
-
+                engineChip.set("Ativo", GREEN);
             } else {
-                engineStatus.setText(
-                        "● Reconectando"
-                );
-
-                engineStatus.setTextColor(
-                        Color.rgb(
-                                255,
-                                145,
-                                0
-                        )
-                );
+                engineChip.set("Reconectando", ORANGE);
             }
         }
 
-        if (masterflixStatus != null) {
-            boolean active =
-                    prefs.getBoolean(
-                            "masterflix_session_active",
-                            false
-                    );
-
-            boolean credentials =
-                    prefs.getBoolean(
-                            "masterflix_credentials_saved",
-                            false
-                    );
+        if (masterflixChip != null) {
+            boolean active = prefs.getBoolean("masterflix_session_active", false);
+            boolean credentials = prefs.getBoolean("masterflix_credentials_saved", false);
 
             if (active) {
-                masterflixStatus.setText(
-                        "● Sessão ativa"
-                );
-
-                masterflixStatus.setTextColor(
-                        Color.rgb(
-                                0,
-                                184,
-                                255
-                        )
-                );
-
+                masterflixChip.set("Sessão ativa", GREEN);
             } else if (credentials) {
-                masterflixStatus.setText(
-                        "● Login salvo"
-                );
-
-                masterflixStatus.setTextColor(
-                        Color.rgb(
-                                255,
-                                150,
-                                0
-                        )
-                );
-
+                masterflixChip.set("Login salvo", ORANGE);
             } else {
-                masterflixStatus.setText(
-                        "● Login necessário"
-                );
-
-                masterflixStatus.setTextColor(
-                        Color.rgb(
-                                255,
-                                145,
-                                0
-                        )
-                );
+                masterflixChip.set("Login necessário", ORANGE);
             }
         }
     }
 
     private boolean hasNotificationAccess() {
-        return BackgroundRuntime.hasNotificationAccess(
-                this
-        );
+        return BackgroundRuntime.hasNotificationAccess(this);
     }
 
-    private boolean isPackageInstalled(
-            String packageName
-    ) {
+    private boolean isPackageInstalled(String packageName) {
         try {
-            getPackageManager()
-                    .getPackageInfo(
-                            packageName,
-                            0
-                    );
-
+            getPackageManager().getPackageInfo(packageName, 0);
             return true;
-
         } catch (Exception e) {
             return false;
         }
@@ -1214,297 +1036,157 @@ public class MainActivity extends Activity {
 
     private void openNotificationAccess() {
         try {
-            Intent intent =
-                    new Intent(
-                            "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"
-                    );
-
-            startActivity(
-                    intent
-            );
-
+            startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
         } catch (Exception e) {
-            Toast.makeText(
-                    this,
-                    "Abra Configurações > Acesso às notificações.",
-                    Toast.LENGTH_LONG
-            ).show();
+            Toast.makeText(this, "Abra Configurações > Acesso às notificações.", Toast.LENGTH_LONG).show();
         }
     }
 
-    private LinearLayout card() {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(LinearLayout.VERTICAL);
-        c.setPadding(dp(16), dp(16), dp(16), dp(16));
-        c.setBackground(futuristicCardBackground(surfaceColor(), borderColor(), 18));
-        if (!isLightTheme()) c.setElevation(dp(3));
-        return c;
-    }
-
-    private TextView addStatus(
-            GridLayout parent,
-            String title,
-            String value,
-            int accent,
-            Runnable click
-    ) {
-        LinearLayout c = card();
-        c.setPadding(dp(13), dp(12), dp(10), dp(12));
-        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-        lp.width = 0;
-        lp.height = dp(91);
-        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        lp.setMargins(dp(4), dp(4), dp(4), dp(4));
-        c.setLayoutParams(lp);
-
-        TextView heading = text("◉  " + title, 9, secondaryTextColor(), true);
-        heading.setLetterSpacing(0.035f);
-        c.addView(heading);
-
-        TextView v = text(value, 12, accent, true);
-        v.setPadding(0, dp(12), 0, 0);
-        c.addView(v);
-
-        if (click != null) {
-            c.setClickable(true);
-            c.setFocusable(true);
-            c.setOnClickListener(view -> click.run());
-        }
-        parent.addView(c);
-        return v;
-    }
-
-    private Button fullButton(
-            String label,
-            boolean orange
-    ) {
-        Button b =
-                new Button(
-                        this
-                );
-
-        b.setText(
-                label
-        );
-
-        b.setTextColor(
-                orange
-                        ? Color.WHITE
-                        : primaryTextColor()
-        );
-
-        b.setTextSize(
-                13
-        );
-
-        b.setTypeface(
-                null,
-                1
-        );
-
-        if (orange) {
-            b.setBackgroundResource(
-                    getResources().getIdentifier(
-                            "button_orange",
-                            "drawable",
-                            getPackageName()
-                    )
-            );
-        } else {
-            b.setBackground(
-                    roundedBackground(
-                            buttonColor(),
-                            borderColor(),
-                            14
-                    )
-            );
-        }
-
-        LinearLayout.LayoutParams lp =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(58)
-                );
-
-        b.setLayoutParams(
-                lp
-        );
-
-        return b;
-    }
-
-    private void section(String value) {
-        TextView t = text(value, 11, isLightTheme() ? Color.rgb(0, 120, 110) : Color.rgb(0, 220, 205), true);
-        t.setLetterSpacing(0.12f);
-        t.setPadding(0, 0, 0, dp(8));
-        content.addView(t);
-    }
-
-    private GradientDrawable futuristicCardBackground(int fill, int stroke, int radiusDp) {
-        if (isLightTheme()) {
-            return roundedBackground(fill, stroke, radiusDp);
-        }
-        GradientDrawable drawable = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(10, 25, 31), fill}
-        );
-        drawable.setCornerRadius(dp(radiusDp));
-        drawable.setStroke(dp(1), stroke);
-        return drawable;
-    }
-
-    private TextView text(
-            String value,
-            int size,
-            int color,
-            boolean bold
-    ) {
-        TextView t =
-                new TextView(
-                        this
-                );
-
-        t.setText(
-                value
-        );
-
-        t.setTextSize(
-                size
-        );
-
-        t.setTextColor(
-                color
-        );
-
-        if (bold) {
-            t.setTypeface(
-                    null,
-                    1
-            );
-        }
-
-        return t;
-    }
-
-    private void gap(
-            int height
-    ) {
-        View v =
-                new View(
-                        this
-                );
-
-        content.addView(
-                v,
-                new LinearLayout.LayoutParams(
-                        1,
-                        dp(height)
-                )
-        );
-    }
-
-    private void launchFromMenu(
-            Intent intent
-    ) {
+    private void launchFromMenu(Intent intent) {
         if (intent == null) {
             return;
         }
 
-        prefs.edit()
-                .putBoolean(
-                        "return_to_menu_after_child",
-                        true
-                )
-                .apply();
-
-        startActivity(
-                intent
-        );
+        prefs.edit().putBoolean("return_to_menu_after_child", true).apply();
+        startActivity(intent);
     }
 
-    private boolean isLightTheme() {
-        return "light".equals(
-                prefs.getString(
-                        "app_theme",
-                        "dark"
-                )
-        );
+    // ------------------------------------------------------------------
+    // Dados auxiliares
+    // ------------------------------------------------------------------
+
+    private int countResellers() {
+        Set<String> keys = new HashSet<>();
+        try {
+            for (String key : prefs.getAll().keySet()) {
+                if (key.startsWith("reseller_submit_time_")) {
+                    keys.add(key.substring("reseller_submit_time_".length()));
+                }
+            }
+            SharedPreferences stvPrefs = getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+            for (String key : stvPrefs.getAll().keySet()) {
+                if (key.startsWith("stv_reseller_submit_time_")) {
+                    keys.add(key.substring("stv_reseller_submit_time_".length()));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return keys.size();
     }
 
-    private int backgroundColor() {
-        return isLightTheme()
-                ? Color.rgb(244, 247, 250)
-                : Color.rgb(5, 17, 11);
+    private long startOfDay(long time) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(time);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis();
     }
 
-    private int surfaceColor() {
-        return isLightTheme()
-                ? Color.WHITE
-                : Color.rgb(10, 27, 17);
+    private String[] lastSevenDayLabels() {
+        String[] names = {"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"};
+        String[] out = new String[7];
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.DAY_OF_YEAR, -6);
+        for (int i = 0; i < 7; i++) {
+            out[i] = names[c.get(Calendar.DAY_OF_WEEK) - 1];
+            c.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        return out;
     }
 
-    private int drawerColor() {
-        return isLightTheme()
-                ? Color.rgb(248, 250, 252)
-                : Color.rgb(8, 22, 14);
+    // ------------------------------------------------------------------
+    // Helpers visuais
+    // ------------------------------------------------------------------
+
+    private NeonIconView icon(String name, int color) {
+        return new NeonIconView(this, name, color);
     }
 
-    private int buttonColor() {
-        return isLightTheme()
-                ? Color.rgb(235, 240, 245)
-                : Color.rgb(14, 35, 23);
+    private TextView text(String value, float size, int color, boolean bold) {
+        TextView t = new TextView(this);
+        t.setText(value);
+        t.setTextSize(size);
+        t.setTextColor(color);
+        t.setIncludeFontPadding(false);
+        if (bold) {
+            t.setTypeface(null, Typeface.BOLD);
+        }
+        return t;
     }
 
-    private int borderColor() {
-        return isLightTheme()
-                ? Color.rgb(205, 214, 223)
-                : Color.rgb(32, 73, 48);
+    /** "MASTER RESPONDE" com RESPONDE em laranja, fonte pesada e itálica. */
+    private TextView brandTitle(float size, boolean compact) {
+        SpannableString s = new SpannableString("MASTER RESPONDE");
+        s.setSpan(new ForegroundColorSpan(ORANGE), 7, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        TextView t = text("", size, Color.WHITE, true);
+        t.setText(s);
+        t.setTypeface(Typeface.create("sans-serif-black", Typeface.ITALIC));
+        return t;
     }
 
-    private int primaryTextColor() {
-        return isLightTheme()
-                ? Color.rgb(20, 27, 34)
-                : Color.WHITE;
+    private void autoFit(TextView t, int minSp, int maxSp) {
+        t.setAutoSizeTextTypeUniformWithConfiguration(minSp, maxSp, 1, TypedValue.COMPLEX_UNIT_SP);
     }
 
-    private int secondaryTextColor() {
-        return isLightTheme()
-                ? Color.rgb(90, 105, 118)
-                : Color.rgb(150, 160, 170);
+    private LinearLayout.LayoutParams lp(int w, int h, int l, int t, int r, int b) {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(w, h);
+        p.setMargins(l, t, r, b);
+        return p;
     }
 
-    private GradientDrawable roundedBackground(
-            int fill,
-            int stroke,
-            int radiusDp
-    ) {
-        GradientDrawable drawable =
-                new GradientDrawable();
-
-        drawable.setColor(
-                fill
-        );
-
-        drawable.setCornerRadius(
-                dp(radiusDp)
-        );
-
-        drawable.setStroke(
-                dp(1),
-                stroke
-        );
-
-        return drawable;
+    private float[] radii(int tl, int tr, int br, int bl) {
+        return new float[]{dp(tl), dp(tl), dp(tr), dp(tr), dp(br), dp(br), dp(bl), dp(bl)};
     }
 
-    private int dp(
-            int value
-    ) {
-        return Math.round(
-                value
-                        * getResources()
-                        .getDisplayMetrics()
-                        .density
-        );
+    /** Fundo com borda em degradê: camada externa colorida + miolo escuro inset. */
+    private Drawable gradientBorder(int[] border, GradientDrawable.Orientation orientation,
+                                    float[] radiiPx, int fillTop, int fillBottom, int widthDp) {
+        int[] colors = border.length >= 2 ? border : new int[]{border[0], border[0]};
+        GradientDrawable outer = new GradientDrawable(orientation, colors);
+        outer.setCornerRadii(radiiPx);
+
+        float[] innerRadii = new float[8];
+        float w = dp(widthDp);
+        for (int i = 0; i < 8; i++) {
+            innerRadii[i] = Math.max(0f, radiiPx[i] - w);
+        }
+        GradientDrawable inner = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{fillTop, fillBottom});
+        inner.setCornerRadii(innerRadii);
+
+        LayerDrawable layers = new LayerDrawable(new Drawable[]{outer, inner});
+        int inset = dp(widthDp);
+        layers.setLayerInset(1, inset, inset, inset, inset);
+        return layers;
+    }
+
+    private GradientDrawable roundedBackground(int fill, int stroke, int radiusDp, int strokeDp) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(fill);
+        d.setCornerRadius(dp(radiusDp));
+        d.setStroke(dp(strokeDp), stroke);
+        return d;
+    }
+
+    /** Mistura a cor com o fundo escuro (0 = fundo, 1 = cor pura). */
+    private int tint(int color, float amount) {
+        int r = Math.round(Color.red(color) * amount + 4 * (1f - amount));
+        int g = Math.round(Color.green(color) * amount + 12 * (1f - amount));
+        int b = Math.round(Color.blue(color) * amount + 28 * (1f - amount));
+        return Color.rgb(r, g, b);
+    }
+
+    private void glow(View v, int color) {
+        if (Build.VERSION.SDK_INT >= 28) {
+            v.setElevation(dp(4));
+            v.setOutlineSpotShadowColor(color);
+            v.setOutlineAmbientShadowColor(color);
+        }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 }
