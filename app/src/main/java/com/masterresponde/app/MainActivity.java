@@ -231,11 +231,12 @@ public class MainActivity extends Activity {
         );
 
         header.setPadding(
-                dp(16),
+                dp(14),
+                dp(8),
                 dp(10),
-                dp(12),
-                dp(10)
+                dp(8)
         );
+        header.setBackground(neonPanel(Color.rgb(2, 15, 31), Color.rgb(0, 150, 210), Color.rgb(255, 135, 20), 0));
 
         ImageView logo =
                 new ImageView(
@@ -274,14 +275,8 @@ public class MainActivity extends Activity {
                 0
         );
 
-        titles.addView(
-                text(
-                        "MASTER RESPONDE",
-                        21,
-                        primaryTextColor(),
-                        true
-                )
-        );
+        titles.addView(text("MASTER", 20, Color.WHITE, true));
+        titles.addView(text("RESPONDE", 20, Color.rgb(255, 151, 35), true));
 
         titles.addView(
                 text(
