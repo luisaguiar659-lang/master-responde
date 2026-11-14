@@ -713,17 +713,56 @@ public class MainActivity extends Activity {
     private void buildDashboard() {
         content.removeAllViews();
 
+        final int neonGreen = Color.rgb(0, 245, 154);
+        final int neonCyan = Color.rgb(0, 210, 255);
+        final int neonPurple = Color.rgb(178, 105, 255);
+        final int warning = Color.rgb(255, 174, 66);
+
         LinearLayout hero = card();
-        hero.setPadding(dp(20), dp(18), dp(18), dp(18));
-        hero.addView(text("CENTRAL DE CONTROLE", 11, Color.rgb(0, 214, 143), true));
+        hero.setPadding(dp(19), dp(18), dp(18), dp(18));
+        if (!isLightTheme()) {
+            GradientDrawable heroBackground = new GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    new int[]{Color.rgb(5, 35, 34), Color.rgb(7, 17, 29), Color.rgb(12, 20, 37)}
+            );
+            heroBackground.setCornerRadius(dp(22));
+            heroBackground.setStroke(dp(1), Color.rgb(0, 170, 145));
+            hero.setBackground(heroBackground);
+            hero.setElevation(dp(7));
+        }
+
+        LinearLayout heroTop = new LinearLayout(this);
+        heroTop.setOrientation(LinearLayout.HORIZONTAL);
+        heroTop.setGravity(Gravity.CENTER_VERTICAL);
+        TextView eyebrow = text("◆  CENTRAL DE CONTROLE", 10, neonCyan, true);
+        eyebrow.setLetterSpacing(0.12f);
+        heroTop.addView(eyebrow, new LinearLayout.LayoutParams(0, -2, 1f));
+
+        TextView botBadge = text(
+                prefs.getBoolean("bot_enabled", false) ? "● BOT ATIVO" : "● BOT PAUSADO",
+                9,
+                prefs.getBoolean("bot_enabled", false) ? neonGreen : warning,
+                true
+        );
+        botBadge.setGravity(Gravity.CENTER);
+        botBadge.setPadding(dp(9), dp(6), dp(9), dp(6));
+        botBadge.setBackground(futuristicCardBackground(
+                Color.rgb(5, 24, 27), Color.rgb(0, 125, 125), 30
+        ));
+        heroTop.addView(botBadge);
+        hero.addView(heroTop);
+
         LinearLayout heroRow = new LinearLayout(this);
         heroRow.setOrientation(LinearLayout.HORIZONTAL);
         heroRow.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout titleBlock = new LinearLayout(this);
         titleBlock.setOrientation(LinearLayout.VERTICAL);
-        TextView title = text("MASTER RESPONDE", 22, primaryTextColor(), true);
+        TextView title = text("MASTER RESPONDE", 21, primaryTextColor(), true);
+        title.setLetterSpacing(0.025f);
         titleBlock.addView(title);
-        titleBlock.addView(text("Atendimento inteligente • Painel geral", 12, secondaryTextColor(), false));
+        TextView subtitle = text("Sua central de automação", 12, secondaryTextColor(), false);
+        subtitle.setPadding(0, dp(4), 0, 0);
+        titleBlock.addView(subtitle);
         heroRow.addView(titleBlock, new LinearLayout.LayoutParams(0, -2, 1f));
 
         botSwitch = new Switch(this);
@@ -735,28 +774,27 @@ public class MainActivity extends Activity {
             Toast.makeText(this, isChecked ? "Bot ativado." : "Bot desativado.", Toast.LENGTH_SHORT).show();
         });
         heroRow.addView(botSwitch);
-        hero.addView(heroRow);
+        LinearLayout.LayoutParams heroRowLp = new LinearLayout.LayoutParams(-1, -2);
+        heroRowLp.topMargin = dp(15);
+        hero.addView(heroRow, heroRowLp);
         LinearLayout.LayoutParams heroLp = new LinearLayout.LayoutParams(-1, -2);
-        heroLp.bottomMargin = dp(18);
+        heroLp.bottomMargin = dp(20);
         content.addView(hero, heroLp);
 
         section("STATUS DO SISTEMA");
         GridLayout statusGrid = new GridLayout(this);
         statusGrid.setColumnCount(2);
-        botStatus = addStatus(statusGrid, "BOT", "● Desativado",
-                Color.rgb(0, 184, 255), null);
-        waStatus = addStatus(statusGrid, "WHATSAPP BUSINESS", "● Verificando",
-                Color.rgb(0, 184, 255), this::openNotificationAccess);
-        masterflixStatus = addStatus(statusGrid, "MASTERFLIX", "● Login necessário",
-                Color.rgb(255, 145, 0), () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        stvStatus = addStatus(statusGrid, "STV+", "● Configuração necessária",
-                Color.rgb(255, 145, 0), () -> startActivity(new Intent(this, StvPlusActivity.class)));
-        engineStatus = addStatus(statusGrid, "MOTOR EM 2º PLANO", "● Verificando",
-                Color.rgb(255, 145, 0), this::openNotificationAccess);
+        botStatus = addStatus(statusGrid, "BOT", "● Desativado", neonGreen, null);
+        waStatus = addStatus(statusGrid, "WHATSAPP BUSINESS", "● Verificando", neonCyan, this::openNotificationAccess);
+        masterflixStatus = addStatus(statusGrid, "MASTERFLIX", "● Login necessário", warning,
+                () -> startActivity(new Intent(this, MasterflixActivity.class)));
+        stvStatus = addStatus(statusGrid, "STV+", "● Configuração necessária", neonPurple,
+                () -> startActivity(new Intent(this, StvPlusActivity.class)));
+        engineStatus = addStatus(statusGrid, "MOTOR EM 2º PLANO", "● Verificando", neonCyan, this::openNotificationAccess);
         content.addView(statusGrid);
 
-        gap(18);
-        section("ATIVIDADE");
+        gap(19);
+        section("ATIVIDADE DO ATENDIMENTO");
         GridLayout metrics = new GridLayout(this);
         metrics.setColumnCount(3);
         org.json.JSONArray events = EventLog.read(this);
@@ -769,32 +807,48 @@ public class MainActivity extends Activity {
             if ("RESPOSTA ENVIADA".equals(type)) sent++;
             if ("FALHA".equals(type)) errors++;
         }
-        addMetric(metrics, "RECEBIDAS", String.valueOf(received), Color.rgb(0, 184, 255));
-        addMetric(metrics, "RESPONDIDAS", String.valueOf(sent), Color.rgb(0, 214, 143));
-        addMetric(metrics, "FALHAS", String.valueOf(errors), errors > 0 ? Color.rgb(255, 110, 90) : secondaryTextColor());
+        addMetric(metrics, "RECEBIDAS", String.valueOf(received), neonCyan);
+        addMetric(metrics, "RESPONDIDAS", String.valueOf(sent), neonGreen);
+        addMetric(metrics, "FALHAS", String.valueOf(errors), errors > 0 ? Color.rgb(255, 91, 112) : secondaryTextColor());
         content.addView(metrics);
 
-        gap(18);
+        gap(19);
         section("MÓDULOS E AUTOMAÇÕES");
         GridLayout modules = new GridLayout(this);
         modules.setColumnCount(2);
-        addModuleCard(modules, "MASTERFLIX", "Gerar teste e acessar painel",
-                "↗", () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        addModuleCard(modules, "STV+", "Testes e gestão de revendas",
-                "✦", () -> startActivity(new Intent(this, StvPlusActivity.class)));
-        addModuleCard(modules, "REGRAS", "Gatilhos e respostas automáticas",
-                "⌘", () -> startActivity(new Intent(this, RulesActivity.class)));
-        addModuleCard(modules, "MONITORAMENTO", "Acompanhar o funcionamento",
-                "◉", () -> startActivity(new Intent(this, MonitoringActivity.class)));
+        addModuleCard(modules, "MASTERFLIX", "Gerar testes e acessar painel", "◈", () ->
+                startActivity(new Intent(this, MasterflixActivity.class)));
+        addModuleCard(modules, "STV+", "Testes e gestão de revendas", "✦", () ->
+                startActivity(new Intent(this, StvPlusActivity.class)));
+        addModuleCard(modules, "REGRAS", "Gatilhos e respostas automáticas", "⌘", () ->
+                startActivity(new Intent(this, RulesActivity.class)));
+        addModuleCard(modules, "MONITORAMENTO", "Acompanhar o funcionamento", "◎", () ->
+                startActivity(new Intent(this, MonitoringActivity.class)));
         content.addView(modules);
 
-        gap(18);
+        gap(19);
         section("ACESSO RÁPIDO");
         LinearLayout access = card();
-        access.setPadding(dp(14), dp(12), dp(14), dp(12));
-        access.addView(text("WhatsApp Business", 15, primaryTextColor(), true));
-        access.addView(text("Libere o acesso às notificações para manter o motor conectado.", 12, secondaryTextColor(), false));
-        Button notificationButton = fullButton("CONFIGURAR ACESSO ÀS NOTIFICAÇÕES", true);
+        access.setPadding(dp(16), dp(15), dp(16), dp(15));
+        TextView accessTitle = text("WHATSAPP BUSINESS", 13, primaryTextColor(), true);
+        access.addView(accessTitle);
+        TextView accessDescription = text(
+                "Configure o acesso às notificações para manter o motor conectado.",
+                11,
+                secondaryTextColor(),
+                false
+        );
+        accessDescription.setPadding(0, dp(5), 0, dp(3));
+        access.addView(accessDescription);
+        Button notificationButton = new Button(this);
+        notificationButton.setText("CONFIGURAR ACESSO ÀS NOTIFICAÇÕES");
+        notificationButton.setTextColor(Color.rgb(2, 18, 17));
+        notificationButton.setTextSize(11);
+        notificationButton.setTypeface(null, 1);
+        notificationButton.setAllCaps(false);
+        notificationButton.setBackground(futuristicCardBackground(
+                neonGreen, Color.rgb(0, 210, 155), 13
+        ));
         LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(-1, dp(48));
         actionLp.topMargin = dp(10);
         access.addView(notificationButton, actionLp);
@@ -803,10 +857,14 @@ public class MainActivity extends Activity {
 
         gap(14);
         LinearLayout last = card();
-        last.setPadding(dp(15), dp(13), dp(15), dp(13));
-        last.addView(text("ÚLTIMA ATIVIDADE", 11, Color.rgb(255, 150, 0), true));
+        last.setPadding(dp(16), dp(14), dp(16), dp(14));
+        TextView lastTitle = text("ÚLTIMA ATIVIDADE", 10, neonCyan, true);
+        lastTitle.setLetterSpacing(0.1f);
+        last.addView(lastTitle);
         String lastStatus = prefs.getString("last_test_status", "Nenhum teste registrado até agora.");
-        last.addView(text(lastStatus, 13, primaryTextColor(), true));
+        TextView lastValue = text(lastStatus, 12, primaryTextColor(), true);
+        lastValue.setPadding(0, dp(7), 0, 0);
+        last.addView(lastValue);
         content.addView(last);
 
         refreshStatus();
@@ -815,16 +873,22 @@ public class MainActivity extends Activity {
     private void addMetric(GridLayout parent, String label, String value, int valueColor) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(12), dp(13), dp(8), dp(13));
-        box.setBackground(roundedBackground(surfaceColor(), borderColor(), 15));
+        box.setGravity(Gravity.CENTER_VERTICAL);
+        box.setPadding(dp(10), dp(11), dp(6), dp(11));
+        box.setBackground(futuristicCardBackground(surfaceColor(), borderColor(), 15));
+        box.setElevation(isLightTheme() ? 0 : dp(3));
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
         lp.width = 0;
-        lp.height = dp(76);
+        lp.height = dp(78);
         lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
         lp.setMargins(dp(3), dp(3), dp(3), dp(3));
         box.setLayoutParams(lp);
-        box.addView(text(label, 9, secondaryTextColor(), true));
-        box.addView(text(value, 22, valueColor, true));
+        TextView caption = text(label, 8, secondaryTextColor(), true);
+        caption.setLetterSpacing(0.04f);
+        box.addView(caption);
+        TextView number = text(value, 23, valueColor, true);
+        number.setPadding(0, dp(3), 0, 0);
+        box.addView(number);
         parent.addView(box);
     }
 
@@ -832,19 +896,22 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(14), dp(13), dp(12), dp(13));
-        box.setBackground(roundedBackground(surfaceColor(), borderColor(), 16));
+        box.setBackground(futuristicCardBackground(surfaceColor(), borderColor(), 17));
+        box.setElevation(isLightTheme() ? 0 : dp(3));
         box.setClickable(true);
         box.setFocusable(true);
         box.setOnClickListener(v -> action.run());
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
         lp.width = 0;
-        lp.height = dp(112);
+        lp.height = dp(116);
         lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
         lp.setMargins(dp(4), dp(4), dp(4), dp(4));
         box.setLayoutParams(lp);
-        TextView icon = text(symbol, 19, Color.rgb(0, 214, 143), true);
+        TextView icon = text(symbol, 22, Color.rgb(0, 230, 190), true);
         box.addView(icon);
-        box.addView(text(label, 12, primaryTextColor(), true));
+        TextView name = text(label, 12, primaryTextColor(), true);
+        name.setPadding(0, dp(5), 0, dp(2));
+        box.addView(name);
         box.addView(text(description, 10, secondaryTextColor(), false));
         parent.addView(box);
     }
@@ -854,7 +921,8 @@ public class MainActivity extends Activity {
         nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setGravity(Gravity.CENTER);
         nav.setPadding(dp(5), dp(8), dp(5), dp(8));
-        nav.setBackground(roundedBackground(surfaceColor(), borderColor(), 22));
+        nav.setBackground(futuristicCardBackground(surfaceColor(), borderColor(), 22));
+        nav.setElevation(isLightTheme() ? 0 : dp(6));
 
         addNavItem(nav, "▦", "Painel", null);
         addNavItem(nav, "☷", "Regras", () -> startActivity(new Intent(this, RulesActivity.class)));
@@ -872,7 +940,7 @@ public class MainActivity extends Activity {
         item.setOrientation(LinearLayout.VERTICAL);
         item.setGravity(Gravity.CENTER);
         item.setPadding(dp(3), dp(2), dp(3), dp(2));
-        TextView symbol = text(icon, 19, Color.rgb(0, 214, 143), true);
+        TextView symbol = text(icon, 19, Color.rgb(0, 230, 190), true);
         symbol.setGravity(Gravity.CENTER);
         item.addView(symbol);
         TextView caption = text(label, 9, secondaryTextColor(), false);
@@ -1251,30 +1319,11 @@ public class MainActivity extends Activity {
     }
 
     private LinearLayout card() {
-        LinearLayout c =
-                new LinearLayout(
-                        this
-                );
-
-        c.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        c.setPadding(
-                dp(16),
-                dp(16),
-                dp(16),
-                dp(16)
-        );
-
-        c.setBackground(
-                roundedBackground(
-                        surfaceColor(),
-                        borderColor(),
-                        18
-                )
-        );
-
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setPadding(dp(16), dp(16), dp(16), dp(16));
+        c.setBackground(futuristicCardBackground(surfaceColor(), borderColor(), 18));
+        if (!isLightTheme()) c.setElevation(dp(3));
         return c;
     }
 
@@ -1285,73 +1334,29 @@ public class MainActivity extends Activity {
             int accent,
             Runnable click
     ) {
-        LinearLayout c =
-                card();
+        LinearLayout c = card();
+        c.setPadding(dp(13), dp(12), dp(10), dp(12));
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.width = 0;
+        lp.height = dp(91);
+        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+        lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+        c.setLayoutParams(lp);
 
-        GridLayout.LayoutParams lp =
-                new GridLayout.LayoutParams();
+        TextView heading = text("◉  " + title, 9, secondaryTextColor(), true);
+        heading.setLetterSpacing(0.035f);
+        c.addView(heading);
 
-        lp.width =
-                0;
-
-        lp.height =
-                dp(88);
-
-        lp.columnSpec =
-                GridLayout.spec(
-                        GridLayout.UNDEFINED,
-                        1f
-                );
-
-        lp.setMargins(
-                dp(4),
-                dp(4),
-                dp(4),
-                dp(4)
-        );
-
-        c.setLayoutParams(
-                lp
-        );
-
-        c.addView(
-                text(
-                        title,
-                        12,
-                        secondaryTextColor(),
-                        false
-                )
-        );
-
-        TextView v =
-                text(
-                        value,
-                        15,
-                        accent,
-                        true
-                );
-
-        v.setPadding(
-                0,
-                dp(10),
-                0,
-                0
-        );
-
-        c.addView(
-                v
-        );
+        TextView v = text(value, 12, accent, true);
+        v.setPadding(0, dp(12), 0, 0);
+        c.addView(v);
 
         if (click != null) {
-            c.setOnClickListener(
-                    view -> click.run()
-            );
+            c.setClickable(true);
+            c.setFocusable(true);
+            c.setOnClickListener(view -> click.run());
         }
-
-        parent.addView(
-                c
-        );
-
+        parent.addView(c);
         return v;
     }
 
@@ -1414,35 +1419,24 @@ public class MainActivity extends Activity {
         return b;
     }
 
-    private void section(
-            String value
-    ) {
-        TextView t =
-                text(
-                        value,
-                        12,
-                        Color.rgb(
-                                255,
-                                150,
-                                0
-                        ),
-                        true
-                );
+    private void section(String value) {
+        TextView t = text(value, 11, isLightTheme() ? Color.rgb(0, 120, 110) : Color.rgb(0, 220, 205), true);
+        t.setLetterSpacing(0.12f);
+        t.setPadding(0, 0, 0, dp(8));
+        content.addView(t);
+    }
 
-        t.setLetterSpacing(
-                0.08f
+    private GradientDrawable futuristicCardBackground(int fill, int stroke, int radiusDp) {
+        if (isLightTheme()) {
+            return roundedBackground(fill, stroke, radiusDp);
+        }
+        GradientDrawable drawable = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(10, 25, 31), fill}
         );
-
-        t.setPadding(
-                0,
-                0,
-                0,
-                dp(8)
-        );
-
-        content.addView(
-                t
-        );
+        drawable.setCornerRadius(dp(radiusDp));
+        drawable.setStroke(dp(1), stroke);
+        return drawable;
     }
 
     private TextView text(
