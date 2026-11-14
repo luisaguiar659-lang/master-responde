@@ -40,12 +40,23 @@ public final class StvPlusBackgroundAutomation {
         try{
             status("STV+: abrindo painel");
             web=new WebView(context);
-            WebSettings s=web.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setDatabaseEnabled(true);
-            CookieManager.getInstance().setAcceptCookie(true);
+            WebSettings s=web.getSettings();
+            s.setJavaScriptEnabled(true);
+            s.setDomStorageEnabled(true);
+            s.setDatabaseEnabled(true);
+            s.setLoadsImagesAutomatically(true);
+            s.setUseWideViewPort(true);
+            s.setLoadWithOverviewMode(true);
+            CookieManager cookies=CookieManager.getInstance();
+            cookies.setAcceptCookie(true);
+            if(android.os.Build.VERSION.SDK_INT>=21) cookies.setAcceptThirdPartyCookies(web,true);
             web.addJavascriptInterface(new Bridge(), "StvBridge");
-            web.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){inspectPage();}});
-            web.loadUrl(StvPanelConfig.getBaseUrl(context)+"/#/dashboard");
-            handler.postDelayed(()->{if(!finished&&!dashboard)fail("Não foi possível confirmar o acesso ao painel. Faça login e conclua a verificação de segurança.");},18000L);
+            web.setWebViewClient(new WebViewClient(){
+                @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);inspectPage();}
+                @Override public void doUpdateVisitedHistory(WebView v,String u,boolean reload){super.doUpdateVisitedHistory(v,u,reload);inspectPage();}
+            });
+            web.loadUrl(StvPanelConfig.dashboardUrl(context));
+            handler.postDelayed(()->{if(!finished&&!dashboard)fail("Não foi possível confirmar o acesso ao painel STV+. Verifique a conexão, o login e a verificação de segurança.");},30000L);
         }catch(Throwable e){fail("Não foi possível abrir o painel STV+.");}
     }
     private void inspectPage(){
@@ -71,7 +82,7 @@ public final class StvPlusBackgroundAutomation {
     private void copyButton(){
         if(finished||web==null)return;copyAttempts++;
         installCopyHook();
-        String js="(function(){var a=Array.from(document.querySelectorAll('button,a,[role=button],*')).filter(e=>(e.innerText||'').trim().toUpperCase()==='COPIAR');if(a.length){a.sort((x,y)=>(x.innerText||'').length-(y.innerText||'').length)[0].click();return 'clicked';}window.scrollBy(0,600);return 'scroll';})();";
+        String js="(function(){var a=Array.from(document.querySelectorAll('button,a,[role=button],*')).filter(e=>(e.offsetWidth||e.offsetHeight||e.getClientRects().length)&&(e.innerText||e.textContent||'').trim().toUpperCase()==='COPIAR');if(a.length){a.sort((x,y)=>(x.innerText||x.textContent||'').length-(y.innerText||y.textContent||'').length);var e=a[0].closest('button,a,[role=button]')||a[0];try{e.scrollIntoView({block:'center'});}catch(x){}e.click();return 'clicked';}window.scrollBy(0,600);return 'scroll';})();";
         web.evaluateJavascript(js,v->{if("clicked".equals(decode(v))){captureAttempts=0;handler.postDelayed(this::waitForCapturedText,350L);}else if(copyAttempts<25)handler.postDelayed(this::copyButton,500L);else fail("O botão COPIAR não foi encontrado.");});
     }
     private void installCopyHook(){
@@ -87,12 +98,16 @@ public final class StvPlusBackgroundAutomation {
     private void waitForCapturedText(){
         if(finished)return;
         String value=capturedCopyText==null?"":capturedCopyText.trim();
-        if(value.length()>10){sendResult(value);return;}
+        if(isValidGeneratedTest(value)){sendResult(value);return;}
         if(++captureAttempts<18){handler.postDelayed(this::waitForCapturedText,300L);}
         else extractResult();
     }
     private void sendResult(String result){
         if(finished)return;
+        if(!isValidGeneratedTest(result)){
+            extractResult();
+            return;
+        }
         finished=true;
         boolean sent=WhatsAppReply.send(context,notification,"✅ *TESTE STV+*\n⏳ Validade: *1 hora*\n\n"+result);
         EventLog.add(context, sent ? "RESPOSTA ENVIADA" : "FALHA", "STV+",
@@ -103,8 +118,18 @@ public final class StvPlusBackgroundAutomation {
 
     private void extractResult(){
         if(finished||web==null)return;
-        String js="(function(){var a=Array.from(document.querySelectorAll('textarea,input,pre,code,[contenteditable=true]')).map(e=>e.value||e.innerText||e.textContent||'').filter(x=>x.trim().length>10);return a.sort((x,y)=>y.length-x.length)[0]||'';})();";
-        web.evaluateJavascript(js,v->{String result=decode(v).trim();if(result.length()>10)sendResult(result);else fail("O painel não disponibilizou os dados do teste para leitura automática.");});
+        String js="(function(){var a=Array.from(document.querySelectorAll('textarea,input,pre,code,[contenteditable=true]')).filter(e=>e.offsetWidth||e.offsetHeight||e.getClientRects().length).map(e=>e.value||e.innerText||e.textContent||'').map(x=>(x||'').trim()).filter(x=>x.length>10);return a.sort((x,y)=>y.length-x.length)[0]||'';})();";
+        web.evaluateJavascript(js,v->{String result=decode(v).trim();if(isValidGeneratedTest(result))sendResult(result);else fail("O painel não disponibilizou um teste completo. Verifique a modalidade e tente novamente.");});
+    }
+
+    private boolean isValidGeneratedTest(String value){
+        if(value==null||value.trim().isEmpty())return false;
+        String text=java.text.Normalizer.normalize(value,java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}","").toLowerCase(java.util.Locale.ROOT);
+        boolean hasUrl=text.contains("http://")||text.contains("https://");
+        boolean hasUser=text.contains("usuario")||text.contains("username")||text.contains("user:")||text.contains("login:");
+        boolean hasPass=text.contains("senha")||text.contains("password")||text.contains("pass:");
+        return hasUrl&&hasUser&&hasPass;
     }
     private void fail(String reason){if(finished)return;finished=true;EventLog.add(context,"FALHA","STV+","Geração de teste interrompida",reason);status(reason);WhatsAppReply.send(context,notification,"⚠️ STV+: "+reason);cleanup();}
     private void status(String s){prefs.edit().putString("last_stv_status",s).apply();}
