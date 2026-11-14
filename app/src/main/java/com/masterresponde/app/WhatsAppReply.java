@@ -30,11 +30,6 @@ public class WhatsAppReply {
     private static final Map<String, Long> LAST_SCHEDULED =
             new ConcurrentHashMap<>();
 
-    // Janela curta para ignorar o eco de respostas enviadas pelo próprio bot
-    // quando o WhatsApp republica a mensagem na notificação.
-    private static final long SENT_ECHO_WINDOW_MS =
-            30000L;
-
     public static boolean send(
             Context context,
             Notification notification,
@@ -317,7 +312,7 @@ public class WhatsAppReply {
 
         return sentAt > 0L
                 && System.currentTimeMillis() - sentAt
-                <= SENT_ECHO_WINDOW_MS;
+                <= AutomationTiming.getMilliseconds(prefs, AutomationTiming.KEY_ECHO_WINDOW_MS, AutomationTiming.DEFAULT_ECHO_WINDOW_MS);
     }
 
     public static boolean isRecentlySent(
@@ -352,7 +347,7 @@ public class WhatsAppReply {
 
         if (sentAt <= 0L
                 || System.currentTimeMillis() - sentAt
-                > SENT_ECHO_WINDOW_MS) {
+                > AutomationTiming.getMilliseconds(prefs, AutomationTiming.KEY_ECHO_WINDOW_MS, AutomationTiming.DEFAULT_ECHO_WINDOW_MS)) {
             return false;
         }
 
