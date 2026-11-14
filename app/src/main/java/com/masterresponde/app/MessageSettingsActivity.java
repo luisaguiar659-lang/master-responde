@@ -332,6 +332,8 @@ public class MessageSettingsActivity extends Activity {
                 "Intervalo de tentativa da fila MASTERFLIX", AutomationTiming.DEFAULT_MASTERFLIX_QUEUE_RETRY_MS);
         addMillisecondSetting(content, AutomationTiming.KEY_STV_QUEUE_RETRY_MS,
                 "Intervalo de tentativa da fila STV+", AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_PRIVATE_EVENT_TTL_MS,
+                "Proteção contra mensagens privadas antigas", AutomationTiming.DEFAULT_PRIVATE_EVENT_TTL_MS);
         addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_RECOVERY_1_MS,
                 "Reconexão do serviço — primeira verificação", AutomationTiming.DEFAULT_LISTENER_RECOVERY_1_MS);
         addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_RECOVERY_2_MS,
