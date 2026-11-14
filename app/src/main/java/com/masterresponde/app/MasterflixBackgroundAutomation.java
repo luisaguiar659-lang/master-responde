@@ -838,10 +838,10 @@ public class MasterflixBackgroundAutomation {
 
                     synchronized (LOCK) {
                         if (current == this) {
-                            current =
-                                    null;
+                            current = null;
                         }
                     }
+                    TestAutomationQueue.onMasterflixFinished();
                 }
         );
     }
