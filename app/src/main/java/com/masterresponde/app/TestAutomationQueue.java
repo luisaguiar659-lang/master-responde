@@ -101,6 +101,7 @@ public final class TestAutomationQueue {
         synchronized (LOCK) {
             MASTERFLIX.addFirst(task);
             masterflixActive = false;
+            activeMasterflixKey = "";
         }
         HANDLER.postDelayed(TestAutomationQueue::pumpMasterflix, 2000L);
     }
@@ -130,18 +131,22 @@ public final class TestAutomationQueue {
 
     public static void onMasterflixFinished() {
         synchronized (LOCK) {
-            masterflixActive = false;
-            MASTERFLIX_KEYS.remove(activeMasterflixKey);
-            activeMasterflixKey = "";
+            if (masterflixActive) {
+                masterflixActive = false;
+                MASTERFLIX_KEYS.remove(activeMasterflixKey);
+                activeMasterflixKey = "";
+            }
         }
         HANDLER.post(TestAutomationQueue::pumpMasterflix);
     }
 
     public static void onStvFinished() {
         synchronized (LOCK) {
-            stvActive = false;
-            STV_KEYS.remove(activeStvKey);
-            activeStvKey = "";
+            if (stvActive) {
+                stvActive = false;
+                STV_KEYS.remove(activeStvKey);
+                activeStvKey = "";
+            }
         }
         HANDLER.post(TestAutomationQueue::pumpStv);
     }
