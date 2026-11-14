@@ -2163,8 +2163,7 @@ public class NotificationAccessService extends NotificationListenerService {
         String stvPass = StvPanelConfig.getPass(this);
         if (!credentialsSaved || stvUser == null || stvUser.trim().isEmpty()
                 || stvPass == null || stvPass.isEmpty()) {
-            WhatsAppReply.send(this, notification,
-                    "STV+ ainda não está configurado. Abra o menu STV+ no MASTER RESPONDE, informe URL, usuário e senha e salve o acesso.");
+            MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_NOT_CONFIGURED, MessageSettings.DEFAULT_STV_NOT_CONFIGURED);
             return;
         }
 
@@ -2173,13 +2172,11 @@ public class NotificationAccessService extends NotificationListenerService {
         boolean queued = TestAutomationQueue.enqueueStv(
                 this, notification, prefs, requestKey);
         if (!queued) {
-            WhatsAppReply.send(this, notification,
-                    "Não consegui registrar seu pedido STV+. Tente novamente em instantes.");
+            MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_QUEUE_ERROR, MessageSettings.DEFAULT_STV_QUEUE_ERROR);
             return;
         }
         prefs.edit().putLong(guardKey, now).apply();
-        WhatsAppReply.send(this, notification,
-                "Recebi seu pedido de teste STV+. Ele entrou na fila e será gerado assim que o painel estiver disponível.");
+        MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_QUEUED, MessageSettings.DEFAULT_STV_QUEUED);
     }
 
     /**
@@ -2208,10 +2205,9 @@ public class NotificationAccessService extends NotificationListenerService {
                 ? hours + "h" + (minutes > 0L ? " " + minutes + "min" : "")
                 : minutes + "min";
 
-        WhatsAppReply.send(this, notification,
-                "Você já solicitou um teste " + module
-                        + " nas últimas 24 horas. Para solicitar outro, aguarde mais "
-                        + wait + ".");
+        MessageSettings.send(this, notification, prefs, MessageSettings.MSG_TEST_COOLDOWN,
+                MessageSettings.DEFAULT_TEST_COOLDOWN,
+                MessageSettings.variables("MODULO", module, "TEMPO", wait));
         return true;
     }
 
@@ -2606,18 +2602,20 @@ public class NotificationAccessService extends NotificationListenerService {
         boolean queued = TestAutomationQueue.enqueueMasterflix(
                 this, notification, prefs, requestKey);
         if (!queued) {
-            WhatsAppReply.send(this, notification,
-                    "Não consegui registrar seu pedido MASTERFLIX. Tente novamente em instantes.");
+            MessageSettings.send(this, notification, prefs, MessageSettings.MSG_MASTERFLIX_QUEUE_ERROR,
+                    MessageSettings.DEFAULT_MASTERFLIX_QUEUE_ERROR);
             return;
         }
 
         prefs.edit().putLong(guardKey, now).apply();
         int waiting = TestAutomationQueue.masterflixWaiting();
-        String waitMessage = MessageSettings.DEFAULT_TEST_WAIT;
-        if (waiting > 1) {
-            waitMessage = "Seu pedido MASTERFLIX foi recebido. Há " + waiting
-                    + " solicitações na fila; vou gerar seu teste assim que chegar sua vez.";
-        }
+        String waitMessage = waiting > 1
+                ? MessageSettings.applyVariables(
+                        MessageSettings.getText(prefs, MessageSettings.MSG_MASTERFLIX_QUEUE_WAITING,
+                                MessageSettings.DEFAULT_MASTERFLIX_QUEUE_WAITING),
+                        MessageSettings.variables("QUANTIDADE", String.valueOf(waiting)))
+                : MessageSettings.getText(prefs, MessageSettings.MSG_MASTERFLIX_QUEUED,
+                        MessageSettings.DEFAULT_MASTERFLIX_QUEUED);
         WhatsAppReply.send(this, notification, waitMessage);
         prefs.edit().putString("last_test_status",
                 "Teste MASTERFLIX recebido e aguardando processamento na fila").apply();
