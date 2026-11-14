@@ -2167,15 +2167,18 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
-        if (!StvPlusBackgroundAutomation.start(
-                this, notification, prefs, StvPanelConfig.getMode(this))) {
+        String requestKey = BackgroundRuntime.notificationLocator(notification)
+                + "|" + incoming + "|" + now;
+        boolean queued = TestAutomationQueue.enqueueStv(
+                this, notification, prefs, requestKey);
+        if (!queued) {
             WhatsAppReply.send(this, notification,
-                    "Já existe uma geração STV+ em andamento. Aguarde a conclusão.");
+                    "Não consegui registrar seu pedido STV+. Tente novamente em instantes.");
             return;
         }
         prefs.edit().putLong(guardKey, now).apply();
         WhatsAppReply.send(this, notification,
-                "Recebi seu pedido de teste STV+. Estou gerando seu acesso de 1 hora.");
+                "Recebi seu pedido de teste STV+. Ele entrou na fila e será gerado assim que o painel estiver disponível.");
     }
 
     private boolean isNewResellerRequest(
@@ -2576,80 +2579,25 @@ public class NotificationAccessService extends NotificationListenerService {
                         + "|"
                         + incoming;
 
-        boolean accepted =
-                TestTaskBridge.begin(
-                        notification,
-                        requestKey
-                );
-
-        if (!accepted) {
+        requestKey = requestKey + "|" + now;
+        boolean queued = TestAutomationQueue.enqueueMasterflix(
+                this, notification, prefs, requestKey);
+        if (!queued) {
+            WhatsAppReply.send(this, notification,
+                    "Não consegui registrar seu pedido MASTERFLIX. Tente novamente em instantes.");
             return;
         }
 
-        BackgroundRuntime.markTestPending(
-                prefs,
-                notification,
-                requestKey
-        );
-
-        boolean started =
-                MasterflixBackgroundAutomation.start(
-                        this,
-                        notification,
-                        prefs
-                );
-
-        if (!started) {
-            TestTaskBridge.complete();
-
-            BackgroundRuntime.clearTestPending(
-                    prefs
-            );
-
-            prefs.edit()
-                    .putString(
-                            "last_test_status",
-                            MasterflixAutomationGate.isBusy()
-                                    ? "Teste: painel Sigma ocupado com outra automação"
-                                    : "Teste: outra geração já está em andamento"
-                    )
-                    .apply();
-
-            MessageSettings.send(
-                    this,
-                    notification,
-                    prefs,
-                    MessageSettings.MSG_TEST_FAIL,
-                    MessageSettings.DEFAULT_TEST_FAIL
-            );
-
-            return;
+        prefs.edit().putLong(guardKey, now).apply();
+        int waiting = TestAutomationQueue.masterflixWaiting();
+        String waitMessage = MessageSettings.DEFAULT_TEST_WAIT;
+        if (waiting > 1) {
+            waitMessage = "Seu pedido MASTERFLIX foi recebido. Há " + waiting
+                    + " solicitações na fila; vou gerar seu teste assim que chegar sua vez.";
         }
-
-        prefs.edit()
-                .putLong(
-                        guardKey,
-                        now
-                )
-                .apply();
-
-        boolean waitSent =
-                MessageSettings.send(
-                        this,
-                        notification,
-                        prefs,
-                        MessageSettings.MSG_TEST_WAIT,
-                        MessageSettings.DEFAULT_TEST_WAIT
-                );
-
-        prefs.edit()
-                .putString(
-                        "last_test_status",
-                        waitSent
-                                ? "Teste: iniciando no motor unificado"
-                                : "Teste: iniciando no motor unificado sem mensagem de espera"
-                )
-                .apply();
+        WhatsAppReply.send(this, notification, waitMessage);
+        prefs.edit().putString("last_test_status",
+                "Teste MASTERFLIX recebido e aguardando processamento na fila").apply();
     }
 
     private boolean recoverPendingForCurrentNotification(
