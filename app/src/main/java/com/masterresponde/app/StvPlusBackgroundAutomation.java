@@ -134,7 +134,7 @@ public final class StvPlusBackgroundAutomation {
     private void fail(String reason){if(finished)return;finished=true;EventLog.add(context,"FALHA","STV+","Geração de teste interrompida",reason);status(reason);WhatsAppReply.send(context,notification,"⚠️ STV+: "+reason);cleanup();}
     private void status(String s){prefs.edit().putString("last_stv_status",s).apply();}
     private String decode(String v){if(v==null||"null".equals(v))return"";try{Object o=new org.json.JSONTokener(v).nextValue();return o==null?"":o.toString();}catch(Exception e){return v;}}
-    private void cleanup(){handler.post(()->{try{if(web!=null){web.removeJavascriptInterface("StvBridge");web.stopLoading();web.loadUrl("about:blank");web.destroy();web=null;}}catch(Throwable ignored){}synchronized(LOCK){if(active==this)active=null;}});}
+    private void cleanup(){handler.post(()->{try{if(web!=null){web.removeJavascriptInterface("StvBridge");web.stopLoading();web.loadUrl("about:blank");web.destroy();web=null;}}catch(Throwable ignored){}synchronized(LOCK){if(active==this)active=null;}TestAutomationQueue.onStvFinished();});}
     public class Bridge {
         @JavascriptInterface
         public void copiedText(String value) {
