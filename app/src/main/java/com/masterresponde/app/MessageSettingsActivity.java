@@ -454,6 +454,22 @@ public class MessageSettingsActivity extends Activity {
                 false
         );
 
+        addSection(content, "MENSAGENS AUTOMÁTICAS — FILA DE TESTES");
+        addTextSetting(content, MessageSettings.MSG_STV_NOT_CONFIGURED, "STV+ — painel não configurado",
+                "Enviada quando faltam os dados de acesso ao painel.", MessageSettings.DEFAULT_STV_NOT_CONFIGURED, false, false);
+        addTextSetting(content, MessageSettings.MSG_STV_QUEUE_ERROR, "STV+ — falha ao registrar pedido",
+                "", MessageSettings.DEFAULT_STV_QUEUE_ERROR, false, false);
+        addTextSetting(content, MessageSettings.MSG_STV_QUEUED, "STV+ — pedido recebido na fila",
+                "", MessageSettings.DEFAULT_STV_QUEUED, false, false);
+        addTextSetting(content, MessageSettings.MSG_TEST_COOLDOWN, "Limite de teste — 24 horas",
+                "Variáveis: {MODULO} e {TEMPO}.", MessageSettings.DEFAULT_TEST_COOLDOWN, false, false);
+        addTextSetting(content, MessageSettings.MSG_MASTERFLIX_QUEUE_ERROR, "MASTERFLIX — falha ao registrar pedido",
+                "", MessageSettings.DEFAULT_MASTERFLIX_QUEUE_ERROR, false, false);
+        addTextSetting(content, MessageSettings.MSG_MASTERFLIX_QUEUED, "MASTERFLIX — pedido recebido",
+                "", MessageSettings.DEFAULT_MASTERFLIX_QUEUED, false, false);
+        addTextSetting(content, MessageSettings.MSG_MASTERFLIX_QUEUE_WAITING, "MASTERFLIX — pedido aguardando na fila",
+                "Variável: {QUANTIDADE}.", MessageSettings.DEFAULT_MASTERFLIX_QUEUE_WAITING, false, false);
+
         addSection(content, "MENSAGENS ENVIADAS — REVENDA STV+");
         addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_SIGNUP, "Revenda STV+ — link de cadastro",
                 "Use {LINK_CADASTRO} para inserir o link STV+ salvo.", MessageSettings.DEFAULT_STV_RESELLER_SIGNUP, true);
