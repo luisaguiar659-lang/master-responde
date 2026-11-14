@@ -17,6 +17,8 @@ import android.widget.Toast;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MessageSettingsActivity extends Activity {
 
@@ -37,6 +39,8 @@ public class MessageSettingsActivity extends Activity {
 
     private final Map<String, EditText> numberFields =
             new LinkedHashMap<>();
+
+    private final Set<String> millisecondFields = new HashSet<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -319,6 +323,16 @@ public class MessageSettingsActivity extends Activity {
         addTextSetting(content, MessageSettings.MSG_GROUP_UNKNOWN, "Opção não reconhecida",
                 "Variável: {COMANDO_MENU}.", MessageSettings.DEFAULT_GROUP_UNKNOWN, true, false);
         
+        addSection(content, "TEMPOS TÉCNICOS — MILISSEGUNDOS");
+        addMillisecondSetting(content, AutomationTiming.KEY_PENDING_TIMEOUT_MS,
+                "Tempo máximo de automação pendente", AutomationTiming.DEFAULT_PENDING_TIMEOUT_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_ECHO_WINDOW_MS,
+                "Janela para ignorar eco das respostas", AutomationTiming.DEFAULT_ECHO_WINDOW_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_MASTERFLIX_QUEUE_RETRY_MS,
+                "Intervalo de tentativa da fila MASTERFLIX", AutomationTiming.DEFAULT_MASTERFLIX_QUEUE_RETRY_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_STV_QUEUE_RETRY_MS,
+                "Intervalo de tentativa da fila STV+", AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS);
+
         addSection(
                 content,
                 "MENSAGENS ENVIADAS"
@@ -997,6 +1011,11 @@ public class MessageSettingsActivity extends Activity {
         );
     }
 
+    private void addMillisecondSetting(LinearLayout content, String key, String title, int defaultValue) {
+        addNumberSetting(content, key, title, "Tempo técnico em milissegundos (100 a 600000).", defaultValue);
+        millisecondFields.add(key);
+    }
+
     private void saveAll() {
         SharedPreferences.Editor editor =
                 prefs.edit();
@@ -1051,14 +1070,13 @@ public class MessageSettingsActivity extends Activity {
                 return;
             }
 
-            if (seconds < 0
-                    || seconds > 3600) {
-
-                entry.getValue()
-                        .setError(
-                                "Use um valor entre 0 e 3600 segundos."
-                        );
-
+            if (millisecondFields.contains(entry.getKey())) {
+                if (seconds < 100 || seconds > 600000) {
+                    entry.getValue().setError("Use um valor entre 100 e 600000 milissegundos.");
+                    return;
+                }
+            } else if (seconds < 0 || seconds > 3600) {
+                entry.getValue().setError("Use um valor entre 0 e 3600 segundos.");
                 return;
             }
 
