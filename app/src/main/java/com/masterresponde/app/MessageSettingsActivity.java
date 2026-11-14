@@ -470,6 +470,13 @@ public class MessageSettingsActivity extends Activity {
         addTextSetting(content, MessageSettings.MSG_MASTERFLIX_QUEUE_WAITING, "MASTERFLIX — pedido aguardando na fila",
                 "Variável: {QUANTIDADE}.", MessageSettings.DEFAULT_MASTERFLIX_QUEUE_WAITING, false, false);
 
+        addTextSetting(content, MessageSettings.MSG_MASTERFLIX_BACKGROUND_FAIL, "MASTERFLIX — falha na geração automática",
+                "", MessageSettings.DEFAULT_MASTERFLIX_BACKGROUND_FAIL, false, false);
+        addTextSetting(content, MessageSettings.MSG_STV_TEST_SUCCESS, "STV+ — teste gerado",
+                "Variável: {RESULTADO}.", MessageSettings.DEFAULT_STV_TEST_SUCCESS, false, false);
+        addTextSetting(content, MessageSettings.MSG_STV_TEST_FAIL, "STV+ — falha na geração",
+                "Variável: {MOTIVO}.", MessageSettings.DEFAULT_STV_TEST_FAIL, false, false);
+
         addSection(content, "MENSAGENS ENVIADAS — REVENDA STV+");
         addStvTextSetting(content, MessageSettings.MSG_STV_RESELLER_SIGNUP, "Revenda STV+ — link de cadastro",
                 "Use {LINK_CADASTRO} para inserir o link STV+ salvo.", MessageSettings.DEFAULT_STV_RESELLER_SIGNUP, true);
