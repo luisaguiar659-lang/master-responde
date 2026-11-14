@@ -29,6 +29,7 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
 
     private TextView botStatus;
+    private TextView dashboardBotBadge;
     private TextView waStatus;
     private TextView masterflixStatus;
     private TextView stvStatus;
@@ -738,18 +739,18 @@ public class MainActivity extends Activity {
         eyebrow.setLetterSpacing(0.12f);
         heroTop.addView(eyebrow, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        TextView botBadge = text(
+        dashboardBotBadge = text(
                 prefs.getBoolean("bot_enabled", false) ? "● BOT ATIVO" : "● BOT PAUSADO",
                 9,
                 prefs.getBoolean("bot_enabled", false) ? neonGreen : warning,
                 true
         );
-        botBadge.setGravity(Gravity.CENTER);
-        botBadge.setPadding(dp(9), dp(6), dp(9), dp(6));
-        botBadge.setBackground(futuristicCardBackground(
+        dashboardBotBadge.setGravity(Gravity.CENTER);
+        dashboardBotBadge.setPadding(dp(9), dp(6), dp(9), dp(6));
+        dashboardBotBadge.setBackground(futuristicCardBackground(
                 Color.rgb(5, 24, 27), Color.rgb(0, 125, 125), 30
         ));
-        heroTop.addView(botBadge);
+        heroTop.addView(dashboardBotBadge);
         hero.addView(heroTop);
 
         LinearLayout heroRow = new LinearLayout(this);
@@ -1049,6 +1050,13 @@ public class MainActivity extends Activity {
                             165
                     )
             );
+
+            if (dashboardBotBadge != null) {
+                dashboardBotBadge.setText(enabled ? "● BOT ATIVO" : "● BOT PAUSADO");
+                dashboardBotBadge.setTextColor(enabled
+                        ? Color.rgb(0, 245, 154)
+                        : Color.rgb(255, 174, 66));
+            }
         }
 
         if (waStatus != null) {
