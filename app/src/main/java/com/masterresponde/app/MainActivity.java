@@ -415,250 +415,120 @@ public class MainActivity extends Activity {
         buildDashboard();
     }
 
-    private void buildDrawer(
-            FrameLayout shell
-    ) {
-        menuOverlay =
-                new FrameLayout(
-                        this
-                );
+    private void buildDrawer(FrameLayout shell) {
+        menuOverlay = new FrameLayout(this);
+        menuOverlay.setBackgroundColor(Color.argb(210, 0, 2, 10));
+        menuOverlay.setVisibility(View.GONE);
+        menuOverlay.setOnClickListener(v -> closeMenu());
 
-        menuOverlay.setBackgroundColor(
-                Color.argb(
-                        175,
-                        0,
-                        0,
-                        0
-                )
-        );
+        ScrollView scroll = new ScrollView(this);
+        drawerPanel = new LinearLayout(this);
+        drawerPanel.setOrientation(LinearLayout.VERTICAL);
+        drawerPanel.setPadding(dp(12), dp(12), dp(12), dp(24));
+        drawerPanel.setBackground(neonPanel(Color.rgb(3, 13, 29), Color.rgb(0, 190, 245), Color.rgb(255, 143, 20), 20));
+        drawerPanel.setClickable(true);
+        drawerPanel.setOnClickListener(v -> { });
 
-        menuOverlay.setVisibility(
-                View.GONE
-        );
+        FrameLayout banner = new FrameLayout(this);
+        GradientDrawable bannerBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(2, 30, 54), Color.rgb(5, 13, 29), Color.rgb(49, 22, 7)});
+        bannerBg.setCornerRadius(dp(18));
+        bannerBg.setStroke(dp(1), Color.rgb(0, 185, 245));
+        banner.setBackground(bannerBg);
+        ImageView mascot = new ImageView(this);
+        int logoId = getResources().getIdentifier("logo_master_responde", "drawable", getPackageName());
+        if (logoId != 0) mascot.setImageResource(logoId);
+        mascot.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        banner.addView(mascot, new FrameLayout.LayoutParams(dp(88), dp(92), Gravity.START | Gravity.CENTER_VERTICAL));
+        LinearLayout brand = new LinearLayout(this);
+        brand.setOrientation(LinearLayout.VERTICAL);
+        brand.setPadding(dp(88), dp(10), dp(34), dp(8));
+        brand.addView(text("MASTER", 21, Color.WHITE, true));
+        brand.addView(text("RESPONDE", 21, Color.rgb(255, 151, 35), true));
+        brand.addView(text("Menu Principal", 12, Color.rgb(145, 190, 215), true));
+        banner.addView(brand, new FrameLayout.LayoutParams(-1, -2));
+        TextView close = text("×", 30, Color.WHITE, true);
+        close.setGravity(Gravity.CENTER);
+        close.setOnClickListener(v -> closeMenu());
+        banner.addView(close, new FrameLayout.LayoutParams(dp(38), dp(38), Gravity.END | Gravity.TOP));
+        LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(-1, dp(112));
+        bannerLp.bottomMargin = dp(13);
+        drawerPanel.addView(banner, bannerLp);
 
-        menuOverlay.setOnClickListener(
-                v -> closeMenu()
-        );
+        drawerSection("ATALHOS RÁPIDOS");
+        LinearLayout shortcuts = new LinearLayout(this);
+        shortcuts.setOrientation(LinearLayout.HORIZONTAL);
+        drawerShortcut(shortcuts, "STV+", "▶", Color.rgb(190, 67, 255), () ->
+                launchFromMenu(new Intent(this, StvPlusActivity.class)));
+        drawerShortcut(shortcuts, "GERAR TESTE", "▶", Color.rgb(255, 153, 24), () -> {
+            Intent intent = new Intent(this, MasterflixActivity.class);
+            intent.putExtra("auto_generate_test", true);
+            launchFromMenu(intent);
+        });
+        drawerShortcut(shortcuts, "NOVA REVENDA", "+", Color.rgb(0, 220, 125), () ->
+                launchFromMenu(new Intent(this, ResellersActivity.class)));
+        LinearLayout.LayoutParams shortcutLp = new LinearLayout.LayoutParams(-1, dp(104));
+        shortcutLp.bottomMargin = dp(13);
+        drawerPanel.addView(shortcuts, shortcutLp);
 
-        ScrollView drawerScroll =
-                new ScrollView(
-                        this
-                );
+        drawerSection("MÓDULOS");
+        drawerLink("Regras", "▤", () -> launchFromMenu(new Intent(this, RulesActivity.class)));
+        drawerLink("Revendas", "♙", () -> launchFromMenu(new Intent(this, ResellersActivity.class)));
+        drawerLink("Mensagens e Tempos", "▣", () -> launchFromMenu(new Intent(this, MessageSettingsActivity.class)));
 
-        drawerPanel =
-                new LinearLayout(
-                        this
-                );
+        drawerSection("CONTROLE E DIAGNÓSTICO");
+        drawerLink("Monitoramento", "▱", () -> launchFromMenu(new Intent(this, MonitoringActivity.class)));
+        drawerLink("Histórico", "◷", () -> launchFromMenu(new Intent(this, EventHistoryActivity.class)));
+        drawerLink("Simulador de Gatilhos", "ϟ", () -> launchFromMenu(new Intent(this, TriggerSimulatorActivity.class)));
+        drawerLink("Backup / Restauração", "▤", () -> launchFromMenu(new Intent(this, BackupActivity.class)));
+        drawerLink("Central de Diagnóstico", "∿", () -> launchFromMenu(new Intent(this, DiagnosticsActivity.class)));
+        drawerLink("Configurações", "⚙", () -> launchFromMenu(new Intent(this, AppSettingsActivity.class)));
 
-        drawerPanel.setOrientation(
-                LinearLayout.VERTICAL
-        );
+        scroll.addView(drawerPanel);
+        int panelWidth = Math.min(getResources().getDisplayMetrics().widthPixels - dp(28), dp(360));
+        menuOverlay.addView(scroll, new FrameLayout.LayoutParams(panelWidth, -1, Gravity.START));
+        shell.addView(menuOverlay, new FrameLayout.LayoutParams(-1, -1));
+    }
 
-        drawerPanel.setPadding(
-                dp(18),
-                dp(24),
-                dp(18),
-                dp(30)
-        );
+    private void drawerShortcut(LinearLayout parent, String label, String symbol, int accent, Runnable action) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setPadding(dp(3), dp(7), dp(3), dp(5));
+        tile.setBackground(neonPanel(Color.rgb(9, 22, 46), accent, accent, 14));
+        TextView icon = text(symbol, 22, accent, true);
+        icon.setGravity(Gravity.CENTER);
+        tile.addView(icon);
+        TextView title = text(label, 8, Color.WHITE, true);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, dp(5), 0, 0);
+        tile.addView(title);
+        tile.setClickable(true);
+        tile.setOnClickListener(v -> action.run());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1f);
+        lp.setMargins(dp(3), 0, dp(3), 0);
+        parent.addView(tile, lp);
+    }
 
-        drawerPanel.setBackgroundColor(
-                drawerColor()
-        );
-
-        drawerPanel.setClickable(
-                true
-        );
-
-        drawerPanel.setOnClickListener(
-                v -> {
-                }
-        );
-
-        TextView close =
-                text(
-                        "‹  MENU",
-                        18,
-                        primaryTextColor(),
-                        true
-                );
-
-        close.setPadding(
-                0,
-                0,
-                0,
-                dp(16)
-        );
-
-        close.setOnClickListener(
-                v -> closeMenu()
-        );
-
-        drawerPanel.addView(
-                close
-        );
-
-        drawerSection(
-                "ATALHOS"
-        );
-
-        drawerItem(
-                "STV+",
-                true,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                StvPlusActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "GERAR TESTE",
-                true,
-                () -> {
-                    Intent intent =
-                            new Intent(
-                                    this,
-                                    MasterflixActivity.class
-                            );
-
-                    intent.putExtra(
-                            "auto_generate_test",
-                            true
-                    );
-
-                    launchFromMenu(
-                            intent
-                    );
-                }
-        );
-
-        drawerItem(
-                "NOVA REVENDA",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                ResellersActivity.class
-                        )
-                )
-        );
-
-        drawerSection(
-                "MÓDULOS"
-        );
-
-        drawerItem(
-                "REGRAS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                RulesActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "REVENDAS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                ResellersActivity.class
-                        )
-                )
-        );
-
-        drawerItem(
-                "MENSAGENS E TEMPOS",
-                true,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                MessageSettingsActivity.class
-                        )
-                )
-        );
-
-        drawerSection(
-                "CONTROLE E DIAGNÓSTICO"
-        );
-
-        drawerItem(
-                "MONITORAMENTO",
-                true,
-                () -> launchFromMenu(
-                        new Intent(this, MonitoringActivity.class)
-                )
-        );
-
-        drawerItem(
-                "HISTÓRICO",
-                false,
-                () -> launchFromMenu(
-                        new Intent(this, EventHistoryActivity.class)
-                )
-        );
-
-        drawerItem(
-                "SIMULADOR DE GATILHOS",
-                false,
-                () -> launchFromMenu(
-                        new Intent(this, TriggerSimulatorActivity.class)
-                )
-        );
-
-        drawerItem(
-                "BACKUP / RESTAURAÇÃO",
-                false,
-                () -> launchFromMenu(
-                        new Intent(this, BackupActivity.class)
-                )
-        );
-
-        drawerItem(
-                "CENTRAL DE DIAGNÓSTICO",
-                false,
-                () -> launchFromMenu(
-                        new Intent(this, DiagnosticsActivity.class)
-                )
-        );
-
-        drawerItem(
-                "CONFIGURAÇÕES",
-                false,
-                () -> launchFromMenu(
-                        new Intent(
-                                this,
-                                AppSettingsActivity.class
-                        )
-                )
-        );
-
-        drawerScroll.addView(
-                drawerPanel
-        );
-
-        FrameLayout.LayoutParams drawerLp =
-                new FrameLayout.LayoutParams(
-                        dp(292),
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        Gravity.START
-                );
-
-        menuOverlay.addView(
-                drawerScroll,
-                drawerLp
-        );
-
-        shell.addView(
-                menuOverlay,
-                new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT
-                )
-        );
+    private void drawerLink(String label, String symbol, Runnable action) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(11), dp(6), dp(11), dp(6));
+        row.setBackground(neonPanel(Color.rgb(7, 27, 47), Color.rgb(0, 133, 185), Color.rgb(0, 133, 185), 13));
+        TextView icon = text(symbol, 20, Color.rgb(0, 211, 245), true);
+        icon.setGravity(Gravity.CENTER);
+        row.addView(icon, new LinearLayout.LayoutParams(dp(34), -1));
+        TextView title = text(label, 12, Color.WHITE, true);
+        title.setPadding(dp(9), 0, 0, 0);
+        row.addView(title, new LinearLayout.LayoutParams(0, -2, 1f));
+        row.addView(text("›", 24, Color.WHITE, false));
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setOnClickListener(v -> { closeMenu(); if (action != null) action.run(); });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(47));
+        lp.setMargins(dp(2), dp(3), dp(2), dp(4));
+        drawerPanel.addView(row, lp);
     }
 
     private void openMenu() {
@@ -713,79 +583,79 @@ public class MainActivity extends Activity {
 
     private void buildDashboard() {
         content.removeAllViews();
+        final int cyan = Color.rgb(0, 213, 255);
+        final int blue = Color.rgb(0, 132, 255);
+        final int green = Color.rgb(0, 224, 119);
+        final int orange = Color.rgb(255, 145, 18);
+        final int purple = Color.rgb(177, 68, 255);
+        final int red = Color.rgb(255, 66, 83);
 
-        final int accent = Color.rgb(92, 112, 255);
-        final int accentSoft = Color.rgb(225, 229, 255);
-        final int success = Color.rgb(28, 190, 130);
-        final int warning = Color.rgb(235, 160, 55);
-        final int danger = Color.rgb(224, 83, 98);
-
-        // Abertura editorial: título e contexto, sem repetir o nome do app em um card gigante.
-        TextView eyebrow = text("PAINEL DE CONTROLE", 10,
-                isLightTheme() ? Color.rgb(92, 105, 130) : Color.rgb(142, 153, 178), true);
-        eyebrow.setLetterSpacing(0.14f);
-        content.addView(eyebrow);
-
-        TextView greeting = text("Tudo sob controle.", 25, primaryTextColor(), true);
-        greeting.setPadding(0, dp(5), 0, dp(3));
-        content.addView(greeting);
-        TextView intro = text("Acompanhe seu atendimento em tempo real.", 12, secondaryTextColor(), false);
-        content.addView(intro);
-
-        gap(18);
-
-        // Controle principal compacto, com hierarquia e ação bem definidas.
-        LinearLayout control = card();
-        control.setOrientation(LinearLayout.HORIZONTAL);
-        control.setGravity(Gravity.CENTER_VERTICAL);
-        control.setPadding(dp(16), dp(15), dp(14), dp(15));
-        control.setBackground(roundedBackground(
-                isLightTheme() ? Color.rgb(238, 241, 255) : Color.rgb(25, 31, 54),
-                isLightTheme() ? Color.rgb(211, 217, 250) : Color.rgb(57, 68, 112), 20));
-        LinearLayout controlInfo = new LinearLayout(this);
-        controlInfo.setOrientation(LinearLayout.VERTICAL);
-        TextView controlLabel = text("AUTOMAÇÃO", 9, accent, true);
-        controlLabel.setLetterSpacing(0.13f);
-        controlInfo.addView(controlLabel);
-        TextView controlTitle = text("Robô de atendimento", 16, primaryTextColor(), true);
-        controlTitle.setPadding(0, dp(4), 0, dp(3));
-        controlInfo.addView(controlTitle);
-        dashboardBotBadge = text(
-                prefs.getBoolean("bot_enabled", false) ? "Em funcionamento" : "Pausado",
-                11,
-                prefs.getBoolean("bot_enabled", false) ? success : warning,
-                true);
-        controlInfo.addView(dashboardBotBadge);
-        control.addView(controlInfo, new LinearLayout.LayoutParams(0, -2, 1f));
-
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(LinearLayout.HORIZONTAL);
+        hero.setGravity(Gravity.CENTER_VERTICAL);
+        hero.setPadding(dp(10), dp(12), dp(9), dp(12));
+        hero.setBackground(neonPanel(Color.rgb(3, 17, 36), orange, cyan, 18));
+        ImageView mascot = new ImageView(this);
+        int logoId = getResources().getIdentifier("logo_master_responde", "drawable", getPackageName());
+        if (logoId != 0) mascot.setImageResource(logoId);
+        mascot.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        hero.addView(mascot, new LinearLayout.LayoutParams(dp(82), dp(92)));
+        LinearLayout heroText = new LinearLayout(this);
+        heroText.setOrientation(LinearLayout.VERTICAL);
+        heroText.setPadding(dp(7), 0, dp(4), 0);
+        TextView overline = text("CENTRAL DE AUTOMAÇÃO", 8, cyan, true);
+        overline.setLetterSpacing(0.1f);
+        heroText.addView(overline);
+        heroText.addView(text("MASTER RESPONDE", 16, Color.WHITE, true));
+        heroText.addView(text("Atendimento automático, testes e revendas.", 9,
+                Color.rgb(177, 197, 218), false));
+        hero.addView(heroText, new LinearLayout.LayoutParams(0, -2, 1f));
+        LinearLayout heroStatus = new LinearLayout(this);
+        heroStatus.setOrientation(LinearLayout.VERTICAL);
+        heroStatus.setGravity(Gravity.CENTER);
+        dashboardBotBadge = text(prefs.getBoolean("bot_enabled", false) ? "● BOT ATIVO" : "● BOT PAUSADO",
+                8, prefs.getBoolean("bot_enabled", false) ? green : orange, true);
+        dashboardBotBadge.setGravity(Gravity.CENTER);
+        dashboardBotBadge.setPadding(dp(6), dp(6), dp(6), dp(6));
+        dashboardBotBadge.setBackground(roundedBackground(Color.rgb(5, 30, 36), green, 16));
+        heroStatus.addView(dashboardBotBadge);
         botSwitch = new Switch(this);
         botSwitch.setChecked(prefs.getBoolean("bot_enabled", false));
-        botSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            prefs.edit().putBoolean("bot_enabled", isChecked).apply();
-            if (isChecked) BackgroundRuntime.requestListenerRebind(this);
+        botSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
+            prefs.edit().putBoolean("bot_enabled", checked).apply();
+            if (checked) BackgroundRuntime.requestListenerRebind(this);
             refreshStatus();
-            Toast.makeText(this, isChecked ? "Bot ativado." : "Bot desativado.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, checked ? "Bot ativado." : "Bot desativado.", Toast.LENGTH_SHORT).show();
         });
-        control.addView(botSwitch);
-        content.addView(control);
+        heroStatus.addView(botSwitch);
+        hero.addView(heroStatus);
+        LinearLayout.LayoutParams heroLp = new LinearLayout.LayoutParams(-1, -2);
+        heroLp.bottomMargin = dp(17);
+        content.addView(hero, heroLp);
 
-        gap(22);
-        section("SAÚDE DO SISTEMA");
-        GridLayout statusGrid = new GridLayout(this);
-        statusGrid.setColumnCount(2);
-        botStatus = addStatus(statusGrid, "BOT", "● Desativado", success, null);
-        waStatus = addStatus(statusGrid, "WHATSAPP BUSINESS", "● Verificando", accent, this::openNotificationAccess);
-        masterflixStatus = addStatus(statusGrid, "MASTERFLIX", "● Login necessário", warning,
+        section("STATUS DO SISTEMA");
+        HorizontalScrollView statusScroll = new HorizontalScrollView(this);
+        statusScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout statusRow = new LinearLayout(this);
+        statusRow.setOrientation(LinearLayout.HORIZONTAL);
+        waStatus = addNeonStatus(statusRow, "WhatsApp Business", "● Verificando", green, "◉",
+                this::openNotificationAccess);
+        masterflixStatus = addNeonStatus(statusRow, "MasterFlix", "● Verificando", orange, "▶",
                 () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        stvStatus = addStatus(statusGrid, "STV+", "● Configuração necessária", accent,
+        stvStatus = addNeonStatus(statusRow, "STV+", "● Verificando", purple, "STV",
                 () -> startActivity(new Intent(this, StvPlusActivity.class)));
-        engineStatus = addStatus(statusGrid, "SERVIÇO EM 2º PLANO", "● Verificando", accent, this::openNotificationAccess);
-        content.addView(statusGrid);
+        botStatus = addNeonStatus(statusRow, "BOT", "● Verificando", blue, "◎", null);
+        engineStatus = addNeonStatus(statusRow, "2º Plano", "● Verificando", orange, "▱",
+                this::openNotificationAccess);
+        statusScroll.addView(statusRow);
+        content.addView(statusScroll);
 
-        gap(22);
-        section("RESUMO DO ATENDIMENTO");
+        gap(16);
+        section("ATIVIDADE DO ATENDIMENTO");
         org.json.JSONArray events = EventLog.read(this);
         int received = 0, sent = 0, errors = 0;
+        long now = System.currentTimeMillis();
+        int[] daily = new int[7];
         for (int i = 0; i < events.length(); i++) {
             org.json.JSONObject event = events.optJSONObject(i);
             if (event == null) continue;
@@ -793,132 +663,159 @@ public class MainActivity extends Activity {
             if ("MENSAGEM RECEBIDA".equals(type)) received++;
             if ("RESPOSTA ENVIADA".equals(type)) sent++;
             if ("FALHA".equals(type)) errors++;
+            long time = event.optLong("time", 0L);
+            long age = now - time;
+            if (time > 0 && age >= 0 && age < 7L * 86400000L) {
+                int day = (int)(age / 86400000L);
+                daily[6 - Math.min(6, day)]++;
+            }
         }
         LinearLayout metrics = new LinearLayout(this);
         metrics.setOrientation(LinearLayout.HORIZONTAL);
-        addMetric(metrics, "Recebidas", String.valueOf(received), accent);
-        addMetric(metrics, "Respondidas", String.valueOf(sent), success);
-        addMetric(metrics, "Falhas", String.valueOf(errors), errors > 0 ? danger : secondaryTextColor());
+        addMetric(metrics, "RECEBIDAS", String.valueOf(received), cyan);
+        addMetric(metrics, "RESPONDIDAS", String.valueOf(sent), green);
+        addMetric(metrics, "FALHAS", String.valueOf(errors), errors > 0 ? red : secondaryTextColor());
         content.addView(metrics);
 
-        gap(22);
-        section("SEUS MÓDULOS");
-        LinearLayout modules = new LinearLayout(this);
-        modules.setOrientation(LinearLayout.VERTICAL);
-        addModuleCard(modules, "MasterFlix", "Gerar testes e acessar o painel", "M", accent,
+        gap(16);
+        section("ACESSO RÁPIDO");
+        HorizontalScrollView quickScroll = new HorizontalScrollView(this);
+        quickScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout quick = new LinearLayout(this);
+        quick.setOrientation(LinearLayout.HORIZONTAL);
+        drawerShortcut(quick, "TESTE MASTERFLIX", "▶", blue,
                 () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        addModuleCard(modules, "STV+", "Testes e gestão de revendas", "S", Color.rgb(22, 174, 151),
+        drawerShortcut(quick, "TESTE STV+", "▶", purple,
                 () -> startActivity(new Intent(this, StvPlusActivity.class)));
-        addModuleCard(modules, "Regras automáticas", "Configurar gatilhos e respostas", "R", Color.rgb(139, 105, 218),
+        drawerShortcut(quick, "NOVA REVENDA", "+", orange,
+                () -> startActivity(new Intent(this, ResellersActivity.class)));
+        drawerShortcut(quick, "REGRAS", "≡", cyan,
                 () -> startActivity(new Intent(this, RulesActivity.class)));
-        addModuleCard(modules, "Monitoramento", "Ver eventos e funcionamento", "M", warning,
-                () -> startActivity(new Intent(this, MonitoringActivity.class)));
-        content.addView(modules);
-
-        gap(22);
-        section("ACESSO E CONEXÃO");
-        LinearLayout access = card();
-        access.setPadding(dp(16), dp(15), dp(16), dp(15));
-        TextView accessTitle = text("Conectar ao WhatsApp Business", 14, primaryTextColor(), true);
-        access.addView(accessTitle);
-        TextView accessDescription = text(
-                "Gerencie a permissão que permite ao MASTER RESPONDE ler notificações e enviar respostas.",
-                11, secondaryTextColor(), false);
-        accessDescription.setPadding(0, dp(5), 0, dp(12));
-        access.addView(accessDescription);
-        Button notificationButton = new Button(this);
-        notificationButton.setText("GERENCIAR PERMISSÃO");
-        notificationButton.setTextColor(Color.WHITE);
-        notificationButton.setTextSize(11);
-        notificationButton.setTypeface(null, 1);
-        notificationButton.setAllCaps(false);
-        notificationButton.setBackground(roundedBackground(accent, accent, 12));
-        access.addView(notificationButton, new LinearLayout.LayoutParams(-1, dp(46)));
-        notificationButton.setOnClickListener(v -> openNotificationAccess());
-        content.addView(access);
+        drawerShortcut(quick, "CONFIGURAÇÕES", "⚙", blue,
+                () -> startActivity(new Intent(this, AppSettingsActivity.class)));
+        quickScroll.addView(quick, new HorizontalScrollView.LayoutParams(dp(560), dp(94)));
+        content.addView(quickScroll);
 
         gap(16);
-        LinearLayout last = card();
-        last.setPadding(dp(16), dp(14), dp(16), dp(14));
-        TextView lastTitle = text("ÚLTIMO REGISTRO", 9, secondaryTextColor(), true);
-        lastTitle.setLetterSpacing(0.12f);
-        last.addView(lastTitle);
-        String lastStatus = prefs.getString("last_test_status", "Nenhuma atividade registrada até agora.");
-        TextView lastValue = text(lastStatus, 12, primaryTextColor(), true);
-        lastValue.setPadding(0, dp(6), 0, 0);
-        last.addView(lastValue);
-        content.addView(last);
+        section("RESUMO GERAL");
+        LinearLayout summary = card();
+        summary.setPadding(dp(12), dp(10), dp(12), dp(10));
+        addSummaryRow(summary, "Mensagens recebidas", String.valueOf(received), cyan);
+        addSummaryRow(summary, "Respostas enviadas", String.valueOf(sent), green);
+        addSummaryRow(summary, "Falhas registradas", String.valueOf(errors), errors > 0 ? red : secondaryTextColor());
+        addSummaryRow(summary, "Eventos armazenados", String.valueOf(events.length()), Color.WHITE);
+        content.addView(summary);
 
+        gap(12);
+        LinearLayout chart = card();
+        chart.setPadding(dp(12), dp(11), dp(12), dp(10));
+        chart.addView(text("USO DIÁRIO — ÚLTIMOS 7 DIAS", 9, cyan, true));
+        LinearLayout bars = new LinearLayout(this);
+        bars.setOrientation(LinearLayout.HORIZONTAL);
+        bars.setGravity(Gravity.BOTTOM);
+        int max = 1;
+        for (int value : daily) max = Math.max(max, value);
+        String[] days = {"6d", "5d", "4d", "3d", "2d", "Ontem", "Hoje"};
+        for (int i = 0; i < daily.length; i++) {
+            LinearLayout col = new LinearLayout(this);
+            col.setOrientation(LinearLayout.VERTICAL);
+            col.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            col.addView(text(String.valueOf(daily[i]), 7, secondaryTextColor(), false));
+            View bar = new View(this);
+            bar.setBackground(roundedBackground(blue, cyan, 5));
+            LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(dp(16),
+                    dp(daily[i] == 0 ? 3 : Math.max(7, (int)(48f * daily[i] / max))));
+            barLp.topMargin = dp(3);
+            col.addView(bar, barLp);
+            TextView day = text(days[i], 7, secondaryTextColor(), false);
+            day.setPadding(0, dp(4), 0, 0);
+            col.addView(day);
+            bars.addView(col, new LinearLayout.LayoutParams(0, dp(76), 1f));
+        }
+        chart.addView(bars);
+        content.addView(chart);
         refreshStatus();
+    }
+
+    private GradientDrawable neonPanel(int fill, int edgeA, int edgeB, int radius) {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{fill, Color.rgb(5, 12, 28), Color.rgb(20, 18, 30)});
+        d.setCornerRadius(dp(radius));
+        d.setStroke(dp(1), edgeA);
+        return d;
+    }
+
+    private TextView addNeonStatus(LinearLayout parent, String label, String value,
+                                   int accent, String symbol, Runnable click) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(dp(8), dp(9), dp(8), dp(8));
+        box.setBackground(neonPanel(Color.rgb(5, 22, 39), accent, accent, 15));
+        TextView icon = text(symbol, 19, accent, true);
+        icon.setGravity(Gravity.CENTER);
+        box.addView(icon);
+        TextView name = text(label, 9, Color.WHITE, true);
+        name.setGravity(Gravity.CENTER);
+        name.setPadding(0, dp(5), 0, dp(6));
+        box.addView(name);
+        TextView status = text(value, 8, accent, true);
+        status.setGravity(Gravity.CENTER);
+        status.setPadding(dp(5), dp(5), dp(5), dp(5));
+        status.setBackground(roundedBackground(Color.rgb(5, 36, 38), Color.rgb(20, 115, 92), 16));
+        box.addView(status);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(112), dp(110));
+        lp.setMargins(dp(3), dp(3), dp(6), dp(3));
+        parent.addView(box, lp);
+        if (click != null) {
+            box.setClickable(true);
+            box.setOnClickListener(v -> click.run());
+        }
+        return status;
+    }
+
+    private void addSummaryRow(LinearLayout parent, String label, String value, int accent) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(9), dp(7), dp(9), dp(7));
+        row.setBackground(roundedBackground(Color.rgb(7, 25, 43), Color.rgb(26, 76, 105), 10));
+        row.addView(text(label, 10, Color.WHITE, false), new LinearLayout.LayoutParams(0, -2, 1f));
+        row.addView(text(value, 12, accent, true));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(5);
+        parent.addView(row, lp);
     }
 
     private void addMetric(LinearLayout parent, String label, String value, int valueColor) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER_VERTICAL);
-        box.setPadding(dp(11), dp(12), dp(5), dp(12));
-        box.setBackground(roundedBackground(surfaceColor(), borderColor(), 15));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(76), 1f);
+        box.setPadding(dp(9), dp(9), dp(4), dp(9));
+        box.setBackground(neonPanel(Color.rgb(5, 24, 43), valueColor, valueColor, 13));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(73), 1f);
         lp.setMargins(dp(3), dp(2), dp(3), dp(2));
         box.setLayoutParams(lp);
-        TextView caption = text(label.toUpperCase(), 8, secondaryTextColor(), true);
-        box.addView(caption);
-        TextView number = text(value, 22, valueColor, true);
-        number.setPadding(0, dp(4), 0, 0);
-        box.addView(number);
+        box.addView(text(label, 8, Color.rgb(180, 200, 218), true));
+        box.addView(text(value, 21, valueColor, true));
         parent.addView(box);
-    }
-
-    private void addModuleCard(LinearLayout parent, String label, String description,
-                               String symbol, int accent, Runnable action) {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.HORIZONTAL);
-        box.setGravity(Gravity.CENTER_VERTICAL);
-        box.setPadding(dp(13), dp(12), dp(13), dp(12));
-        box.setBackground(roundedBackground(surfaceColor(), borderColor(), 16));
-        box.setClickable(true);
-        box.setFocusable(true);
-        box.setOnClickListener(v -> action.run());
-
-        TextView icon = text(symbol, 17, accent, true);
-        icon.setGravity(Gravity.CENTER);
-        icon.setBackground(roundedBackground(
-                isLightTheme() ? Color.rgb(239, 241, 250) : Color.rgb(31, 37, 57),
-                Color.TRANSPARENT, 12));
-        box.addView(icon, new LinearLayout.LayoutParams(dp(43), dp(43)));
-
-        LinearLayout details = new LinearLayout(this);
-        details.setOrientation(LinearLayout.VERTICAL);
-        details.setPadding(dp(12), 0, dp(5), 0);
-        details.addView(text(label, 13, primaryTextColor(), true));
-        TextView sub = text(description, 10, secondaryTextColor(), false);
-        sub.setPadding(0, dp(3), 0, 0);
-        details.addView(sub);
-        box.addView(details, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView arrow = text("›", 25, secondaryTextColor(), false);
-        box.addView(arrow);
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.bottomMargin = dp(8);
-        parent.addView(box, lp);
     }
 
     private void buildBottomNavigation(LinearLayout root) {
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setGravity(Gravity.CENTER);
-        nav.setPadding(dp(6), dp(5), dp(6), dp(5));
-        nav.setBackground(roundedBackground(surfaceColor(), borderColor(), 17));
-        nav.setElevation(isLightTheme() ? 0 : dp(5));
-
-        addNavItem(nav, "⌂", "Início", null);
-        addNavItem(nav, "≡", "Regras", () -> startActivity(new Intent(this, RulesActivity.class)));
-        addNavItem(nav, "＋", "Testes", () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        addNavItem(nav, "◷", "Monitor", () -> startActivity(new Intent(this, MonitoringActivity.class)));
-        addNavItem(nav, "•••", "Mais", this::openMenu);
-
+        nav.setPadding(dp(3), dp(5), dp(3), dp(5));
+        nav.setBackground(neonPanel(Color.rgb(3, 15, 30), Color.rgb(0, 165, 235), Color.rgb(255, 139, 20), 17));
+        nav.setElevation(dp(5));
+        addNavItem(nav, "⌂", "Dashboard", null);
+        addNavItem(nav, "▣", "Atend.", () -> startActivity(new Intent(this, EventHistoryActivity.class)));
+        addNavItem(nav, "▱", "Módulos", this::openMenu);
+        addNavItem(nav, "♙", "Revendas", () -> startActivity(new Intent(this, ResellersActivity.class)));
+        addNavItem(nav, "▥", "Relatórios", () -> startActivity(new Intent(this, MonitoringActivity.class)));
+        addNavItem(nav, "⚙", "Config.", () -> startActivity(new Intent(this, AppSettingsActivity.class)));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(60));
-        lp.setMargins(dp(14), dp(4), dp(14), dp(8));
+        lp.setMargins(dp(6), dp(4), dp(6), dp(7));
         root.addView(nav, lp);
     }
 
@@ -926,15 +823,14 @@ public class MainActivity extends Activity {
         LinearLayout item = new LinearLayout(this);
         item.setOrientation(LinearLayout.VERTICAL);
         item.setGravity(Gravity.CENTER);
-        item.setPadding(dp(3), dp(2), dp(3), dp(2));
-        TextView symbol = text(icon, 18, primaryTextColor(), true);
+        item.setPadding(dp(1), dp(2), dp(1), dp(2));
+        TextView symbol = text(icon, 16, Color.rgb(0, 211, 246), true);
         symbol.setGravity(Gravity.CENTER);
         item.addView(symbol);
-        TextView caption = text(label, 9, secondaryTextColor(), false);
+        TextView caption = text(label, 7, Color.rgb(205, 218, 231), false);
         caption.setGravity(Gravity.CENTER);
         item.addView(caption);
         item.setClickable(true);
-        item.setFocusable(true);
         item.setOnClickListener(v -> { if (action != null) action.run(); });
         parent.addView(item, new LinearLayout.LayoutParams(0, -1, 1f));
     }
@@ -946,7 +842,7 @@ public class MainActivity extends Activity {
                 text(
                         value,
                         11,
-                        secondaryTextColor(),
+                        Color.rgb(0, 211, 245),
                         true
                 );
 
@@ -955,10 +851,10 @@ public class MainActivity extends Activity {
         );
 
         section.setPadding(
+                dp(5),
+                dp(12),
                 0,
-                dp(14),
-                0,
-                dp(7)
+                dp(8)
         );
 
         drawerPanel.addView(
