@@ -300,6 +300,9 @@ public class MessageSettings {
     public static final String MSG_MASTERFLIX_QUEUE_ERROR = "msg_masterflix_queue_error";
     public static final String MSG_MASTERFLIX_QUEUED = "msg_masterflix_queued";
     public static final String MSG_MASTERFLIX_QUEUE_WAITING = "msg_masterflix_queue_waiting";
+    public static final String MSG_MASTERFLIX_BACKGROUND_FAIL = "msg_masterflix_background_fail";
+    public static final String MSG_STV_TEST_SUCCESS = "msg_stv_test_success";
+    public static final String MSG_STV_TEST_FAIL = "msg_stv_test_fail";
 
     public static final String DEFAULT_STV_NOT_CONFIGURED =
             "STV+ ainda não está configurado. Abra o menu STV+ no MASTER RESPONDE, informe URL, usuário e senha e salve o acesso.";
@@ -315,6 +318,13 @@ public class MessageSettings {
             "Gerando seu teste, aguarde...";
     public static final String DEFAULT_MASTERFLIX_QUEUE_WAITING =
             "Seu pedido MASTERFLIX foi recebido. Há {QUANTIDADE} solicitações na fila; vou gerar seu teste assim que chegar sua vez.";
+
+    public static final String DEFAULT_MASTERFLIX_BACKGROUND_FAIL =
+            "Não consegui concluir o teste automaticamente. Confira o MASTERFLIX no MASTER RESPONDE.";
+    public static final String DEFAULT_STV_TEST_SUCCESS =
+            "✅ *TESTE STV+*\n⏳ Validade: *1 hora*\n\n{RESULTADO}";
+    public static final String DEFAULT_STV_TEST_FAIL =
+            "⚠️ STV+: {MOTIVO}";
 
     public static final int DEFAULT_REPLY_DELAY_SECONDS = 1;
     public static final int DEFAULT_MIN_REPLY_INTERVAL_SECONDS = 1;
