@@ -35,7 +35,6 @@ public class NotificationAccessService extends NotificationListenerService {
     // pode republicá-las quando a notificação é atualizada (por exemplo, após
     // o envio de um teste). Mantemos esses eventos processados por mais tempo,
     // sempre isolados por conversa, para não disparar regras antigas novamente.
-    private static final long PRIVATE_STABLE_EVENT_TTL_MS = 10L * 60L * 1000L;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int listenerRebindAttempt = 0;
@@ -1725,7 +1724,7 @@ public class NotificationAccessService extends NotificationListenerService {
                     eventId.startsWith("msg|")
                             ? Math.max(
                             duplicateWindow,
-                            PRIVATE_STABLE_EVENT_TTL_MS
+                            AutomationTiming.getMilliseconds(prefs, AutomationTiming.KEY_PRIVATE_EVENT_TTL_MS, AutomationTiming.DEFAULT_PRIVATE_EVENT_TTL_MS)
                     )
                             : duplicateWindow;
 
