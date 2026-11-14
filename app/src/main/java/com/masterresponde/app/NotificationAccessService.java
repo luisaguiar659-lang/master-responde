@@ -2147,10 +2147,11 @@ public class NotificationAccessService extends NotificationListenerService {
             SharedPreferences prefs
     ) {
         String contactKey = privateContactKey(notification);
-        String guardKey = "stv_test_request_guard_" + contactKey;
+        String guardKey = "stvplus_test_24h_" + contactKey;
         long now = System.currentTimeMillis();
-        long last = prefs.getLong(guardKey, 0L);
-        if (last > 0L && now - last < 90000L) return;
+        if (isTestCooldownActive(notification, prefs, guardKey, now, "STV+")) {
+            return;
+        }
         android.content.SharedPreferences stvPrefs =
                 getSharedPreferences("master_responde_stv", MODE_PRIVATE);
         boolean credentialsSaved =
@@ -2179,6 +2180,39 @@ public class NotificationAccessService extends NotificationListenerService {
         prefs.edit().putLong(guardKey, now).apply();
         WhatsAppReply.send(this, notification,
                 "Recebi seu pedido de teste STV+. Ele entrou na fila e será gerado assim que o painel estiver disponível.");
+    }
+
+    /**
+     * Limite independente de 24 horas por contato e por módulo.
+     * O horário só é gravado depois que o pedido entra na fila.
+     */
+    private boolean isTestCooldownActive(
+            Notification notification,
+            SharedPreferences prefs,
+            String cooldownKey,
+            long now,
+            String module
+    ) {
+        long lastTest = prefs.getLong(cooldownKey, 0L);
+        long cooldown = 24L * 60L * 60L * 1000L;
+        long elapsed = now - lastTest;
+        if (lastTest <= 0L || elapsed >= cooldown || elapsed < 0L) {
+            return false;
+        }
+
+        long remaining = cooldown - elapsed;
+        long totalMinutes = (remaining + 59999L) / 60000L;
+        long hours = totalMinutes / 60L;
+        long minutes = totalMinutes % 60L;
+        String wait = hours > 0L
+                ? hours + "h" + (minutes > 0L ? " " + minutes + "min" : "")
+                : minutes + "min";
+
+        WhatsAppReply.send(this, notification,
+                "Você já solicitou um teste " + module
+                        + " nas últimas 24 horas. Para solicitar outro, aguarde mais "
+                        + wait + ".");
+        return true;
     }
 
     private boolean isNewResellerRequest(
@@ -2557,20 +2591,9 @@ public class NotificationAccessService extends NotificationListenerService {
                         notification
                 );
 
-        String guardKey =
-                "test_request_guard_" + contactKey;
-
-        long now =
-                System.currentTimeMillis();
-
-        long lastRequest =
-                prefs.getLong(
-                        guardKey,
-                        0L
-                );
-
-        if (lastRequest > 0L
-                && now - lastRequest < 90000L) {
+        String guardKey = "masterflix_test_24h_" + contactKey;
+        long now = System.currentTimeMillis();
+        if (isTestCooldownActive(notification, prefs, guardKey, now, "MASTERFLIX")) {
             return;
         }
 
