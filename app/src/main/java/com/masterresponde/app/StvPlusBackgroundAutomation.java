@@ -109,7 +109,11 @@ public final class StvPlusBackgroundAutomation {
             return;
         }
         finished=true;
-        boolean sent=WhatsAppReply.send(context,notification,"✅ *TESTE STV+*\n⏳ Validade: *1 hora*\n\n"+result);
+        boolean sent=MessageSettings.send(
+                context, notification, prefs,
+                MessageSettings.MSG_STV_TEST_SUCCESS,
+                MessageSettings.DEFAULT_STV_TEST_SUCCESS,
+                MessageSettings.variables("RESULTADO", result));
         EventLog.add(context, sent ? "RESPOSTA ENVIADA" : "FALHA", "STV+",
                 "Geração de teste concluída", sent ? "TESTE ENVIADO" : "FALHA NO ENVIO");
         status(sent?"Teste STV+ gerado e enviado.":"Teste STV+ gerado, mas o WhatsApp não confirmou o envio.");
@@ -131,7 +135,17 @@ public final class StvPlusBackgroundAutomation {
         boolean hasPass=text.contains("senha")||text.contains("password")||text.contains("pass:");
         return hasUrl&&hasUser&&hasPass;
     }
-    private void fail(String reason){if(finished)return;finished=true;EventLog.add(context,"FALHA","STV+","Geração de teste interrompida",reason);status(reason);WhatsAppReply.send(context,notification,"⚠️ STV+: "+reason);cleanup();}
+    private void fail(String reason){
+        if(finished)return;
+        finished=true;
+        EventLog.add(context,"FALHA","STV+","Geração de teste interrompida",reason);
+        status(reason);
+        MessageSettings.send(context, notification, prefs,
+                MessageSettings.MSG_STV_TEST_FAIL,
+                MessageSettings.DEFAULT_STV_TEST_FAIL,
+                MessageSettings.variables("MOTIVO", reason));
+        cleanup();
+    }
     private void status(String s){prefs.edit().putString("last_stv_status",s).apply();}
     private String decode(String v){if(v==null||"null".equals(v))return"";try{Object o=new org.json.JSONTokener(v).nextValue();return o==null?"":o.toString();}catch(Exception e){return v;}}
     private void cleanup(){handler.post(()->{try{if(web!=null){web.removeJavascriptInterface("StvBridge");web.stopLoading();web.loadUrl("about:blank");web.destroy();web=null;}}catch(Throwable ignored){}synchronized(LOCK){if(active==this)active=null;}TestAutomationQueue.onStvFinished();});}
