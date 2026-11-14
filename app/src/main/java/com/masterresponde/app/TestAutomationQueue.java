@@ -103,7 +103,7 @@ public final class TestAutomationQueue {
             masterflixActive = false;
             activeMasterflixKey = "";
         }
-        HANDLER.postDelayed(TestAutomationQueue::pumpMasterflix, 2000L);
+        HANDLER.postDelayed(TestAutomationQueue::pumpMasterflix, AutomationTiming.getMilliseconds(task.prefs, AutomationTiming.KEY_MASTERFLIX_QUEUE_RETRY_MS, AutomationTiming.DEFAULT_MASTERFLIX_QUEUE_RETRY_MS));
     }
 
     private static void pumpStv() {
@@ -125,7 +125,7 @@ public final class TestAutomationQueue {
                 STV.addFirst(task);
                 stvActive = false;
             }
-            HANDLER.postDelayed(TestAutomationQueue::pumpStv, 1500L);
+            HANDLER.postDelayed(TestAutomationQueue::pumpStv, AutomationTiming.getMilliseconds(task.prefs, AutomationTiming.KEY_STV_QUEUE_RETRY_MS, AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS));
         }
     }
 
