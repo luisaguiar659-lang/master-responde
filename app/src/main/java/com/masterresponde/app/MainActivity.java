@@ -582,44 +582,45 @@ public class MainActivity extends Activity {
                 .start();
     }
 
+
     private void buildDashboard() {
         content.removeAllViews();
-        final int cyan = Color.rgb(0, 213, 255);
+        final int cyan = Color.rgb(0, 220, 255);
         final int blue = Color.rgb(0, 132, 255);
-        final int green = Color.rgb(0, 224, 119);
-        final int orange = Color.rgb(255, 145, 18);
-        final int purple = Color.rgb(177, 68, 255);
-        final int red = Color.rgb(255, 66, 83);
+        final int green = Color.rgb(0, 230, 125);
+        final int orange = Color.rgb(255, 145, 20);
+        final int purple = Color.rgb(181, 67, 255);
+        final int red = Color.rgb(255, 65, 85);
 
         LinearLayout hero = new LinearLayout(this);
         hero.setOrientation(LinearLayout.HORIZONTAL);
         hero.setGravity(Gravity.CENTER_VERTICAL);
-        hero.setPadding(dp(10), dp(12), dp(9), dp(12));
-        hero.setBackground(neonPanel(Color.rgb(3, 17, 36), orange, cyan, 18));
+        hero.setPadding(dp(10), dp(10), dp(10), dp(10));
+        hero.setBackground(neonPanel(Color.rgb(2, 13, 30), orange, cyan, 18));
         ImageView mascot = new ImageView(this);
         int logoId = getResources().getIdentifier("logo_master_responde", "drawable", getPackageName());
         if (logoId != 0) mascot.setImageResource(logoId);
         mascot.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        hero.addView(mascot, new LinearLayout.LayoutParams(dp(82), dp(92)));
+        hero.addView(mascot, new LinearLayout.LayoutParams(dp(76), dp(92)));
         LinearLayout heroText = new LinearLayout(this);
         heroText.setOrientation(LinearLayout.VERTICAL);
-        heroText.setPadding(dp(7), 0, dp(4), 0);
-        TextView overline = text("CENTRAL DE AUTOMAÇÃO", 8, cyan, true);
-        overline.setLetterSpacing(0.1f);
-        heroText.addView(overline);
-        heroText.addView(text("MASTER RESPONDE", 16, Color.WHITE, true));
-        heroText.addView(text("Atendimento automático, testes e revendas.", 9,
-                Color.rgb(177, 197, 218), false));
+        heroText.setPadding(dp(8), 0, dp(4), 0);
+        TextView eyebrow = text("CENTRAL DE AUTOMAÇÃO", 8, cyan, true);
+        eyebrow.setLetterSpacing(0.1f);
+        heroText.addView(eyebrow);
+        TextView heroTitle = text("MASTER RESPONDE", 15, Color.WHITE, true);
+        heroTitle.setPadding(0, dp(4), 0, dp(3));
+        heroText.addView(heroTitle);
+        heroText.addView(text("Atendimentos automáticos, testes e gestão de revendas em um só lugar.", 9, Color.rgb(185, 204, 224), false));
         hero.addView(heroText, new LinearLayout.LayoutParams(0, -2, 1f));
-        LinearLayout heroStatus = new LinearLayout(this);
-        heroStatus.setOrientation(LinearLayout.VERTICAL);
-        heroStatus.setGravity(Gravity.CENTER);
-        dashboardBotBadge = text(prefs.getBoolean("bot_enabled", false) ? "● BOT ATIVO" : "● BOT PAUSADO",
-                8, prefs.getBoolean("bot_enabled", false) ? green : orange, true);
+        LinearLayout toggleColumn = new LinearLayout(this);
+        toggleColumn.setOrientation(LinearLayout.VERTICAL);
+        toggleColumn.setGravity(Gravity.CENTER);
+        dashboardBotBadge = text(prefs.getBoolean("bot_enabled", false) ? "● BOT ATIVO" : "● BOT PAUSADO", 8, prefs.getBoolean("bot_enabled", false) ? green : orange, true);
         dashboardBotBadge.setGravity(Gravity.CENTER);
-        dashboardBotBadge.setPadding(dp(6), dp(6), dp(6), dp(6));
-        dashboardBotBadge.setBackground(roundedBackground(Color.rgb(5, 30, 36), green, 16));
-        heroStatus.addView(dashboardBotBadge);
+        dashboardBotBadge.setPadding(dp(7), dp(6), dp(7), dp(6));
+        dashboardBotBadge.setBackground(roundedBackground(Color.rgb(4, 34, 39), green, 18));
+        toggleColumn.addView(dashboardBotBadge);
         botSwitch = new Switch(this);
         botSwitch.setChecked(prefs.getBoolean("bot_enabled", false));
         botSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
@@ -628,30 +629,23 @@ public class MainActivity extends Activity {
             refreshStatus();
             Toast.makeText(this, checked ? "Bot ativado." : "Bot desativado.", Toast.LENGTH_SHORT).show();
         });
-        heroStatus.addView(botSwitch);
-        hero.addView(heroStatus);
+        toggleColumn.addView(botSwitch);
+        hero.addView(toggleColumn);
         LinearLayout.LayoutParams heroLp = new LinearLayout.LayoutParams(-1, -2);
         heroLp.bottomMargin = dp(17);
         content.addView(hero, heroLp);
 
         section("STATUS DO SISTEMA");
-        HorizontalScrollView statusScroll = new HorizontalScrollView(this);
-        statusScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout statusRow = new LinearLayout(this);
-        statusRow.setOrientation(LinearLayout.HORIZONTAL);
-        waStatus = addNeonStatus(statusRow, "WhatsApp Business", "● Verificando", green, "◉",
-                this::openNotificationAccess);
-        masterflixStatus = addNeonStatus(statusRow, "MasterFlix", "● Verificando", orange, "▶",
-                () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        stvStatus = addNeonStatus(statusRow, "STV+", "● Verificando", purple, "STV",
-                () -> startActivity(new Intent(this, StvPlusActivity.class)));
-        botStatus = addNeonStatus(statusRow, "BOT", "● Verificando", blue, "◎", null);
-        engineStatus = addNeonStatus(statusRow, "2º Plano", "● Verificando", orange, "▱",
-                this::openNotificationAccess);
-        statusScroll.addView(statusRow);
-        content.addView(statusScroll);
+        GridLayout statusGrid = new GridLayout(this);
+        statusGrid.setColumnCount(2);
+        botStatus = addReferenceStatus(statusGrid, "BOT", "● Verificando", blue, "◎", null);
+        waStatus = addReferenceStatus(statusGrid, "WHATSAPP BUSINESS", "● Verificando", green, "◉", this::openNotificationAccess);
+        masterflixStatus = addReferenceStatus(statusGrid, "MASTERFLIX", "● Verificando", orange, "▶", () -> startActivity(new Intent(this, MasterflixActivity.class)));
+        stvStatus = addReferenceStatus(statusGrid, "STV+", "● Verificando", purple, "STV", () -> startActivity(new Intent(this, StvPlusActivity.class)));
+        engineStatus = addReferenceStatus(statusGrid, "2º PLANO", "● Verificando", Color.rgb(255, 195, 30), "▱", this::openNotificationAccess);
+        content.addView(statusGrid);
 
-        gap(16);
+        gap(17);
         section("ATIVIDADE DO ATENDIMENTO");
         org.json.JSONArray events = EventLog.read(this);
         int received = 0, sent = 0, errors = 0;
@@ -671,39 +665,42 @@ public class MainActivity extends Activity {
                 daily[6 - Math.min(6, day)]++;
             }
         }
-        LinearLayout metrics = new LinearLayout(this);
-        metrics.setOrientation(LinearLayout.HORIZONTAL);
-        addMetric(metrics, "RECEBIDAS", String.valueOf(received), cyan);
-        addMetric(metrics, "RESPONDIDAS", String.valueOf(sent), green);
-        addMetric(metrics, "FALHAS", String.valueOf(errors), errors > 0 ? red : secondaryTextColor());
-        content.addView(metrics);
+        GridLayout activityGrid = new GridLayout(this);
+        activityGrid.setColumnCount(3);
+        addReferenceMetric(activityGrid, "RECEBIDAS", String.valueOf(received), cyan);
+        addReferenceMetric(activityGrid, "RESPONDIDAS", String.valueOf(sent), green);
+        addReferenceMetric(activityGrid, "FALHAS", String.valueOf(errors), errors > 0 ? red : Color.rgb(160, 175, 190));
+        content.addView(activityGrid);
 
-        gap(16);
+        gap(17);
+        section("DESEMPENHO");
+        LinearLayout performance = card();
+        performance.setOrientation(LinearLayout.HORIZONTAL);
+        performance.setGravity(Gravity.CENTER_VERTICAL);
+        performance.setPadding(dp(15), dp(12), dp(15), dp(12));
+        performance.addView(text("TAXA DE RESPOSTA", 10, Color.WHITE, true), new LinearLayout.LayoutParams(0, -2, 1f));
+        int responseRate = received <= 0 ? 0 : Math.min(100, Math.round(sent * 100f / received));
+        performance.addView(text(responseRate + "%", 25, green, true));
+        content.addView(performance);
+
+        gap(17);
         section("ACESSO RÁPIDO");
-        HorizontalScrollView quickScroll = new HorizontalScrollView(this);
-        quickScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout quick = new LinearLayout(this);
-        quick.setOrientation(LinearLayout.HORIZONTAL);
-        drawerShortcut(quick, "TESTE MASTERFLIX", "▶", blue,
-                () -> startActivity(new Intent(this, MasterflixActivity.class)));
-        drawerShortcut(quick, "TESTE STV+", "▶", purple,
-                () -> startActivity(new Intent(this, StvPlusActivity.class)));
-        drawerShortcut(quick, "NOVA REVENDA", "+", orange,
-                () -> startActivity(new Intent(this, ResellersActivity.class)));
-        drawerShortcut(quick, "REGRAS", "≡", cyan,
-                () -> startActivity(new Intent(this, RulesActivity.class)));
-        drawerShortcut(quick, "CONFIGURAÇÕES", "⚙", blue,
-                () -> startActivity(new Intent(this, AppSettingsActivity.class)));
-        quickScroll.addView(quick, new HorizontalScrollView.LayoutParams(dp(560), dp(94)));
-        content.addView(quickScroll);
+        GridLayout quickGrid = new GridLayout(this);
+        quickGrid.setColumnCount(2);
+        addReferenceQuick(quickGrid, "Gerar Teste MasterFlix", "▶", blue, () -> startActivity(new Intent(this, MasterflixActivity.class)));
+        addReferenceQuick(quickGrid, "Gerar Teste STV+", "▶", purple, () -> startActivity(new Intent(this, StvPlusActivity.class)));
+        addReferenceQuick(quickGrid, "Cadastrar Revenda", "+", orange, () -> startActivity(new Intent(this, ResellersActivity.class)));
+        addReferenceQuick(quickGrid, "Regras do Bot", "≡", cyan, () -> startActivity(new Intent(this, RulesActivity.class)));
+        addReferenceQuick(quickGrid, "Configurações", "⚙", blue, () -> startActivity(new Intent(this, AppSettingsActivity.class)));
+        content.addView(quickGrid);
 
-        gap(16);
+        gap(17);
         section("RESUMO GERAL");
         LinearLayout summary = card();
-        summary.setPadding(dp(12), dp(10), dp(12), dp(10));
-        addSummaryRow(summary, "Mensagens recebidas", String.valueOf(received), cyan);
+        summary.setPadding(dp(12), dp(11), dp(12), dp(12));
+        addSummaryRow(summary, "Total de atendimentos recebidos", String.valueOf(received), cyan);
         addSummaryRow(summary, "Respostas enviadas", String.valueOf(sent), green);
-        addSummaryRow(summary, "Falhas registradas", String.valueOf(errors), errors > 0 ? red : secondaryTextColor());
+        addSummaryRow(summary, "Falhas registradas", String.valueOf(errors), errors > 0 ? red : Color.rgb(170, 185, 200));
         addSummaryRow(summary, "Eventos armazenados", String.valueOf(events.length()), Color.WHITE);
         content.addView(summary);
 
@@ -724,55 +721,90 @@ public class MainActivity extends Activity {
             col.addView(text(String.valueOf(daily[i]), 7, secondaryTextColor(), false));
             View bar = new View(this);
             bar.setBackground(roundedBackground(blue, cyan, 5));
-            LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(dp(16),
-                    dp(daily[i] == 0 ? 3 : Math.max(7, (int)(48f * daily[i] / max))));
+            LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(dp(17), dp(daily[i] == 0 ? 3 : Math.max(7, (int)(52f * daily[i] / max))));
             barLp.topMargin = dp(3);
             col.addView(bar, barLp);
             TextView day = text(days[i], 7, secondaryTextColor(), false);
             day.setPadding(0, dp(4), 0, 0);
             col.addView(day);
-            bars.addView(col, new LinearLayout.LayoutParams(0, dp(76), 1f));
+            bars.addView(col, new LinearLayout.LayoutParams(0, dp(82), 1f));
         }
         chart.addView(bars);
         content.addView(chart);
         refreshStatus();
     }
 
-    private GradientDrawable neonPanel(int fill, int edgeA, int edgeB, int radius) {
-        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{fill, Color.rgb(5, 12, 28), Color.rgb(20, 18, 30)});
-        d.setCornerRadius(dp(radius));
-        d.setStroke(dp(1), edgeA);
-        return d;
-    }
-
-    private TextView addNeonStatus(LinearLayout parent, String label, String value,
-                                   int accent, String symbol, Runnable click) {
+    private TextView addReferenceStatus(GridLayout parent, String label, String value, int accent, String symbol, Runnable click) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER);
-        box.setPadding(dp(8), dp(9), dp(8), dp(8));
-        box.setBackground(neonPanel(Color.rgb(5, 22, 39), accent, accent, 15));
-        TextView icon = text(symbol, 19, accent, true);
+        box.setPadding(dp(8), dp(10), dp(8), dp(10));
+        box.setBackground(neonPanel(Color.rgb(4, 18, 37), accent, accent, 15));
+        TextView icon = text(symbol, 21, accent, true);
         icon.setGravity(Gravity.CENTER);
         box.addView(icon);
         TextView name = text(label, 9, Color.WHITE, true);
         name.setGravity(Gravity.CENTER);
-        name.setPadding(0, dp(5), 0, dp(6));
+        name.setPadding(0, dp(5), 0, dp(7));
         box.addView(name);
         TextView status = text(value, 8, accent, true);
         status.setGravity(Gravity.CENTER);
         status.setPadding(dp(5), dp(5), dp(5), dp(5));
-        status.setBackground(roundedBackground(Color.rgb(5, 36, 38), Color.rgb(20, 115, 92), 16));
+        status.setBackground(roundedBackground(Color.rgb(4, 37, 40), Color.rgb(20, 115, 92), 16));
         box.addView(status);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(112), dp(110));
-        lp.setMargins(dp(3), dp(3), dp(6), dp(3));
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.width = 0;
+        lp.height = dp(105);
+        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+        lp.setMargins(dp(3), dp(3), dp(3), dp(3));
         parent.addView(box, lp);
         if (click != null) {
             box.setClickable(true);
+            box.setFocusable(true);
             box.setOnClickListener(v -> click.run());
         }
         return status;
+    }
+
+    private void addReferenceMetric(GridLayout parent, String label, String value, int accent) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER_VERTICAL);
+        box.setPadding(dp(9), dp(10), dp(5), dp(10));
+        box.setBackground(neonPanel(Color.rgb(4, 20, 40), accent, accent, 14));
+        box.addView(text(label, 8, Color.rgb(180, 200, 218), true));
+        box.addView(text(value, 22, accent, true));
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.width = 0;
+        lp.height = dp(78);
+        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+        lp.setMargins(dp(3), dp(2), dp(3), dp(2));
+        parent.addView(box, lp);
+    }
+
+    private void addReferenceQuick(GridLayout parent, String label, String symbol, int accent, Runnable action) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setPadding(dp(8), dp(10), dp(8), dp(10));
+        tile.setBackground(neonPanel(Color.rgb(5, 19, 39), accent, accent, 15));
+        TextView icon = text(symbol, 24, accent, true);
+        icon.setGravity(Gravity.CENTER);
+        tile.addView(icon);
+        TextView caption = text(label, 10, Color.WHITE, true);
+        caption.setGravity(Gravity.CENTER);
+        caption.setMaxLines(2);
+        caption.setPadding(0, dp(6), 0, 0);
+        tile.addView(caption);
+        tile.setClickable(true);
+        tile.setFocusable(true);
+        tile.setOnClickListener(v -> action.run());
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.width = 0;
+        lp.height = dp(94);
+        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+        lp.setMargins(dp(3), dp(3), dp(3), dp(3));
+        parent.addView(tile, lp);
     }
 
     private void addSummaryRow(LinearLayout parent, String label, String value, int accent) {
@@ -786,20 +818,6 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.topMargin = dp(5);
         parent.addView(row, lp);
-    }
-
-    private void addMetric(LinearLayout parent, String label, String value, int valueColor) {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setGravity(Gravity.CENTER_VERTICAL);
-        box.setPadding(dp(9), dp(9), dp(4), dp(9));
-        box.setBackground(neonPanel(Color.rgb(5, 24, 43), valueColor, valueColor, 13));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(73), 1f);
-        lp.setMargins(dp(3), dp(2), dp(3), dp(2));
-        box.setLayoutParams(lp);
-        box.addView(text(label, 8, Color.rgb(180, 200, 218), true));
-        box.addView(text(value, 21, valueColor, true));
-        parent.addView(box);
     }
 
     private void buildBottomNavigation(LinearLayout root) {
