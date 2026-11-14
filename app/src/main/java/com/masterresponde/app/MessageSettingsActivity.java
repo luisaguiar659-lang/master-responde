@@ -332,6 +332,22 @@ public class MessageSettingsActivity extends Activity {
                 "Intervalo de tentativa da fila MASTERFLIX", AutomationTiming.DEFAULT_MASTERFLIX_QUEUE_RETRY_MS);
         addMillisecondSetting(content, AutomationTiming.KEY_STV_QUEUE_RETRY_MS,
                 "Intervalo de tentativa da fila STV+", AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_RECOVERY_1_MS,
+                "Reconexão do serviço — primeira verificação", AutomationTiming.DEFAULT_LISTENER_RECOVERY_1_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_RECOVERY_2_MS,
+                "Reconexão do serviço — segunda verificação", AutomationTiming.DEFAULT_LISTENER_RECOVERY_2_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_RECOVERY_3_MS,
+                "Reconexão do serviço — terceira verificação", AutomationTiming.DEFAULT_LISTENER_RECOVERY_3_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_REBIND_1_MS,
+                "Tentativa de reativação 1", AutomationTiming.DEFAULT_LISTENER_REBIND_1_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_REBIND_2_MS,
+                "Tentativa de reativação 2", AutomationTiming.DEFAULT_LISTENER_REBIND_2_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_REBIND_3_MS,
+                "Tentativa de reativação 3", AutomationTiming.DEFAULT_LISTENER_REBIND_3_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_REBIND_4_MS,
+                "Tentativa de reativação 4", AutomationTiming.DEFAULT_LISTENER_REBIND_4_MS);
+        addMillisecondSetting(content, AutomationTiming.KEY_LISTENER_REBIND_5_MS,
+                "Tentativa de reativação 5", AutomationTiming.DEFAULT_LISTENER_REBIND_5_MS);
 
         addSection(
                 content,
