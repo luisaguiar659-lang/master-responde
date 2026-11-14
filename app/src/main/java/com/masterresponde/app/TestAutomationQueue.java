@@ -23,6 +23,8 @@ public final class TestAutomationQueue {
     private static final Set<String> STV_KEYS = new HashSet<>();
     private static boolean masterflixActive;
     private static boolean stvActive;
+    private static String activeMasterflixKey = "";
+    private static String activeStvKey = "";
 
     private TestAutomationQueue() {}
 
@@ -74,6 +76,7 @@ public final class TestAutomationQueue {
             }
             task = MASTERFLIX.removeFirst();
             masterflixActive = true;
+            activeMasterflixKey = task.requestKey;
         }
 
         if (!TestTaskBridge.begin(task.notification, task.requestKey)) {
@@ -108,6 +111,7 @@ public final class TestAutomationQueue {
             }
             task = STV.removeFirst();
             stvActive = true;
+            activeStvKey = task.requestKey;
         }
         boolean started = StvPlusBackgroundAutomation.start(
                 task.context, task.notification, task.prefs, StvPanelConfig.getMode(task.context));
@@ -123,10 +127,8 @@ public final class TestAutomationQueue {
     public static void onMasterflixFinished() {
         synchronized (LOCK) {
             masterflixActive = false;
-            if (!MASTERFLIX.isEmpty()) {
-                String key = MASTERFLIX.peekFirst().requestKey;
-                MASTERFLIX_KEYS.remove(key);
-            }
+            MASTERFLIX_KEYS.remove(activeMasterflixKey);
+            activeMasterflixKey = "";
         }
         HANDLER.post(TestAutomationQueue::pumpMasterflix);
     }
@@ -134,10 +136,8 @@ public final class TestAutomationQueue {
     public static void onStvFinished() {
         synchronized (LOCK) {
             stvActive = false;
-            if (!STV.isEmpty()) {
-                String key = STV.peekFirst().requestKey;
-                STV_KEYS.remove(key);
-            }
+            STV_KEYS.remove(activeStvKey);
+            activeStvKey = "";
         }
         HANDLER.post(TestAutomationQueue::pumpStv);
     }
