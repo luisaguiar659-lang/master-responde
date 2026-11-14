@@ -33,12 +33,14 @@ public final class TestAutomationQueue {
         final Notification notification;
         final SharedPreferences prefs;
         final String requestKey;
+        final String stvMode;
 
         Task(Context c, Notification n, SharedPreferences p, String key) {
             context = c.getApplicationContext();
             notification = n;
             prefs = p;
             requestKey = key == null ? "" : key;
+            stvMode = StvPanelConfig.getMode(context);
         }
     }
 
@@ -46,6 +48,7 @@ public final class TestAutomationQueue {
                                              SharedPreferences p, String key) {
         if (c == null || n == null || p == null) return false;
         synchronized (LOCK) {
+            if (MASTERFLIX.size() >= 100) return false;
             if (!MASTERFLIX_KEYS.add(key == null ? "" : key)) return false;
             MASTERFLIX.addLast(new Task(c, n, p, key));
         }
@@ -57,6 +60,7 @@ public final class TestAutomationQueue {
                                      SharedPreferences p, String key) {
         if (c == null || n == null || p == null) return false;
         synchronized (LOCK) {
+            if (STV.size() >= 100) return false;
             if (!STV_KEYS.add(key == null ? "" : key)) return false;
             STV.addLast(new Task(c, n, p, key));
         }
@@ -114,7 +118,7 @@ public final class TestAutomationQueue {
             activeStvKey = task.requestKey;
         }
         boolean started = StvPlusBackgroundAutomation.start(
-                task.context, task.notification, task.prefs, StvPanelConfig.getMode(task.context));
+                task.context, task.notification, task.prefs, task.stvMode);
         if (!started) {
             synchronized (LOCK) {
                 STV.addFirst(task);
