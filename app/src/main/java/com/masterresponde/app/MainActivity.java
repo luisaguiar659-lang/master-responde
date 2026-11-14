@@ -729,6 +729,16 @@ public class MainActivity extends Activity {
         refreshStatus();
     }
 
+    private GradientDrawable neonPanel(int fill, int edgeA, int edgeB, int radius) {
+        GradientDrawable drawable = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{fill, Color.rgb(5, 12, 28), Color.rgb(20, 18, 30)}
+        );
+        drawable.setCornerRadius(dp(radius));
+        drawable.setStroke(dp(1), edgeA);
+        return drawable;
+    }
+
     private TextView addReferenceStatus(GridLayout parent, String label, String value, int accent, String symbol, Runnable click) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
