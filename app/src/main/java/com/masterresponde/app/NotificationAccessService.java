@@ -139,20 +139,16 @@ public class NotificationAccessService extends NotificationListenerService {
                 true
         );
 
-        handler.postDelayed(
-                this::recoverPendingAutomations,
-                900L
-        );
-
-        handler.postDelayed(
-                this::recoverPendingAutomations,
-                15000L
-        );
-
-        handler.postDelayed(
-                this::recoverPendingAutomations,
-                45000L
-        );
+        SharedPreferences timingPrefs = getSharedPreferences("master_responde", MODE_PRIVATE);
+        handler.postDelayed(this::recoverPendingAutomations,
+                AutomationTiming.getMilliseconds(timingPrefs, AutomationTiming.KEY_LISTENER_RECOVERY_1_MS,
+                        AutomationTiming.DEFAULT_LISTENER_RECOVERY_1_MS));
+        handler.postDelayed(this::recoverPendingAutomations,
+                AutomationTiming.getMilliseconds(timingPrefs, AutomationTiming.KEY_LISTENER_RECOVERY_2_MS,
+                        AutomationTiming.DEFAULT_LISTENER_RECOVERY_2_MS));
+        handler.postDelayed(this::recoverPendingAutomations,
+                AutomationTiming.getMilliseconds(timingPrefs, AutomationTiming.KEY_LISTENER_RECOVERY_3_MS,
+                        AutomationTiming.DEFAULT_LISTENER_RECOVERY_3_MS));
     }
 
     @Override
@@ -184,12 +180,13 @@ public class NotificationAccessService extends NotificationListenerService {
      * solicita o rebind enquanto a permissão permanece ativa.
      */
     private void scheduleListenerRebindRetry() {
+        SharedPreferences timingPrefs = getSharedPreferences("master_responde", MODE_PRIVATE);
         final long[] delays = {
-                1500L,
-                5000L,
-                15000L,
-                30000L,
-                60000L
+                AutomationTiming.getMilliseconds(timingPrefs, AutomationTiming.KEY_LISTENER_REBIND_1_MS, AutomationTiming.DEFAULT_LISTENER_REBIND_1_MS),
+                AutomationTiming.getMilliseconds(timingPrefs, AutomationTiming.KEY_LISTENER_REBIND_2_MS, AutomationTiming.DEFAULT_LISTENER_REBIND_2_MS),
+                AutomationTiming.getMilliseconds(timingPrefs, AutomationTiming.KEY_LISTENER_REBIND_3_MS, AutomationTiming.DEFAULT_LISTENER_REBIND_3_MS),
+                AutomationTiming.getMilliseconds(timingPrefs, AutomationTiming.KEY_LISTENER_REBIND_4_MS, AutomationTiming.DEFAULT_LISTENER_REBIND_4_MS),
+                AutomationTiming.getMilliseconds(timingPrefs, AutomationTiming.KEY_LISTENER_REBIND_5_MS, AutomationTiming.DEFAULT_LISTENER_REBIND_5_MS)
         };
 
         if (listenerRebindAttempt >= delays.length) {
