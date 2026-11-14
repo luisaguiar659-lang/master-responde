@@ -797,11 +797,12 @@ public class MasterflixBackgroundAutomation {
                 )
                 .apply();
 
-        WhatsAppReply.send(
+        MessageSettings.send(
                 context,
                 whatsappNotification,
-                "Não consegui concluir o teste automaticamente. " +
-                        "Confira o MASTERFLIX no MASTER RESPONDE."
+                prefs,
+                MessageSettings.MSG_MASTERFLIX_BACKGROUND_FAIL,
+                MessageSettings.DEFAULT_MASTERFLIX_BACKGROUND_FAIL
         );
 
         TestTaskBridge.complete();
