@@ -293,6 +293,29 @@ public class MessageSettings {
     public static final String DEFAULT_GROUP_UNKNOWN =
             "⚠️ Opção não reconhecida. Envie {COMANDO_MENU} para ver o menu.";
 
+    public static final String MSG_STV_NOT_CONFIGURED = "msg_stv_not_configured";
+    public static final String MSG_STV_QUEUE_ERROR = "msg_stv_queue_error";
+    public static final String MSG_STV_QUEUED = "msg_stv_queued";
+    public static final String MSG_TEST_COOLDOWN = "msg_test_cooldown";
+    public static final String MSG_MASTERFLIX_QUEUE_ERROR = "msg_masterflix_queue_error";
+    public static final String MSG_MASTERFLIX_QUEUED = "msg_masterflix_queued";
+    public static final String MSG_MASTERFLIX_QUEUE_WAITING = "msg_masterflix_queue_waiting";
+
+    public static final String DEFAULT_STV_NOT_CONFIGURED =
+            "STV+ ainda não está configurado. Abra o menu STV+ no MASTER RESPONDE, informe URL, usuário e senha e salve o acesso.";
+    public static final String DEFAULT_STV_QUEUE_ERROR =
+            "Não consegui registrar seu pedido STV+. Tente novamente em instantes.";
+    public static final String DEFAULT_STV_QUEUED =
+            "Recebi seu pedido de teste STV+. Ele entrou na fila e será gerado assim que o painel estiver disponível.";
+    public static final String DEFAULT_TEST_COOLDOWN =
+            "Você já solicitou um teste {MODULO} nas últimas 24 horas. Para solicitar outro, aguarde mais {TEMPO}.";
+    public static final String DEFAULT_MASTERFLIX_QUEUE_ERROR =
+            "Não consegui registrar seu pedido MASTERFLIX. Tente novamente em instantes.";
+    public static final String DEFAULT_MASTERFLIX_QUEUED =
+            "Gerando seu teste, aguarde...";
+    public static final String DEFAULT_MASTERFLIX_QUEUE_WAITING =
+            "Seu pedido MASTERFLIX foi recebido. Há {QUANTIDADE} solicitações na fila; vou gerar seu teste assim que chegar sua vez.";
+
     public static final int DEFAULT_REPLY_DELAY_SECONDS = 1;
     public static final int DEFAULT_MIN_REPLY_INTERVAL_SECONDS = 1;
     public static final int DEFAULT_SEQUENCE_INTERVAL_SECONDS = 1;
