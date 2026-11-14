@@ -75,7 +75,7 @@ public final class TestAutomationQueue {
             if (MasterflixAutomationGate.isBusy()
                     || MasterflixBackgroundAutomation.isRunning()
                     || MasterflixResellerAutomation.isRunning()) {
-                HANDLER.postDelayed(TestAutomationQueue::pumpMasterflix, AutomationTiming.getMilliseconds(task.prefs, AutomationTiming.KEY_MASTERFLIX_QUEUE_RETRY_MS, AutomationTiming.DEFAULT_MASTERFLIX_QUEUE_RETRY_MS));
+                HANDLER.postDelayed(TestAutomationQueue::pumpMasterflix, AutomationTiming.getMilliseconds(MASTERFLIX.peekFirst().prefs, AutomationTiming.KEY_MASTERFLIX_QUEUE_RETRY_MS, AutomationTiming.DEFAULT_MASTERFLIX_QUEUE_RETRY_MS));
                 return;
             }
             task = MASTERFLIX.removeFirst();
@@ -111,7 +111,7 @@ public final class TestAutomationQueue {
         synchronized (LOCK) {
             if (stvActive || STV.isEmpty()) return;
             if (StvPlusBackgroundAutomation.isRunning()) {
-                HANDLER.postDelayed(TestAutomationQueue::pumpStv, AutomationTiming.getMilliseconds(task.prefs, AutomationTiming.KEY_STV_QUEUE_RETRY_MS, AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS));
+                HANDLER.postDelayed(TestAutomationQueue::pumpStv, AutomationTiming.getMilliseconds(STV.peekFirst().prefs, AutomationTiming.KEY_STV_QUEUE_RETRY_MS, AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS));
                 return;
             }
             task = STV.removeFirst();
