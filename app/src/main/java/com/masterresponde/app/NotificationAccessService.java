@@ -2151,8 +2151,6 @@ public class NotificationAccessService extends NotificationListenerService {
         long now = System.currentTimeMillis();
         long last = prefs.getLong(guardKey, 0L);
         if (last > 0L && now - last < 90000L) return;
-        prefs.edit().putLong(guardKey, now).apply();
-
         android.content.SharedPreferences stvPrefs =
                 getSharedPreferences("master_responde_stv", MODE_PRIVATE);
         boolean credentialsSaved =
@@ -2175,6 +2173,7 @@ public class NotificationAccessService extends NotificationListenerService {
                     "Já existe uma geração STV+ em andamento. Aguarde a conclusão.");
             return;
         }
+        prefs.edit().putLong(guardKey, now).apply();
         WhatsAppReply.send(this, notification,
                 "Recebi seu pedido de teste STV+. Estou gerando seu acesso de 1 hora.");
     }
@@ -2572,13 +2571,6 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
-        prefs.edit()
-                .putLong(
-                        guardKey,
-                        now
-                )
-                .apply();
-
         String requestKey =
                 notificationKey
                         + "|"
@@ -2633,6 +2625,13 @@ public class NotificationAccessService extends NotificationListenerService {
 
             return;
         }
+
+        prefs.edit()
+                .putLong(
+                        guardKey,
+                        now
+                )
+                .apply();
 
         boolean waitSent =
                 MessageSettings.send(
