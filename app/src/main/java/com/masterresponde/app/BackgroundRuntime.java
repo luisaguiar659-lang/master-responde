@@ -47,9 +47,6 @@ public final class BackgroundRuntime {
     public static final String KEY_RESELLER_CONTACT =
             "background_reseller_contact";
 
-    private static final long PENDING_TIMEOUT_MS =
-            120000L;
-
     private BackgroundRuntime() {
     }
 
@@ -366,7 +363,7 @@ public final class BackgroundRuntime {
                 );
 
         return time > 0L
-                && System.currentTimeMillis() - time < PENDING_TIMEOUT_MS;
+                && System.currentTimeMillis() - time < AutomationTiming.getMilliseconds(prefs,\n                        AutomationTiming.KEY_PENDING_TIMEOUT_MS,\n                        AutomationTiming.DEFAULT_PENDING_TIMEOUT_MS);
     }
 
     private static String normalize(
