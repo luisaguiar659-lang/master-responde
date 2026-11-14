@@ -301,6 +301,24 @@ public class MessageSettingsActivity extends Activity {
                 MessageSettings.DEFAULT_RULE_DUPLICATE_SECONDS
         );
 
+        addNumberSetting(content, MessageSettings.KEY_GROUP_DUPLICATE_SECONDS,
+                "Bloqueio de mensagem repetida em grupos",
+                "Tempo para ignorar o mesmo comando repetido no mesmo grupo.",
+                MessageSettings.DEFAULT_GROUP_DUPLICATE_SECONDS);
+
+        addNumberSetting(content, MessageSettings.KEY_GROUP_MENU_SECONDS,
+                "Tempo para manter o menu de grupos aberto",
+                "Tempo máximo para aceitar opções depois de abrir o menu.",
+                MessageSettings.DEFAULT_GROUP_MENU_SECONDS);
+
+        addSection(content, "MENSAGENS ENVIADAS — GRUPOS");
+        addTextSetting(content, MessageSettings.MSG_GROUP_MENU, "Menu principal dos grupos",
+                "Variáveis: {CATEGORIAS} e {COMANDO_MENU}.", MessageSettings.DEFAULT_GROUP_MENU, true, false);
+        addTextSetting(content, MessageSettings.MSG_GROUP_CATEGORY_MISSING, "Categoria não configurada",
+                "Variável: {CATEGORIA}.", MessageSettings.DEFAULT_GROUP_CATEGORY_MISSING, true, false);
+        addTextSetting(content, MessageSettings.MSG_GROUP_UNKNOWN, "Opção não reconhecida",
+                "Variável: {COMANDO_MENU}.", MessageSettings.DEFAULT_GROUP_UNKNOWN, true, false);
+        
         addSection(
                 content,
                 "MENSAGENS ENVIADAS"
