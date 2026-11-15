@@ -87,6 +87,7 @@ public class RulesActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
 
         setContentView(root);
+        NeonUi.watch(root);
     }
 
     private void renderRules() {

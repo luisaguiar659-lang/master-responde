@@ -581,6 +581,7 @@ public class MessageSettingsActivity extends Activity {
         setContentView(
                 root
         );
+        NeonUi.watch(root);
     }
 
     private CheckBox addMatchModeSetting(

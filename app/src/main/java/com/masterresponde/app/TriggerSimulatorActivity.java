@@ -167,7 +167,11 @@ public class TriggerSimulatorActivity extends Activity {
 
     private void addResult(String value, int color) {
         TextView t = text(value, 13, color, false);
-        t.setPadding(dp(12), dp(9), dp(12), dp(9));
+        t.setPadding(dp(14), dp(10), dp(14), dp(10));
+        t.setBackgroundResource(R.drawable.card);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
+        rp.setMargins(0, dp(5), 0, dp(5));
+        t.setLayoutParams(rp);
         result.addView(t);
     }
 

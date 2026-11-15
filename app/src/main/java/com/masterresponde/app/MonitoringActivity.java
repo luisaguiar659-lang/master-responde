@@ -1,8 +1,9 @@
 package com.masterresponde.app;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.LinearLayout;
@@ -12,15 +13,26 @@ import android.widget.TextView;
 import org.json.JSONArray;
 
 public class MonitoringActivity extends Activity {
-    private final int bg = Color.rgb(5, 17, 11);
-    private final int card = Color.rgb(8, 30, 60);
-    private final int white = Color.WHITE;
-    private final int muted = Color.rgb(160, 174, 190);
-    private final int green = Color.rgb(0, 214, 143);
+    private static final int GREEN = Color.rgb(0, 214, 143);
+    private static final int AMBER = Color.rgb(255, 170, 40);
+    private static final int RED = Color.rgb(255, 100, 90);
+    private static final int CYAN = Color.rgb(0, 200, 255);
+    private static final int PURPLE = Color.rgb(170, 110, 255);
+    private static final int ORANGE = Color.rgb(255, 145, 20);
+
     private LinearLayout content;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        ScrollView scroll = new ScrollView(this);
+        content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(16), dp(12), dp(16), dp(24));
+        scroll.addView(content);
+        body.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+        setContentView(NeonUi.wrap(this, "MONITORAMENTO", "Visão geral do funcionamento", body));
         render();
     }
 
@@ -30,69 +42,91 @@ public class MonitoringActivity extends Activity {
     }
 
     private void render() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(8), dp(16), dp(18));
-        ScrollView scroll = new ScrollView(this);
-        content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(0, dp(12), 0, dp(20));
-        scroll.addView(content);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
-        setContentView(NeonUi.wrap(this, "MONITORAMENTO", "Visão geral do funcionamento", root));
-
-        android.content.SharedPreferences prefs = getSharedPreferences("master_responde", MODE_PRIVATE);
-        android.content.SharedPreferences stv = getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+        content.removeAllViews();
+        SharedPreferences prefs = getSharedPreferences("master_responde", MODE_PRIVATE);
+        SharedPreferences stv = getSharedPreferences("master_responde_stv", MODE_PRIVATE);
         boolean bot = prefs.getBoolean("bot_enabled", false);
         boolean listener = BackgroundRuntime.hasNotificationAccess(this);
-        addCard("MOTOR DE RESPOSTAS", bot ? "ATIVADO" : "DESATIVADO",
-                bot ? green : Color.rgb(255, 170, 40), "Controle principal do aplicativo");
-        addCard("ACESSO AO WHATSAPP", listener ? "PERMISSÃO LIBERADA" : "VERIFICAR PERMISSÃO",
-                listener ? green : Color.rgb(255, 170, 40), "Acesso às notificações do WhatsApp Business");
-        addCard("MASTERFLIX", prefs.getString("last_test_status", "Nenhum teste registrado"),
-                white, "Último estado informado pelo módulo");
-        addCard("STV+ — TESTES", stv.getString("last_stv_status", "Nenhum teste registrado"),
-                white, "Último estado de geração de teste");
-        addCard("STV+ — REVENDAS", stv.getString("last_stv_reseller_status", "Nenhuma atividade registrada"),
-                white, "Último estado do fluxo de revendas");
+
+        EventLog.Stats st = EventLog.stats(this);
+        int received = st.total[0];
+        int sent = st.total[1];
+        int errors = st.total[2];
+        int rate = received <= 0 ? 0 : Math.min(100, Math.round(sent * 100f / received));
+
+        // ---- resumo com anel ----
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(LinearLayout.HORIZONTAL);
+        hero.setGravity(Gravity.CENTER_VERTICAL);
+        hero.setPadding(dp(10), dp(10), dp(14), dp(10));
+        hero.setBackgroundResource(R.drawable.card);
+        NeonRingView ring = new NeonRingView(this);
+        ring.setPercent(rate);
+        hero.addView(ring, new LinearLayout.LayoutParams(dp(124), dp(124)));
+        LinearLayout nums = new LinearLayout(this);
+        nums.setOrientation(LinearLayout.VERTICAL);
+        nums.setPadding(dp(8), 0, 0, 0);
+        nums.addView(metric("Mensagens recebidas", String.valueOf(received), CYAN));
+        nums.addView(metric("Respostas confirmadas", String.valueOf(sent), GREEN));
+        nums.addView(metric("Falhas registradas", String.valueOf(errors), errors > 0 ? RED : GREEN));
+        hero.addView(nums, new LinearLayout.LayoutParams(0, -2, 1f));
+        content.addView(hero, lp(0, 0, 0, dp(6)));
+
+        content.addView(section("ESTADO DO SISTEMA"));
+        content.addView(NeonUi.statusCard(this, "robot", bot ? GREEN : AMBER, "Motor de respostas",
+                bot ? "ATIVADO" : "DESATIVADO", "Controle principal do aplicativo"));
+        content.addView(NeonUi.statusCard(this, "whatsapp", listener ? GREEN : AMBER, "Acesso ao WhatsApp",
+                listener ? "PERMISSÃO LIBERADA" : "VERIFICAR PERMISSÃO", "Acesso às notificações do WhatsApp Business"));
+
+        content.addView(section("MÓDULOS"));
+        content.addView(NeonUi.statusCard(this, "play", ORANGE, "MasterFlix",
+                prefs.getString("last_test_status", "Nenhum teste registrado"), "Último estado informado pelo módulo"));
+        content.addView(NeonUi.statusCard(this, "play", PURPLE, "STV+ — Testes",
+                stv.getString("last_stv_status", "Nenhum teste registrado"), "Último estado de geração de teste"));
+        content.addView(NeonUi.statusCard(this, "people", PURPLE, "STV+ — Revendas",
+                stv.getString("last_stv_reseller_status", "Nenhuma atividade registrada"), "Último estado do fluxo de revendas"));
 
         JSONArray events = EventLog.read(this);
-        EventLog.Stats st = EventLog.stats(this);
-        int received = st.total[0], sent = st.total[1], errors = st.total[2];
-        addCard("MENSAGENS RECEBIDAS", String.valueOf(received), white, "Total desde a instalação");
-        addCard("RESPOSTAS CONFIRMADAS", String.valueOf(sent), green, "Envios confirmados pelo serviço");
-        addCard("FALHAS REGISTRADAS", String.valueOf(errors), errors > 0 ? Color.rgb(255,100,90) : green,
-                "Ocorrências registradas no histórico");
-        addCard("ÚLTIMA ATIVIDADE", events.length() == 0 ? "Sem registros" :
-                EventLog.date(events.optJSONObject(events.length()-1).optLong("time")),
-                white, "Abra HISTÓRICO para consultar os detalhes");
+        content.addView(section("ATIVIDADE"));
+        content.addView(NeonUi.statusCard(this, "clock", CYAN, "Última atividade",
+                events.length() == 0 ? "Sem registros"
+                        : EventLog.date(events.optJSONObject(events.length() - 1).optLong("time")),
+                "Abra o Histórico para consultar os detalhes"));
     }
 
-    private void addCard(String title, String value, int valueColor, String description) {
+    private LinearLayout metric(String label, String value, int color) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(15), dp(13), dp(15), dp(13));
-        GradientDrawable shape = new GradientDrawable();
-        shape.setColor(card);
-        shape.setCornerRadius(dp(14)); shape.setStroke(dp(1), Color.rgb(20, 100, 156));
-        box.setBackground(shape);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.setMargins(0, dp(6), 0, dp(6));
-        box.setLayoutParams(lp);
-        box.addView(text(title, 11, muted, true));
-        box.addView(text(value, 18, valueColor, true));
-        box.addView(text(description, 11, muted, false));
-        content.addView(box);
+        box.setPadding(0, dp(4), 0, dp(4));
+        TextView v = new TextView(this);
+        v.setText(value);
+        v.setTextColor(color);
+        v.setTextSize(22);
+        v.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
+        box.addView(v);
+        TextView l = new TextView(this);
+        l.setText(label);
+        l.setTextColor(Color.rgb(150, 180, 205));
+        l.setTextSize(11);
+        box.addView(l);
+        return box;
     }
 
-    private TextView text(String value, int size, int color, boolean bold) {
+    private TextView section(String title) {
         TextView t = new TextView(this);
-        t.setText(value);
-        t.setTextSize(size);
-        t.setTextColor(color);
-        if (bold) t.setTypeface(null, android.graphics.Typeface.BOLD);
-        t.setPadding(0, dp(3), 0, dp(3));
+        t.setText(title);
+        t.setTextColor(Color.rgb(255, 145, 20));
+        t.setTextSize(12);
+        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        t.setLayoutParams(lp(0, dp(14), 0, dp(4)));
         return t;
     }
+
+    private LinearLayout.LayoutParams lp(int l, int t, int r, int b) {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
+        p.setMargins(l, t, r, b);
+        return p;
+    }
+
     private int dp(int v) { return (int)(v * getResources().getDisplayMetrics().density + .5f); }
 }

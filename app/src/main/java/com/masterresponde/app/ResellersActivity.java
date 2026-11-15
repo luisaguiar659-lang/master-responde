@@ -387,6 +387,7 @@ public class ResellersActivity extends Activity {
         );
 
         setContentView(root);
+        NeonUi.watch(root);
 
         refreshStatus();
     }

@@ -204,6 +204,9 @@ public class AppSettingsActivity extends Activity {
         setContentView(
                 root
         );
+        if (!isLightTheme()) {
+            NeonUi.watch(root);
+        }
 
         renderSettings();
     }

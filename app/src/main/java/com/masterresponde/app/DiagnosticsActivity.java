@@ -103,19 +103,16 @@ public class DiagnosticsActivity extends Activity {
     }
 
     private void item(String label, String value, boolean ok) {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(13), dp(11), dp(13), dp(11));
-        GradientDrawable shape = new GradientDrawable();
-        shape.setColor(panel);
-        shape.setCornerRadius(dp(12)); shape.setStroke(dp(1), Color.rgb(20, 100, 156));
-        box.setBackground(shape);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.setMargins(0, dp(5), 0, dp(5));
-        box.setLayoutParams(lp);
-        box.addView(text(label, 12, muted, false));
-        box.addView(text(value, 15, ok ? green : warn, true));
-        list.addView(box);
+        String icon = "pulse";
+        String l = label.toLowerCase();
+        if (l.contains("motor")) icon = "robot";
+        else if (l.contains("notifica")) icon = "bell";
+        else if (l.contains("segundo plano")) icon = "layers";
+        else if (l.contains("bateria")) icon = "bolt";
+        else if (l.contains("whatsapp")) icon = "whatsapp";
+        else if (l.contains("hist")) icon = "database";
+        else if (l.contains("ltima")) icon = "clock";
+        list.addView(NeonUi.statusCard(this, icon, ok ? green : warn, label, value, null));
     }
 
     private TextView text(String value, int size, int color, boolean bold) {
