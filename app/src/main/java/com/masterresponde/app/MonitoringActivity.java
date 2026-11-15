@@ -13,7 +13,7 @@ import org.json.JSONArray;
 
 public class MonitoringActivity extends Activity {
     private final int bg = Color.rgb(5, 17, 11);
-    private final int card = Color.rgb(10, 27, 17);
+    private final int card = Color.rgb(8, 30, 60);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
     private final int green = Color.rgb(0, 214, 143);
@@ -32,17 +32,14 @@ public class MonitoringActivity extends Activity {
     private void render() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(18), dp(16), dp(18));
-        root.setBackgroundResource(R.drawable.app_background);
-        root.addView(text("MONITORAMENTO", 22, white, true));
-        root.addView(text("Visão geral do funcionamento", 13, muted, false));
+        root.setPadding(dp(16), dp(8), dp(16), dp(18));
         ScrollView scroll = new ScrollView(this);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(0, dp(12), 0, dp(20));
         scroll.addView(content);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
-        setContentView(root);
+        setContentView(NeonUi.wrap(this, "MONITORAMENTO", "Visão geral do funcionamento", root));
 
         android.content.SharedPreferences prefs = getSharedPreferences("master_responde", MODE_PRIVATE);
         android.content.SharedPreferences stv = getSharedPreferences("master_responde_stv", MODE_PRIVATE);
@@ -60,16 +57,9 @@ public class MonitoringActivity extends Activity {
                 white, "Último estado do fluxo de revendas");
 
         JSONArray events = EventLog.read(this);
-        int received = 0, sent = 0, errors = 0;
-        for (int i = 0; i < events.length(); i++) {
-            org.json.JSONObject e = events.optJSONObject(i);
-            if (e == null) continue;
-            String type = e.optString("type");
-            if ("MENSAGEM RECEBIDA".equals(type)) received++;
-            if ("RESPOSTA ENVIADA".equals(type)) sent++;
-            if ("FALHA".equals(type)) errors++;
-        }
-        addCard("MENSAGENS RECEBIDAS", String.valueOf(received), white, "Eventos registrados nesta instalação");
+        EventLog.Stats st = EventLog.stats(this);
+        int received = st.total[0], sent = st.total[1], errors = st.total[2];
+        addCard("MENSAGENS RECEBIDAS", String.valueOf(received), white, "Total desde a instalação");
         addCard("RESPOSTAS CONFIRMADAS", String.valueOf(sent), green, "Envios confirmados pelo serviço");
         addCard("FALHAS REGISTRADAS", String.valueOf(errors), errors > 0 ? Color.rgb(255,100,90) : green,
                 "Ocorrências registradas no histórico");
@@ -84,7 +74,7 @@ public class MonitoringActivity extends Activity {
         box.setPadding(dp(15), dp(13), dp(15), dp(13));
         GradientDrawable shape = new GradientDrawable();
         shape.setColor(card);
-        shape.setCornerRadius(dp(14));
+        shape.setCornerRadius(dp(14)); shape.setStroke(dp(1), Color.rgb(20, 100, 156));
         box.setBackground(shape);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.setMargins(0, dp(6), 0, dp(6));

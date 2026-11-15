@@ -15,7 +15,7 @@ import android.widget.TextView;
 
 public class DiagnosticsActivity extends Activity {
     private final int bg = Color.rgb(5, 17, 11);
-    private final int panel = Color.rgb(10, 27, 17);
+    private final int panel = Color.rgb(8, 30, 60);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
     private final int green = Color.rgb(0, 214, 143);
@@ -35,14 +35,11 @@ public class DiagnosticsActivity extends Activity {
     private void render() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(20), dp(16), dp(18));
-        root.setBackgroundResource(R.drawable.app_background);
-        root.addView(text("CENTRAL DE DIAGNÓSTICO", 21, white, true));
-        root.addView(text("Verificações do aparelho e do motor de atendimento", 12, muted, false));
+        root.setPadding(dp(16), dp(8), dp(16), dp(18));
         list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
         list.setPadding(0, dp(12), 0, dp(12));
-        root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1f));
+        root.addView(list, new LinearLayout.LayoutParams(-1, -2));
 
         boolean bot = getSharedPreferences("master_responde", MODE_PRIVATE)
                 .getBoolean("bot_enabled", false);
@@ -93,7 +90,9 @@ public class DiagnosticsActivity extends Activity {
                 "IMPORTANTE PARA XIAOMI / REDMI (MIUI): habilite a Inicialização automática do MASTER RESPONDE e, em Bateria > Economia de bateria de apps, selecione Sem restrições. Depois, deixe o Acesso às notificações ativado. Os nomes dos menus podem variar conforme a versão da MIUI.",
                 12, muted, false
         ));
-        setContentView(root);
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        sv.addView(root);
+        setContentView(NeonUi.wrap(this, "CENTRAL DE DIAGNÓSTICO", "Verificações do aparelho e do motor de atendimento", sv));
     }
 
     private boolean installed(String pkg) {
@@ -109,7 +108,7 @@ public class DiagnosticsActivity extends Activity {
         box.setPadding(dp(13), dp(11), dp(13), dp(11));
         GradientDrawable shape = new GradientDrawable();
         shape.setColor(panel);
-        shape.setCornerRadius(dp(12));
+        shape.setCornerRadius(dp(12)); shape.setStroke(dp(1), Color.rgb(20, 100, 156));
         box.setBackground(shape);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.setMargins(0, dp(5), 0, dp(5));

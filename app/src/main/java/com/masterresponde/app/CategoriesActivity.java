@@ -43,12 +43,13 @@ public class CategoriesActivity extends Activity {
     private void buildScreen() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(7, 9, 11));
+        root.setBackgroundResource(R.drawable.app_background);
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(14), dp(10), dp(14), dp(10));
+        header.setBackgroundResource(R.drawable.header_bg);
 
         Button back = new Button(this);
         back.setText("←");

@@ -611,11 +611,7 @@ public class AppSettingsActivity extends Activity {
                 247,
                 250
         )
-                : Color.rgb(
-                7,
-                9,
-                11
-        );
+                : Color.rgb(3, 10, 24);
     }
 
     private int surfaceColor() {

@@ -30,10 +30,7 @@ public class BackupActivity extends Activity {
         super.onCreate(state);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(18), dp(22), dp(18), dp(18));
-        root.setBackgroundResource(R.drawable.app_background);
-        TextView title = text("BACKUP E RESTAURAÇÃO", 21, white, true);
-        root.addView(title);
+        root.setPadding(dp(18), dp(14), dp(18), dp(18));
         root.addView(text("Salve e recupere suas regras e configurações sem alterar os módulos durante a operação.", 13, muted, false));
 
         Button export = new Button(this);
@@ -52,7 +49,7 @@ public class BackupActivity extends Activity {
         root.addView(restore);
 
         root.addView(text("Por segurança, senhas, tokens, credenciais e tarefas temporárias não são incluídos no backup.", 12, muted, false));
-        setContentView(root);
+        setContentView(NeonUi.wrap(this, "BACKUP E RESTAURAÇÃO", "Exporte e recupere suas configurações", root));
     }
 
     private void chooseExport() {

@@ -65,11 +65,7 @@ public class MessageSettingsActivity extends Activity {
         );
 
         root.setBackgroundColor(
-                Color.rgb(
-                        7,
-                        9,
-                        11
-                )
+                Color.rgb(3, 10, 24)
         );
 
         LinearLayout header =

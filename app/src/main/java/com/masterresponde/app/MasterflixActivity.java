@@ -250,6 +250,7 @@ public class MasterflixActivity extends Activity {
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(12), dp(8), dp(12), dp(8));
+        header.setBackgroundResource(R.drawable.header_bg);
 
         Button back = new Button(this);
         back.setText("←");

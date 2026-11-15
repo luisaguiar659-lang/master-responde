@@ -342,6 +342,10 @@ public class NeonIconView extends View {
                 rect.set(4.5f, 15.5f, 19.5f, 21f);
                 c.drawArc(rect, 0, 180, false, stroke);
                 break;
+            case "back":
+                line(c, 4.5f, 12, 19.5f, 12);
+                poly(c, 11, 5, 4.5f, 12, 11, 19);
+                break;
             case "chevron":
                 poly(c, 9, 5, 16, 12, 9, 19);
                 break;

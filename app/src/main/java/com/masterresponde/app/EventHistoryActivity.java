@@ -16,7 +16,7 @@ import org.json.JSONObject;
 public class EventHistoryActivity extends Activity {
     private LinearLayout list;
     private final int bg = Color.rgb(5, 17, 11);
-    private final int card = Color.rgb(10, 27, 17);
+    private final int card = Color.rgb(8, 30, 60);
     private final int white = Color.WHITE;
     private final int muted = Color.rgb(160, 174, 190);
     private final int accent = Color.rgb(0, 214, 143);
@@ -30,12 +30,8 @@ public class EventHistoryActivity extends Activity {
     private void build() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(18), dp(16), dp(16));
-        root.setBackgroundResource(R.drawable.app_background);
+        root.setPadding(dp(16), dp(10), dp(16), dp(16));
 
-        TextView title = text("HISTÓRICO DE ATIVIDADES", 20, white, true);
-        root.addView(title);
-        root.addView(text("Registro local de eventos do MASTER RESPONDE", 12, muted, false));
 
         Button clear = new Button(this);
         clear.setText("LIMPAR HISTÓRICO");
@@ -54,7 +50,7 @@ public class EventHistoryActivity extends Activity {
         list.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(list);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
-        setContentView(root);
+        setContentView(NeonUi.wrap(this, "HISTÓRICO DE ATIVIDADES", "Registro local de eventos do MASTER RESPONDE", root));
     }
 
     private void render() {
@@ -72,13 +68,15 @@ public class EventHistoryActivity extends Activity {
             item.setPadding(dp(14), dp(12), dp(14), dp(12));
             android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
             shape.setColor(card);
-            shape.setCornerRadius(dp(12));
+            shape.setCornerRadius(dp(12)); shape.setStroke(dp(1), Color.rgb(20, 100, 156));
             item.setBackground(shape);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.setMargins(0, dp(7), 0, dp(7));
             item.setLayoutParams(lp);
             item.addView(text(EventLog.date(e.optLong("time")), 11, muted, false));
-            item.addView(text(e.optString("type") + " · " + e.optString("module"), 15, accent, true));
+            String type = e.optString("type");
+            int tone = "FALHA".equals(type) ? Color.rgb(255, 100, 90) : ("RESPOSTA ENVIADA".equals(type) ? Color.rgb(0, 200, 255) : accent);
+            item.addView(text(type + " · " + e.optString("module"), 15, tone, true));
             item.addView(text(e.optString("detail"), 13, white, false));
             item.addView(text("Resultado: " + e.optString("result"), 11, muted, false));
             list.addView(item);

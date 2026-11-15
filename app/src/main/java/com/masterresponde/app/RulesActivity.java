@@ -48,6 +48,7 @@ public class RulesActivity extends Activity {
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(14), dp(10), dp(14), dp(10));
+        header.setBackgroundResource(R.drawable.header_bg);
 
         Button back = new Button(this);
         back.setText("←");

@@ -60,12 +60,13 @@ public class ResellersActivity extends Activity {
     private void buildScreen() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(7, 9, 11));
+        root.setBackgroundResource(R.drawable.app_background);
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(12), dp(8), dp(12), dp(8));
+        header.setBackgroundResource(R.drawable.header_bg);
 
         Button back = new Button(this);
         back.setText("←");
