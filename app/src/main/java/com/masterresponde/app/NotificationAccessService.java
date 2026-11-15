@@ -1865,7 +1865,8 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
-        if ("COMPLETE".equals(state)) {
+        if ("COMPLETE".equals(state)
+                && prefs.getBoolean("block_repeat_stv_reseller", true)) {
             MessageSettings.send(
                     this,
                     notification,
@@ -2232,7 +2233,8 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
-        if ("COMPLETE".equals(state)) {
+        if ("COMPLETE".equals(state)
+                && prefs.getBoolean("block_repeat_masterflix_reseller", true)) {
             MessageSettings.send(
                     this,
                     notification,
