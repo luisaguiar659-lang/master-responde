@@ -1991,28 +1991,12 @@ public class NotificationAccessService extends NotificationListenerService {
                 return true;
             }
 
-            String email =
-                    incoming == null
-                            ? ""
-                            : incoming.trim().toLowerCase(Locale.ROOT);
+            String email = extractEmailAddress(incoming);
 
-            if (!isValidEmail(email)) {
-                // Só consome a mensagem quando ela aparenta ser uma tentativa
-                // de informar e-mail. Mensagens comuns seguem para os demais
-                // gatilhos do MASTER RESPONDE, sem ficarem presas ao estado
-                // WAITING_EMAIL de uma conversa.
-                if (email.contains("@")) {
-                    MessageSettings.send(
-                            this,
-                            notification,
-                            prefs,
-                            MessageSettings.MSG_STV_RESELLER_INVALID_EMAIL,
-                            MessageSettings.DEFAULT_STV_RESELLER_INVALID_EMAIL
-                    );
-                    return true;
-                }
-
-                return false;
+            // Mantém o fluxo de cadastro isolado: mensagens que não contêm
+            // um e-mail válido não acionam regras privadas nem outros gatilhos.
+            if (email.isEmpty()) {
+                return true;
             }
 
             try {
@@ -2068,17 +2052,17 @@ public class NotificationAccessService extends NotificationListenerService {
                     );
 
             if (!started) {
-                BackgroundRuntime.clearResellerPending(
-                        prefs
-                );
+                // A solicitação e o e-mail já foram salvos. Mantém a tarefa
+                // pendente para o motor tentar novamente quando o painel
+                // compartilhado ficar livre, sem pedir o e-mail outra vez.
                 prefs.edit()
                         .putString(
                                 "stv_reseller_state_" + contactKey,
-                                "WAITING_EMAIL"
+                                "SEARCHING"
                         )
                         .putString(
                                 "last_stv_reseller_status",
-                                "Revenda: verificação ocupada"
+                                "Revenda STV+: aguardando o painel liberar para verificar o e-mail"
                         )
                         .apply();
 
@@ -2089,6 +2073,7 @@ public class NotificationAccessService extends NotificationListenerService {
                         MessageSettings.MSG_STV_RESELLER_BUSY,
                         MessageSettings.DEFAULT_STV_RESELLER_BUSY
                 );
+                scheduleResellerRecovery();
             }
 
             return true;
@@ -2357,20 +2342,12 @@ public class NotificationAccessService extends NotificationListenerService {
                 return true;
             }
 
-            String email =
-                    incoming == null
-                            ? ""
-                            : incoming.trim().toLowerCase(Locale.ROOT);
+            String email = extractEmailAddress(incoming);
 
-            if (!isValidEmail(email)) {
-                MessageSettings.send(
-                        this,
-                        notification,
-                        prefs,
-                        MessageSettings.MSG_RESELLER_INVALID_EMAIL,
-                        MessageSettings.DEFAULT_RESELLER_INVALID_EMAIL
-                );
-
+            // Enquanto aguarda o e-mail, não deixa mensagens comuns caírem
+            // nas regras/gatilhos gerais e gerarem respostas fora de contexto.
+            // Aceita também textos como "meu e-mail é nome@dominio.com".
+            if (email.isEmpty()) {
                 return true;
             }
 
@@ -2427,17 +2404,17 @@ public class NotificationAccessService extends NotificationListenerService {
                     );
 
             if (!started) {
-                BackgroundRuntime.clearResellerPending(
-                        prefs
-                );
+                // A solicitação e o e-mail já foram salvos. Mantém a tarefa
+                // pendente para o motor tentar novamente quando o painel
+                // compartilhado ficar livre, sem pedir o e-mail outra vez.
                 prefs.edit()
                         .putString(
                                 "reseller_state_" + contactKey,
-                                "WAITING_EMAIL"
+                                "SEARCHING"
                         )
                         .putString(
                                 "last_reseller_status",
-                                "Revenda: verificação ocupada"
+                                "Revenda: aguardando o painel liberar para verificar o e-mail"
                         )
                         .apply();
 
@@ -2448,6 +2425,7 @@ public class NotificationAccessService extends NotificationListenerService {
                         MessageSettings.MSG_RESELLER_BUSY,
                         MessageSettings.DEFAULT_RESELLER_BUSY
                 );
+                scheduleResellerRecovery();
             }
 
             return true;
@@ -2461,6 +2439,32 @@ public class NotificationAccessService extends NotificationListenerService {
         }
 
         return false;
+    }
+
+    private String extractEmailAddress(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "";
+        }
+
+        java.util.regex.Matcher matcher =
+                android.util.Patterns.EMAIL_ADDRESS.matcher(value);
+
+        if (!matcher.find()) {
+            return "";
+        }
+
+        String candidate = matcher.group();
+        if (candidate == null) {
+            return "";
+        }
+
+        candidate = candidate.trim().toLowerCase(Locale.ROOT);
+        while (!candidate.isEmpty()
+                && ".,;:!?)]}>".contains(candidate.substring(candidate.length() - 1))) {
+            candidate = candidate.substring(0, candidate.length() - 1);
+        }
+
+        return isValidEmail(candidate) ? candidate : "";
     }
 
     private boolean isValidEmail(
@@ -2738,6 +2742,13 @@ public class NotificationAccessService extends NotificationListenerService {
         }
 
         return false;
+    }
+
+    private void scheduleResellerRecovery() {
+        long[] delays = {2000L, 5000L, 10000L, 20000L};
+        for (long delay : delays) {
+            handler.postDelayed(this::recoverPendingAutomations, delay);
+        }
     }
 
     private void recoverPendingAutomations() {
