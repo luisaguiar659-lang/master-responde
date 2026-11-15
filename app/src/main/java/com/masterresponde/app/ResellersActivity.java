@@ -10,6 +10,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -282,6 +283,76 @@ public class ResellersActivity extends Activity {
                 false
         ));
         content.addView(stvCard);
+
+        gap(content, 12);
+
+        LinearLayout repeatControl = card();
+        repeatControl.addView(text(
+                "CONTROLE DE CADASTROS REPETIDOS",
+                11,
+                Color.rgb(255, 150, 0),
+                true
+        ));
+        repeatControl.addView(text(
+                "Escolha separadamente se o mesmo WhatsApp poderá iniciar outro cadastro depois que já tiver uma revenda confirmada.",
+                12,
+                Color.rgb(150, 160, 170),
+                false
+        ));
+
+        Switch masterRepeatSwitch = new Switch(this);
+        masterRepeatSwitch.setText("Bloquear novo cadastro MASTERFLIX");
+        masterRepeatSwitch.setTextColor(Color.WHITE);
+        masterRepeatSwitch.setTextSize(14);
+        masterRepeatSwitch.setChecked(prefs.getBoolean(
+                "block_repeat_masterflix_reseller",
+                true
+        ));
+        masterRepeatSwitch.setOnCheckedChangeListener((button, checked) -> {
+            prefs.edit().putBoolean(
+                    "block_repeat_masterflix_reseller",
+                    checked
+            ).apply();
+            Toast.makeText(
+                    this,
+                    checked
+                            ? "Bloqueio de cadastro repetido MASTERFLIX ativado."
+                            : "Novo cadastro MASTERFLIX liberado.",
+                    Toast.LENGTH_SHORT
+            ).show();
+        });
+        repeatControl.addView(masterRepeatSwitch);
+
+        Switch stvRepeatSwitch = new Switch(this);
+        stvRepeatSwitch.setText("Bloquear novo cadastro STV+");
+        stvRepeatSwitch.setTextColor(Color.WHITE);
+        stvRepeatSwitch.setTextSize(14);
+        stvRepeatSwitch.setChecked(stvPrefs.getBoolean(
+                "block_repeat_stv_reseller",
+                true
+        ));
+        stvRepeatSwitch.setOnCheckedChangeListener((button, checked) -> {
+            stvPrefs.edit().putBoolean(
+                    "block_repeat_stv_reseller",
+                    checked
+            ).apply();
+            Toast.makeText(
+                    this,
+                    checked
+                            ? "Bloqueio de cadastro repetido STV+ ativado."
+                            : "Novo cadastro STV+ liberado.",
+                    Toast.LENGTH_SHORT
+            ).show();
+        });
+        repeatControl.addView(stvRepeatSwitch);
+
+        repeatControl.addView(text(
+                "ATIVADO: impede outro cadastro pelo mesmo WhatsApp. DESATIVADO: permite iniciar novamente o fluxo e verificar outro e-mail. A configuração de cada módulo é independente.",
+                12,
+                Color.rgb(150, 160, 170),
+                false
+        ));
+        content.addView(repeatControl);
 
         gap(content, 12);
 
