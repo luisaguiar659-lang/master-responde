@@ -440,77 +440,67 @@ public class MasterflixResellerAutomation {
     }
 
     private void searchExactEmail() {
-        if (finished
-                || webView == null) {
+        if (finished || webView == null) {
             return;
         }
 
         searchAttempts++;
 
-        String emailJson =
-                JSONObject.quote(
-                        email
-                );
-
+        String emailJson = JSONObject.quote(email);
         String script =
                 "(function(){" +
-                        "var wanted=" + emailJson + ";" +
-
-                        "function visible(el){" +
-                        "if(!el)return false;" +
-                        "var r=el.getBoundingClientRect();" +
-                        "var st=getComputedStyle(el);" +
-                        "return r.width>0&&r.height>0" +
-                        "&&st.display!=='none'" +
-                        "&&st.visibility!=='hidden';" +
-                        "}" +
-
-                        "function setValue(el,v){" +
-                        "if(!el)return false;" +
-                        "try{" +
-                        "var proto=el.tagName==='TEXTAREA'" +
-                        "?HTMLTextAreaElement.prototype" +
-                        ":HTMLInputElement.prototype;" +
-                        "var setter=Object.getOwnPropertyDescriptor(proto,'value').set;" +
-                        "setter.call(el,v);" +
-                        "}catch(e){el.value=v;}" +
-                        "el.dispatchEvent(new Event('input',{bubbles:true}));" +
-                        "el.dispatchEvent(new Event('change',{bubbles:true}));" +
-                        "el.dispatchEvent(new KeyboardEvent('keyup',{bubbles:true,key:'a'}));" +
-                        "return true;" +
-                        "}" +
-
-                        "var inputs=document.querySelectorAll('input,textarea');" +
-                        "var search=null;" +
-
-                        "for(var i=0;i<inputs.length;i++){" +
-                        "var el=inputs[i];" +
-                        "if(!visible(el))continue;" +
-                        "var hint=((el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')).toLowerCase();" +
-                        "var type=(el.type||'').toLowerCase();" +
-                        "if(type==='search'" +
-                        "||hint.indexOf('buscar')!==-1" +
-                        "||hint.indexOf('pesquisar')!==-1" +
-                        "||hint.indexOf('search')!==-1" +
-                        "||hint.indexOf('email')!==-1){" +
-                        "search=el;" +
-                        "break;" +
-                        "}" +
-                        "}" +
-
-                        "if(search){" +
-                        "setValue(search,wanted);" +
-                        "try{search.focus();}catch(e){}" +
-                        "}" +
-
-                        "return search?'search_set':'no_search';" +
-                        "})();";
+                "var wanted=" + emailJson + ";" +
+                "function visible(el){" +
+                "if(!el)return false;" +
+                "var r=el.getBoundingClientRect(),s=getComputedStyle(el);" +
+                "return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';" +
+                "}" +
+                "function setValue(el,v){" +
+                "try{" +
+                "var p=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;" +
+                "var d=Object.getOwnPropertyDescriptor(p,'value');" +
+                "if(d&&d.set)d.set.call(el,v);else el.value=v;" +
+                "}catch(e){el.value=v;}" +
+                "['input','change'].forEach(function(n){el.dispatchEvent(new Event(n,{bubbles:true}));});" +
+                "}" +
+                "var inputs=Array.prototype.slice.call(document.querySelectorAll('input,textarea')).filter(visible);" +
+                "var search=null,best=-1;" +
+                "for(var i=0;i<inputs.length;i++){" +
+                "var el=inputs[i],type=(el.type||'').toLowerCase();" +
+                "if(type==='password'||type==='hidden'||type==='checkbox'||type==='radio')continue;" +
+                "var hint=((el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.name||'')+' '+(el.id||'')).toLowerCase();" +
+                "var score=0;" +
+                "if(type==='search')score+=100;" +
+                "if(hint.indexOf('email')!==-1||hint.indexOf('e-mail')!==-1)score+=80;" +
+                "if(hint.indexOf('buscar')!==-1||hint.indexOf('pesquisar')!==-1||hint.indexOf('search')!==-1)score+=60;" +
+                "if(type==='text')score+=5;" +
+                "if(score>best){best=score;search=el;}" +
+                "}" +
+                "if(!search||best<5)return JSON.stringify({ok:false,reason:'campo de busca não localizado',inputs:inputs.length});" +
+                "setValue(search,wanted);" +
+                "try{search.focus();}catch(e){}" +
+                "var form=search.closest('form');" +
+                "var button=null;" +
+                "if(form){" +
+                "var buttons=form.querySelectorAll('button,[type=submit],[role=button]');" +
+                "for(var b=0;b<buttons.length;b++){" +
+                "var label=((buttons[b].innerText||'')+' '+(buttons[b].getAttribute('aria-label')||'')+' '+(buttons[b].title||'')).toLowerCase();" +
+                "if(/buscar|pesquisar|search|filtrar/.test(label)){button=buttons[b];break;}" +
+                "}" +
+                "}" +
+                "if(button&&visible(button)){button.click();}" +
+                "else{" +
+                "['keydown','keypress','keyup'].forEach(function(n){search.dispatchEvent(new KeyboardEvent(n,{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true}));});" +
+                "if(form&&form.requestSubmit){try{form.requestSubmit();}catch(e){}}" +
+                "}" +
+                "return JSON.stringify({ok:true,submitted:!!button||!!form});" +
+                "})();";
 
         webView.evaluateJavascript(
                 script,
                 value -> handler.postDelayed(
                         this::inspectExactEmail,
-                        700L
+                        1400L
                 )
         );
     }
