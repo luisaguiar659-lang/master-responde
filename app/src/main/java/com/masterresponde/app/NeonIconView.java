@@ -350,9 +350,21 @@ public class NeonIconView extends View {
                 line(c, 19, 5, 5, 19);
                 break;
             case "slashes":
-                stroke.setStrokeWidth(2.6f);
-                line(c, 5, 20, 12, 4);
-                line(c, 12, 20, 19, 4);
+                // dois paralelogramos preenchidos ( // ), como nos títulos do menu de referência
+                path.reset();
+                path.moveTo(2.5f, 20);
+                path.lineTo(8, 20);
+                path.lineTo(13.5f, 4);
+                path.lineTo(8, 4);
+                path.close();
+                c.drawPath(path, fill);
+                path.reset();
+                path.moveTo(11, 20);
+                path.lineTo(16.5f, 20);
+                path.lineTo(22, 4);
+                path.lineTo(16.5f, 4);
+                path.close();
+                c.drawPath(path, fill);
                 break;
             default:
                 circle(c, 12, 12, 6);

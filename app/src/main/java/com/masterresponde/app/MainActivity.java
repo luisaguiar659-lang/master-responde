@@ -2,10 +2,10 @@ package com.masterresponde.app;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
@@ -13,6 +13,8 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -24,7 +26,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -49,8 +50,23 @@ public class MainActivity extends Activity {
     private static final int GREY = Color.rgb(145, 158, 172);
     private static final int PANEL_EDGE = Color.rgb(8, 78, 120);
 
+    private static final int PERIOD_TODAY = 0;
+    private static final int PERIOD_WEEK = 1;
+    private static final int PERIOD_ALL = 2;
+    private static final long DAY_MS = 86400000L;
+    private static final long REFRESH_MS = 4000L;
+
     private LinearLayout content;
     private SharedPreferences prefs;
+    private final Handler ui = new Handler(Looper.getMainLooper());
+    private final Runnable ticker = new Runnable() {
+        @Override
+        public void run() {
+            refreshStatus();
+            refreshData();
+            ui.postDelayed(this, REFRESH_MS);
+        }
+    };
 
     private TextView dashboardBotBadge;
     private View bellDot;
@@ -60,22 +76,38 @@ public class MainActivity extends Activity {
     private Chip stvChip;
     private Chip engineChip;
 
-    private Switch botSwitch;
-    private boolean skipNextRebuild;
+    private NeonToggleView botToggle;
+
+    // Dashboard (atualizados no lugar, sem recriar a tela)
+    private TextView tvReceived;
+    private TextView tvSent;
+    private TextView tvErrors;
+    private TextView tvRingSuffix;
+    private NeonRingView ring;
+    private NeonBarChartView chart;
+    private TextView tvSumTotal;
+    private TextView tvSumToday;
+    private TextView tvSumTests;
+    private TextView tvSumResellers;
+    private final TextView[] periodTabs = new TextView[3];
+    private int period = PERIOD_TODAY;
+    private long lastRebindAt;
 
     private FrameLayout menuOverlay;
     private ScrollView drawerScroll;
     private LinearLayout drawerPanel;
     private int drawerWidth;
 
-    /** Pílula de status: bolinha colorida + texto. */
-    private static final class Chip {
+    /** Pílula de status: bolinha colorida + texto, com a cor da borda seguindo o estado. */
+    private final class Chip {
         final TextView label;
         final View dot;
+        final View pill;
 
-        Chip(TextView label, View dot) {
+        Chip(TextView label, View dot, View pill) {
             this.label = label;
             this.dot = dot;
+            this.pill = pill;
         }
 
         void set(String text, int color) {
@@ -84,6 +116,7 @@ public class MainActivity extends Activity {
             d.setShape(GradientDrawable.OVAL);
             d.setColor(color);
             dot.setBackground(d);
+            pill.setBackground(roundedBackground(tint(color, 0.16f), tint(color, 0.55f), 12, 1));
         }
     }
 
@@ -134,15 +167,8 @@ public class MainActivity extends Activity {
         }
 
         if (content != null) {
-            // Atualiza números e gráfico ao voltar de outra tela
-            if (skipNextRebuild) {
-                skipNextRebuild = false;
-            } else {
-                buildDashboard();
-            }
-
-            refreshStatus();
-            content.postDelayed(this::refreshStatus, 1200L);
+            ui.removeCallbacks(ticker);
+            ticker.run();
 
             boolean returnToMenu = prefs.getBoolean("return_to_menu_after_child", false);
 
@@ -154,6 +180,12 @@ public class MainActivity extends Activity {
                 }
             }
         }
+    }
+
+    @Override
+    protected void onPause() {
+        ui.removeCallbacks(ticker);
+        super.onPause();
     }
 
     @Override
@@ -181,7 +213,7 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
 
-        root.addView(buildHeader(), new LinearLayout.LayoutParams(-1, dp(66)));
+        root.addView(buildHeader(), new LinearLayout.LayoutParams(-1, dp(72)));
 
         View line = new View(this);
         line.setBackgroundResource(R.drawable.line);
@@ -205,26 +237,28 @@ public class MainActivity extends Activity {
         buildDrawer(shell);
         setContentView(shell);
 
-        skipNextRebuild = true;
         buildDashboard();
+        refreshData();
     }
 
     private View buildHeader() {
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(6), 0, dp(6), 0);
-
+        FrameLayout header = new FrameLayout(this);
         GradientDrawable bg = new GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{Color.rgb(2, 12, 28), Color.rgb(4, 44, 84), Color.rgb(3, 14, 32), Color.rgb(70, 36, 6)});
+                new int[]{Color.rgb(2, 12, 28), Color.rgb(4, 40, 78), Color.rgb(3, 14, 32), Color.rgb(60, 32, 6)});
         header.setBackground(bg);
+        header.addView(new NeonAccentView(this), new FrameLayout.LayoutParams(-1, -1));
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(6), 0, dp(6), 0);
 
         FrameLayout menuBtn = new FrameLayout(this);
         menuBtn.addView(icon("menu", Color.WHITE), new FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER));
         menuBtn.setContentDescription("Abrir menu");
         menuBtn.setOnClickListener(v -> openMenu());
-        header.addView(menuBtn, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        row.addView(menuBtn, new LinearLayout.LayoutParams(dp(46), dp(46)));
 
         LinearLayout center = new LinearLayout(this);
         center.setOrientation(LinearLayout.HORIZONTAL);
@@ -233,14 +267,14 @@ public class MainActivity extends Activity {
         ImageView head = new ImageView(this);
         head.setImageResource(R.drawable.mascot_head);
         head.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        center.addView(head, new LinearLayout.LayoutParams(dp(58), dp(42)));
+        center.addView(head, new LinearLayout.LayoutParams(dp(64), dp(52)));
 
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
         titles.setPadding(dp(6), 0, 0, 0);
-        TextView title = brandTitle(20, true);
+        TextView title = brandTitle(21, true);
         title.setMaxLines(1);
-        autoFit(title, 12, 20);
+        autoFit(title, 12, 21);
         titles.addView(title, new LinearLayout.LayoutParams(-1, -2));
         TextView sub = text("Central Inteligente de Atendimento", 11, CYAN, false);
         sub.setMaxLines(1);
@@ -248,7 +282,7 @@ public class MainActivity extends Activity {
         titles.addView(sub, new LinearLayout.LayoutParams(-1, -2));
         center.addView(titles, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        header.addView(center, new LinearLayout.LayoutParams(0, -1, 1f));
+        row.addView(center, new LinearLayout.LayoutParams(0, -1, 1f));
 
         FrameLayout bell = new FrameLayout(this);
         bell.addView(icon("bell", Color.WHITE), new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER));
@@ -264,8 +298,9 @@ public class MainActivity extends Activity {
         bell.addView(bellDot, dotLp);
         bell.setContentDescription("Histórico de eventos");
         bell.setOnClickListener(v -> startActivity(new Intent(this, EventHistoryActivity.class)));
-        header.addView(bell, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        row.addView(bell, new LinearLayout.LayoutParams(dp(46), dp(46)));
 
+        header.addView(row, new FrameLayout.LayoutParams(-1, -1));
         return header;
     }
 
@@ -306,9 +341,9 @@ public class MainActivity extends Activity {
         brand.setOrientation(LinearLayout.VERTICAL);
         brand.setGravity(Gravity.CENTER_VERTICAL);
         TextView master = text("MASTER", 24, Color.WHITE, true);
-        master.setTypeface(Typeface.create("sans-serif-black", Typeface.ITALIC));
+        master.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
         TextView responde = text("RESPONDE", 24, ORANGE, true);
-        responde.setTypeface(Typeface.create("sans-serif-black", Typeface.ITALIC));
+        responde.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
         master.setMaxLines(1);
         responde.setMaxLines(1);
         autoFit(master, 14, 24);
@@ -320,6 +355,10 @@ public class MainActivity extends Activity {
         brandLp.leftMargin = dp(108);
         brandLp.rightMargin = dp(34);
         banner.addView(brand, brandLp);
+
+        NeonAccentView stripes = new NeonAccentView(this);
+        stripes.setCompact(true);
+        banner.addView(stripes, new FrameLayout.LayoutParams(dp(70), -1, Gravity.END));
 
         FrameLayout close = new FrameLayout(this);
         close.addView(icon("close", Color.WHITE), new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER));
@@ -335,11 +374,8 @@ public class MainActivity extends Activity {
         shortcuts.setOrientation(LinearLayout.HORIZONTAL);
         drawerShortcut(shortcuts, "play", PURPLE, "STV+", true, () ->
                 launchFromMenu(new Intent(this, StvPlusActivity.class)));
-        drawerShortcut(shortcuts, "play", ORANGE, "GERAR\nTESTE", false, () -> {
-            Intent intent = new Intent(this, MasterflixActivity.class);
-            intent.putExtra("auto_generate_test", true);
-            launchFromMenu(intent);
-        });
+        drawerShortcut(shortcuts, "play", ORANGE, "GERAR\nTESTE", false, () ->
+                confirmGenerateTest("MasterFlix", MasterflixActivity.class, true));
         drawerShortcut(shortcuts, "person_add", GREEN, "NOVA\nREVENDA", false, () ->
                 launchFromMenu(new Intent(this, ResellersActivity.class)));
         shortcutsBox.addView(shortcuts, new LinearLayout.LayoutParams(-1, dp(88)));
@@ -349,6 +385,8 @@ public class MainActivity extends Activity {
         drawerLink(modules, "Regras", "book", CYAN, () -> launchFromMenu(new Intent(this, RulesActivity.class)));
         drawerLink(modules, "Revendas", "people", CYAN, () -> launchFromMenu(new Intent(this, ResellersActivity.class)));
         drawerLink(modules, "Mensagens e Tempos", "msgtext", CYAN, () -> launchFromMenu(new Intent(this, MessageSettingsActivity.class)));
+        drawerLink(modules, "Grupos", "people", CYAN, () -> launchFromMenu(new Intent(this, GroupsActivity.class)));
+        drawerLink(modules, "Categorias", "layers", CYAN, () -> launchFromMenu(new Intent(this, CategoriesActivity.class)));
 
         // Controle e diagnóstico
         LinearLayout control = drawerBox("gear", ORANGE, "CONTROLE E DIAGNÓSTICO", ORANGE);
@@ -379,6 +417,10 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams settingsLp = new LinearLayout.LayoutParams(-1, dp(54));
         settingsLp.topMargin = dp(14);
         drawerPanel.addView(settings, settingsLp);
+
+        TextView version = text("MASTER RESPONDE  •  v" + appVersion(), 10.5f, Color.rgb(120, 145, 170), false);
+        version.setGravity(Gravity.CENTER);
+        drawerPanel.addView(version, lp(-1, -2, 0, dp(14), 0, 0));
 
         menuOverlay.addView(drawerScroll, new FrameLayout.LayoutParams(drawerWidth, -1, Gravity.START));
         shell.addView(menuOverlay, new FrameLayout.LayoutParams(-1, -1));
@@ -477,6 +519,32 @@ public class MainActivity extends Activity {
         parent.addView(row, lp);
     }
 
+    private String appVersion() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Pede confirmação antes de gerar um teste, para um toque acidental não disparar a automação. */
+    private void confirmGenerateTest(String name, Class<?> target, boolean fromMenu) {
+        new AlertDialog.Builder(this)
+                .setTitle("Gerar teste " + name)
+                .setMessage("Iniciar a geração automática de um teste agora?")
+                .setPositiveButton("Gerar", (dialog, which) -> {
+                    Intent intent = new Intent(this, target);
+                    intent.putExtra("auto_generate_test", true);
+                    if (fromMenu) {
+                        launchFromMenu(intent);
+                    } else {
+                        startActivity(intent);
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
     private void openMenu() {
         if (menuOverlay == null) {
             return;
@@ -512,65 +580,10 @@ public class MainActivity extends Activity {
 
     private void buildDashboard() {
         content.removeAllViews();
-
-        // ---- Dados ----
-        org.json.JSONArray events = EventLog.read(this);
-        int received = 0;
-        int sent = 0;
-        int errors = 0;
-        int receivedToday = 0;
-        int sentToday = 0;
-        int errorsToday = 0;
-        int tests = 0;
-        int[] daily = new int[7];
-        long now = System.currentTimeMillis();
-        long dayMs = 86400000L;
-        long todayStart = startOfDay(now);
-        for (int i = 0; i < events.length(); i++) {
-            org.json.JSONObject event = events.optJSONObject(i);
-            if (event == null) {
-                continue;
-            }
-            String type = event.optString("type");
-            long time = event.optLong("time", 0L);
-            boolean last24h = time > 0 && now - time >= 0 && now - time < dayMs;
-            if ("MENSAGEM RECEBIDA".equals(type)) {
-                received++;
-                if (last24h) {
-                    receivedToday++;
-                }
-                if (time > 0) {
-                    int ago = (int) Math.round((todayStart - startOfDay(time)) / (double) dayMs);
-                    if (ago >= 0 && ago < 7) {
-                        daily[6 - ago]++;
-                    }
-                }
-            }
-            if ("RESPOSTA ENVIADA".equals(type)) {
-                sent++;
-                if (last24h) {
-                    sentToday++;
-                }
-                if ("TESTE ENVIADO".equals(event.optString("result"))) {
-                    tests++;
-                }
-            }
-            if ("FALHA".equals(type)) {
-                errors++;
-                if (last24h) {
-                    errorsToday++;
-                }
-            }
-        }
-        int rateToday = receivedToday <= 0 ? 0 : Math.min(100, Math.round(sentToday * 100f / receivedToday));
-        int resellers = countResellers();
-
-        if (bellDot != null) {
-            bellDot.setVisibility(errorsToday > 0 ? View.VISIBLE : View.GONE);
-        }
+        period = Math.max(0, Math.min(2, prefs.getInt("dash_period", PERIOD_TODAY)));
 
         // ---- Hero ----
-        content.addView(buildHero(), lp(-1, dp(144), 0, 0, 0, dp(10)));
+        content.addView(buildHero(), lp(-1, dp(150), 0, 0, 0, dp(10)));
 
         // ---- Status do sistema ----
         LinearLayout statusBox = sectionBox();
@@ -593,19 +606,21 @@ public class MainActivity extends Activity {
 
         LinearLayout activityBox = sectionBox();
         activityBox.addView(sectionHeader("bars", BLUE, "ATIVIDADE DO ATENDIMENTO", ""));
+        activityBox.addView(buildPeriodTabs(), lp(-1, dp(24), 0, dp(6), 0, 0));
         LinearLayout metrics = new LinearLayout(this);
         metrics.setOrientation(LinearLayout.HORIZONTAL);
-        addMetric(metrics, "chat", BLUE, "Recebidas", String.valueOf(received), BLUE);
-        addMetric(metrics, "reply", GREEN, "Respondidas", String.valueOf(sent), GREEN);
-        addMetric(metrics, "warning", RED, "Falhas", String.valueOf(errors), RED);
-        activityBox.addView(metrics, lp(-1, dp(96), 0, dp(8), 0, 0));
+        tvReceived = addMetric(metrics, "chat", BLUE, "Recebidas", BLUE);
+        tvSent = addMetric(metrics, "reply", GREEN, "Respondidas", GREEN);
+        tvErrors = addMetric(metrics, "warning", RED, "Falhas", RED);
+        activityBox.addView(metrics, lp(-1, dp(92), 0, dp(8), 0, 0));
         activityRow.addView(activityBox, new LinearLayout.LayoutParams(0, -1, 1.62f));
 
         LinearLayout perfBox = sectionBox();
-        perfBox.addView(sectionHeader("stopwatch", CYAN, "DESEMPENHO", "(HOJE)"));
-        NeonRingView ring = new NeonRingView(this);
-        ring.setPercent(rateToday);
-        perfBox.addView(ring, lp(-1, dp(98), 0, dp(6), 0, 0));
+        View perfHeader = sectionHeader("stopwatch", CYAN, "DESEMPENHO", "(HOJE)");
+        tvRingSuffix = (TextView) ((LinearLayout) perfHeader).getChildAt(1);
+        perfBox.addView(perfHeader);
+        ring = new NeonRingView(this);
+        perfBox.addView(ring, lp(-1, dp(128), 0, dp(6), 0, 0));
         LinearLayout.LayoutParams perfLp = new LinearLayout.LayoutParams(0, -1, 1f);
         perfLp.leftMargin = dp(8);
         activityRow.addView(perfBox, perfLp);
@@ -618,9 +633,9 @@ public class MainActivity extends Activity {
         LinearLayout quickRow = new LinearLayout(this);
         quickRow.setOrientation(LinearLayout.HORIZONTAL);
         addQuick(quickRow, "play", BLUE, "Gerar Teste\nMasterFlix",
-                () -> startActivity(new Intent(this, MasterflixActivity.class)));
+                () -> confirmGenerateTest("MasterFlix", MasterflixActivity.class, false));
         addQuick(quickRow, "play", PURPLE, "Gerar Teste\nSTV+",
-                () -> startActivity(new Intent(this, StvPlusActivity.class)));
+                () -> confirmGenerateTest("STV+", StvPlusActivity.class, false));
         addQuick(quickRow, "person_add", ORANGE, "Cadastrar\nRevenda",
                 () -> startActivity(new Intent(this, ResellersActivity.class)));
         addQuick(quickRow, "people", CYAN, "Clientes\nAtivos",
@@ -636,24 +651,114 @@ public class MainActivity extends Activity {
 
         LinearLayout summaryBox = sectionBox();
         summaryBox.addView(sectionHeader("clipboard", CYAN, "RESUMO GERAL", ""));
-        addSummaryRow(summaryBox, "chat", CYAN, "Total de atendimentos", String.valueOf(received));
-        addSummaryRow(summaryBox, "person", GREEN, "Clientes ativos", String.valueOf(receivedToday));
-        addSummaryRow(summaryBox, "key", GREEN, "Testes gerados", String.valueOf(tests));
-        addSummaryRow(summaryBox, "people", GREEN, "Revendas cadastradas", String.valueOf(resellers));
+        tvSumTotal = addSummaryRow(summaryBox, "chat", CYAN, "Total de atendimentos");
+        tvSumToday = addSummaryRow(summaryBox, "person", GREEN, "Atendimentos hoje");
+        tvSumTests = addSummaryRow(summaryBox, "key", GREEN, "Testes gerados");
+        tvSumResellers = addSummaryRow(summaryBox, "people", GREEN, "Revendas cadastradas");
         bottomRow.addView(summaryBox, new LinearLayout.LayoutParams(0, -1, 1.1f));
 
         LinearLayout chartBox = sectionBox();
         chartBox.addView(sectionHeader("bars", CYAN, "USO DIÁRIO", "(ÚLTIMOS 7 DIAS)"));
-        NeonBarChartView chart = new NeonBarChartView(this);
-        chart.setData(daily, lastSevenDayLabels());
-        chartBox.addView(chart, lp(-1, dp(124), 0, dp(8), 0, 0));
+        chart = new NeonBarChartView(this);
+        chartBox.addView(chart, lp(-1, dp(150), 0, dp(8), 0, 0));
         LinearLayout.LayoutParams chartLp = new LinearLayout.LayoutParams(0, -1, 1f);
         chartLp.leftMargin = dp(8);
         bottomRow.addView(chartBox, chartLp);
 
         content.addView(bottomRow, lp(-1, -2, 0, 0, 0, 0));
 
-        refreshStatus();
+        applyPeriodStyles();
+    }
+
+    /** Seletor Hoje / 7 dias / Total para o card de atividade. */
+    private View buildPeriodTabs() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setBackground(roundedBackground(Color.rgb(4, 16, 34), Color.rgb(14, 60, 96), 12, 1));
+        row.setPadding(dp(2), dp(2), dp(2), dp(2));
+        String[] names = {"HOJE", "7 DIAS", "TOTAL"};
+        for (int i = 0; i < 3; i++) {
+            final int index = i;
+            TextView tab = text(names[i], 10, Color.rgb(170, 195, 215), true);
+            tab.setGravity(Gravity.CENTER);
+            tab.setMaxLines(1);
+            tab.setOnClickListener(v -> {
+                period = index;
+                prefs.edit().putInt("dash_period", index).apply();
+                applyPeriodStyles();
+                refreshData();
+            });
+            periodTabs[i] = tab;
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, -1, 1f);
+            tlp.setMargins(dp(1), 0, dp(1), 0);
+            row.addView(tab, tlp);
+        }
+        return row;
+    }
+
+    private void applyPeriodStyles() {
+        for (int i = 0; i < 3; i++) {
+            TextView tab = periodTabs[i];
+            if (tab == null) {
+                continue;
+            }
+            boolean on = i == period;
+            tab.setTextColor(on ? Color.WHITE : Color.rgb(170, 195, 215));
+            tab.setBackground(on ? roundedBackground(tint(BLUE, 0.55f), BLUE, 10, 1) : null);
+        }
+        if (tvRingSuffix != null) {
+            String[] names = {"DESEMPENHO (HOJE)", "DESEMPENHO (7 DIAS)", "DESEMPENHO (TOTAL)"};
+            SpannableString t = new SpannableString(names[period]);
+            t.setSpan(new ForegroundColorSpan(Color.rgb(175, 195, 215)), 10, t.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            tvRingSuffix.setText(t);
+        }
+    }
+
+    /** Lê os contadores permanentes e atualiza números, anel e gráfico no lugar. */
+    private void refreshData() {
+        if (tvReceived == null) {
+            return;
+        }
+
+        EventLog.Stats stats = EventLog.stats(this);
+        long now = System.currentTimeMillis();
+
+        int[] today = stats.day(now);
+        int[] week = new int[4];
+        int[] daily = new int[7];
+        for (int ago = 0; ago < 7; ago++) {
+            int[] d = stats.day(daysAgo(now, ago));
+            for (int k = 0; k < 4; k++) {
+                week[k] += d[k];
+            }
+            daily[6 - ago] = d[0];
+        }
+        int[] shown = period == PERIOD_TODAY ? today : (period == PERIOD_WEEK ? week : stats.total);
+
+        tvReceived.setText(String.valueOf(shown[0]));
+        tvSent.setText(String.valueOf(shown[1]));
+        tvErrors.setText(String.valueOf(shown[2]));
+
+        int rate = shown[0] <= 0 ? 0 : Math.min(100, Math.round(shown[1] * 100f / shown[0]));
+        ring.setPercent(rate);
+
+        tvSumTotal.setText(String.valueOf(stats.total[0]));
+        tvSumToday.setText(String.valueOf(today[0]));
+        tvSumTests.setText(String.valueOf(stats.total[3]));
+        tvSumResellers.setText(String.valueOf(countResellers()));
+
+        chart.setData(daily, lastSevenDayLabels());
+
+        if (bellDot != null) {
+            bellDot.setVisibility(today[2] > 0 ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private long daysAgo(long now, int ago) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(now);
+        c.add(Calendar.DAY_OF_YEAR, -ago);
+        return c.getTimeInMillis();
     }
 
     private View buildHero() {
@@ -665,13 +770,13 @@ public class MainActivity extends Activity {
                 new int[]{ORANGE, Color.rgb(90, 80, 120), CYAN},
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 radii(20, 20, 20, 20), Color.rgb(8, 22, 46), Color.rgb(3, 10, 26), 2));
-        frame.addView(panel, new FrameLayout.LayoutParams(-1, dp(118), Gravity.BOTTOM));
+        frame.addView(panel, new FrameLayout.LayoutParams(-1, dp(126), Gravity.BOTTOM));
 
         ImageView mascot = new ImageView(this);
         mascot.setImageResource(R.drawable.mascot_robot);
-        mascot.setScaleType(ImageView.ScaleType.FIT_END);
+        mascot.setScaleType(ImageView.ScaleType.FIT_START);
         mascot.setAdjustViewBounds(true);
-        frame.addView(mascot, new FrameLayout.LayoutParams(dp(146), dp(128), Gravity.BOTTOM | Gravity.START));
+        frame.addView(mascot, new FrameLayout.LayoutParams(dp(140), dp(134), Gravity.BOTTOM | Gravity.START));
 
         LinearLayout texts = new LinearLayout(this);
         texts.setOrientation(LinearLayout.VERTICAL);
@@ -679,15 +784,15 @@ public class MainActivity extends Activity {
         TextView eyebrow = text("CENTRAL DE AUTOMAÇÃO", 9, Color.rgb(190, 215, 235), false);
         eyebrow.setLetterSpacing(0.14f);
         eyebrow.setMaxLines(1);
-        texts.addView(eyebrow);
-        TextView title = brandTitle(24, false);
+        texts.addView(eyebrow, lp(-1, -2, 0, 0, dp(96), 0));
+        TextView title = brandTitle(26, false);
         title.setMaxLines(1);
-        autoFit(title, 14, 24);
-        texts.addView(title, lp(-1, -2, 0, dp(2), 0, dp(2)));
+        autoFit(title, 14, 26);
+        texts.addView(title, lp(-1, -2, 0, dp(3), 0, dp(3)));
         TextView sub = text("Atendimentos automáticos, testes e gestão de revendas em um só lugar.", 11.5f, Color.rgb(205, 222, 238), false);
-        texts.addView(sub, lp(-1, -2, 0, 0, dp(84), 0));
+        texts.addView(sub, lp(-1, -2, 0, 0, dp(78), 0));
         FrameLayout.LayoutParams textsLp = new FrameLayout.LayoutParams(-1, -1);
-        textsLp.leftMargin = dp(140);
+        textsLp.leftMargin = dp(144);
         textsLp.rightMargin = dp(12);
         textsLp.topMargin = dp(6);
         textsLp.bottomMargin = dp(8);
@@ -703,10 +808,9 @@ public class MainActivity extends Activity {
         badgeLp.rightMargin = dp(10);
         panel.addView(dashboardBotBadge, badgeLp);
 
-        botSwitch = new Switch(this);
-        botSwitch.setChecked(enabled);
-        styleSwitch(botSwitch);
-        botSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
+        botToggle = new NeonToggleView(this);
+        botToggle.setCheckedSilently(enabled);
+        botToggle.setOnChangeListener(checked -> {
             prefs.edit().putBoolean("bot_enabled", checked).apply();
             if (checked) {
                 BackgroundRuntime.requestListenerRebind(this);
@@ -714,29 +818,21 @@ public class MainActivity extends Activity {
             refreshStatus();
             Toast.makeText(this, checked ? "Bot ativado." : "Bot desativado.", Toast.LENGTH_SHORT).show();
         });
-        FrameLayout.LayoutParams swLp = new FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.BOTTOM);
-        swLp.rightMargin = dp(16);
-        swLp.bottomMargin = dp(26);
-        panel.addView(botSwitch, swLp);
+        FrameLayout.LayoutParams swLp = new FrameLayout.LayoutParams(dp(64), dp(34), Gravity.END | Gravity.BOTTOM);
+        swLp.rightMargin = dp(14);
+        swLp.bottomMargin = dp(22);
+        panel.addView(botToggle, swLp);
 
         View underline = new View(this);
         underline.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                 new int[]{ORANGE, Color.argb(0, 255, 145, 20)}));
         FrameLayout.LayoutParams ulLp = new FrameLayout.LayoutParams(-1, dp(2), Gravity.BOTTOM);
-        ulLp.leftMargin = dp(140);
-        ulLp.rightMargin = dp(70);
+        ulLp.leftMargin = dp(144);
+        ulLp.rightMargin = dp(84);
         ulLp.bottomMargin = dp(10);
         panel.addView(underline, ulLp);
 
         return frame;
-    }
-
-    private void styleSwitch(Switch s) {
-        s.setScaleX(1.25f);
-        s.setScaleY(1.25f);
-        int[][] states = new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}};
-        s.setTrackTintList(new ColorStateList(states, new int[]{GREEN, Color.rgb(60, 72, 88)}));
-        s.setThumbTintList(new ColorStateList(states, new int[]{Color.WHITE, Color.rgb(200, 210, 220)}));
     }
 
     private LinearLayout sectionBox() {
@@ -824,10 +920,10 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(104), 1f);
         lp.setMargins(dp(2), 0, dp(2), 0);
         parent.addView(card, lp);
-        return new Chip(state, dot);
+        return new Chip(state, dot, pill);
     }
 
-    private void addMetric(LinearLayout parent, String iconName, int iconColor, String label, String value, int accent) {
+    private TextView addMetric(LinearLayout parent, String iconName, int iconColor, String label, int accent) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER);
@@ -842,7 +938,7 @@ public class MainActivity extends Activity {
         l.setMaxLines(1);
         autoFit(l, 7, 11);
         box.addView(l, lp(-1, -2, 0, dp(2), 0, 0));
-        TextView v = text(value, 24, accent, true);
+        TextView v = text("0", 24, accent, true);
         v.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
         v.setGravity(Gravity.CENTER);
         v.setMaxLines(1);
@@ -851,6 +947,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1f);
         lp.setMargins(dp(2), 0, dp(2), 0);
         parent.addView(box, lp);
+        return v;
     }
 
     private void addQuick(LinearLayout parent, String iconName, int accent, String label, Runnable action) {
@@ -878,7 +975,7 @@ public class MainActivity extends Activity {
         parent.addView(tile, lp);
     }
 
-    private void addSummaryRow(LinearLayout parent, String iconName, int iconColor, String label, String value) {
+    private TextView addSummaryRow(LinearLayout parent, String iconName, int iconColor, String label) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -890,10 +987,11 @@ public class MainActivity extends Activity {
         l.setMaxLines(1);
         autoFit(l, 7, 11);
         row.addView(l, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView v = text(value, 13, Color.WHITE, true);
+        TextView v = text("0", 13, Color.WHITE, true);
         v.setMaxLines(1);
         row.addView(v);
         parent.addView(row, lp(-1, dp(35), 0, dp(6), 0, 0));
+        return v;
     }
 
     private void buildBottomNavigation(LinearLayout root) {
@@ -927,6 +1025,7 @@ public class MainActivity extends Activity {
                     new int[]{ORANGE, Color.rgb(255, 190, 60)},
                     GradientDrawable.Orientation.TL_BR,
                     radii(14, 14, 14, 14), Color.rgb(60, 32, 8), Color.rgb(26, 16, 10), 2));
+            glow(item, ORANGE);
         }
         item.addView(icon(iconName, color), new LinearLayout.LayoutParams(dp(24), dp(24)));
         TextView caption = text(label, 9, selected ? ORANGE : Color.rgb(210, 224, 236), false);
@@ -958,6 +1057,10 @@ public class MainActivity extends Activity {
             botChip.set(enabled ? "Ativo" : "Desativado", enabled ? GREEN : GREY);
         }
 
+        if (botToggle != null && botToggle.isChecked() != enabled) {
+            botToggle.setCheckedSilently(enabled);
+        }
+
         if (dashboardBotBadge != null) {
             dashboardBotBadge.setText(enabled ? "● BOT ATIVO" : "● BOT PAUSADO");
             dashboardBotBadge.setTextColor(enabled ? GREEN : ORANGE);
@@ -974,7 +1077,11 @@ public class MainActivity extends Activity {
                 waChip.set("Conectado", GREEN);
             } else {
                 waChip.set("Reconectando", ORANGE);
-                BackgroundRuntime.requestListenerRebind(this);
+                long nowMs = System.currentTimeMillis();
+                if (nowMs - lastRebindAt > 30000L) {
+                    lastRebindAt = nowMs;
+                    BackgroundRuntime.requestListenerRebind(this);
+                }
             }
         }
 
@@ -1122,7 +1229,7 @@ public class MainActivity extends Activity {
         s.setSpan(new ForegroundColorSpan(ORANGE), 7, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         TextView t = text("", size, Color.WHITE, true);
         t.setText(s);
-        t.setTypeface(Typeface.create("sans-serif-black", Typeface.ITALIC));
+        t.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
         return t;
     }
 
