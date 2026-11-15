@@ -144,7 +144,11 @@ final class NeonUi {
         Context c = v.getContext();
         if (v instanceof EditText) {
             EditText e = (EditText) v;
-            e.setBackgroundResource(R.drawable.input_bg);
+            GradientDrawable box = new GradientDrawable();
+            box.setColor(Color.rgb(4, 16, 31));
+            box.setCornerRadius(dp(c, 12));
+            box.setStroke(dp(c, 1), Color.rgb(26, 120, 180));
+            e.setBackground(box);
             e.setTextColor(Color.WHITE);
             e.setHintTextColor(Color.rgb(105, 135, 165));
             e.setPadding(dp(c, 12), dp(c, 10), dp(c, 12), dp(c, 10));
