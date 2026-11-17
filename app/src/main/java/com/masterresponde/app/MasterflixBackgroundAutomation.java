@@ -18,9 +18,6 @@ import java.util.Locale;
 
 public class MasterflixBackgroundAutomation {
 
-    private static final String DASHBOARD_URL =
-            "https://masterflix.sigmab.pro/#/dashboard";
-
     private static final String TEST_PRODUCT =
             "MASTERFLIX TESTE COMPLETO 1H";
 
@@ -162,7 +159,7 @@ public class MasterflixBackgroundAutomation {
             );
 
             webView.loadUrl(
-                    DASHBOARD_URL
+                    SigmaPanelConfig.dashboardUrl(context)
             );
 
             // Segurança contra fluxo preso para sempre.
