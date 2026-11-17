@@ -5,12 +5,19 @@ import android.content.SharedPreferences;
 
 public final class StvPanelConfig {
     public static final String DEFAULT_PANEL_NAME = "STV+";
-    public static final String DEFAULT_BASE_URL = "https://stvmais.sigma.vin";
+    public static final String DEFAULT_BASE_URL = "https://stvmais.sigma.st";
     private static final String PREFS = "master_responde_stv";
     private StvPanelConfig() {}
     public static SharedPreferences prefs(Context c) { return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
     public static String getPanelName(Context c) { return DEFAULT_PANEL_NAME; }
-    public static String getBaseUrl(Context c) { return normalizeBaseUrl(prefs(c).getString("base_url", DEFAULT_BASE_URL)); }
+    public static String getBaseUrl(Context c) {
+        String value = prefs(c).getString("base_url", DEFAULT_BASE_URL);
+        if ("https://stvmais.sigma.vin".equals(normalizeBaseUrl(value))) {
+            value = DEFAULT_BASE_URL;
+            prefs(c).edit().putString("base_url", DEFAULT_BASE_URL).apply();
+        }
+        return normalizeBaseUrl(value);
+    }
     public static String loginUrl(Context c) { return getBaseUrl(c) + "/#/sign-in?redirect=/dashboard"; }
     public static String dashboardUrl(Context c) { return getBaseUrl(c) + "/#/dashboard"; }
     public static String resellersUrl(Context c) { return getBaseUrl(c) + "/#/resellers"; }
