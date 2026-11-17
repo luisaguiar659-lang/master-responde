@@ -216,7 +216,7 @@ public class SigmaPanelSettingsActivity extends Activity {
 
         panel.addView(
                 note(
-                        "Exemplo: https://seudominio.sigmab.pro. As rotas de Login, Dashboard e Revendas são preenchidas automaticamente."
+                        "Exemplo: https://seudominio.sigma.st. As rotas de Login, Dashboard e Revendas são preenchidas automaticamente."
                 )
         );
 
