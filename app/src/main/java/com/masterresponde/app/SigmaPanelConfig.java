@@ -9,7 +9,7 @@ public final class SigmaPanelConfig {
             "MASTERFLIX";
 
     public static final String DEFAULT_BASE_URL =
-            "https://masterflix.sigmab.pro";
+            "https://masterflix.sigma.st";
 
     public static final String KEY_PANEL_NAME =
             "sigma_panel_name";
@@ -60,9 +60,18 @@ public final class SigmaPanelConfig {
                         DEFAULT_BASE_URL
                 );
 
-        return normalizeBaseUrl(
-                value
-        );
+        // Migra automaticamente o endereço padrão antigo, sem sobrescrever
+        // um endereço personalizado configurado pelo usuário.
+        if ("https://masterflix.sigmab.pro".equals(
+                normalizeBaseUrl(value)
+        )) {
+            value = DEFAULT_BASE_URL;
+            prefs(context).edit()
+                    .putString(KEY_BASE_URL, DEFAULT_BASE_URL)
+                    .apply();
+        }
+
+        return normalizeBaseUrl(value);
     }
 
     public static String getPreferredTest(
