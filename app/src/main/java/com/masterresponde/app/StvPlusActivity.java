@@ -21,6 +21,13 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceError;
+import android.webkit.WebChromeClient;
+import android.webkit.ConsoleMessage;
+import android.webkit.SslErrorHandler;
+import android.net.http.SslError;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -39,6 +46,7 @@ public class StvPlusActivity extends Activity {
     private EditText passField;
     private TextView sessionStatus;
     private TextView generationStatus;
+    private TextView networkStatus;
     private WebView webView;
     private boolean fullScreenPanelMode = false;
 
@@ -485,6 +493,15 @@ public class StvPlusActivity extends Activity {
 
         browserCard.addView(generationStatus);
 
+        networkStatus = text(
+                "Rede do painel: aguardando carregamento",
+                11,
+                Color.rgb(150, 160, 170),
+                false
+        );
+        networkStatus.setPadding(0, dp(4), 0, dp(8));
+        browserCard.addView(networkStatus);
+
         Button generateButton = actionButton(
                 "GERAR TESTE",
                 true
@@ -590,8 +607,50 @@ public class StvPlusActivity extends Activity {
                 "StvPlusBridge"
         );
 
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage message) {
+                if (message != null && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    Log.e("STV+WebView", "Console: " + message.message()
+                            + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
+                }
+                return true;
+            }
+        });
+
         webView.setWebViewClient(
                 new WebViewClient() {
+
+                    @Override
+                    public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                        super.onPageStarted(view, url, favicon);
+                        showNetworkStatus("Carregando: " + url, Color.rgb(0, 184, 255));
+                    }
+
+                    @Override
+                    public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                        super.onReceivedError(view, request, error);
+                        if (request != null && request.isForMainFrame() && error != null) {
+                            reportNetworkFailure("ERRO DE REDE", error.getErrorCode()
+                                    + " - " + error.getDescription(), request.getUrl().toString());
+                        }
+                    }
+
+                    @Override
+                    public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse response) {
+                        super.onReceivedHttpError(view, request, response);
+                        if (request != null && request.isForMainFrame() && response != null) {
+                            reportNetworkFailure("ERRO HTTP", "Status " + response.getStatusCode(), request.getUrl().toString());
+                        }
+                    }
+
+                    @Override
+                    public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+                        if (handler != null) handler.cancel();
+                        String failingUrl = error == null ? String.valueOf(view.getUrl()) : error.getUrl();
+                        String detail = error == null ? "Falha SSL sem detalhes" : "Código SSL " + error.getPrimaryError();
+                        reportNetworkFailure("ERRO SSL", detail, failingUrl);
+                    }
 
                     @Override
                     public void onPageFinished(
@@ -788,11 +847,32 @@ public class StvPlusActivity extends Activity {
     }
 
     private void openLogin() {
-        webView.loadUrl(StvPanelConfig.loginUrl(this));
+        String url = StvPanelConfig.loginUrl(this);
+        showNetworkStatus("URL solicitada: " + url, Color.rgb(0, 184, 255));
+        Log.i("STV+WebView", "Abrindo login: " + url);
+        webView.loadUrl(url);
     }
 
     private void openDashboard() {
-        webView.loadUrl(StvPanelConfig.dashboardUrl(this));
+        String url = StvPanelConfig.dashboardUrl(this);
+        showNetworkStatus("URL solicitada: " + url, Color.rgb(0, 184, 255));
+        Log.i("STV+WebView", "Abrindo painel: " + url);
+        webView.loadUrl(url);
+    }
+
+    private void showNetworkStatus(String message, int color) {
+        runOnUiThread(() -> {
+            if (networkStatus != null) {
+                networkStatus.setText(message);
+                networkStatus.setTextColor(color);
+            }
+        });
+    }
+
+    private void reportNetworkFailure(String type, String detail, String url) {
+        String message = type + ": " + detail + "\\nURL: " + url;
+        Log.e("STV+WebView", message);
+        showNetworkStatus(message, Color.rgb(255, 100, 100));
     }
 
     private void startVisibleResellerAutomation() {
