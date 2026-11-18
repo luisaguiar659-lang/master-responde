@@ -17,13 +17,13 @@ import android.widget.Toast;
 public class ResellersActivity extends Activity {
 
     public static final String DEFAULT_SIGNUP_LINK =
-            "https://masterflix.sigmab.pro/#/rs/en12xeNDPE/ryJDz2KDge";
+            "https://masterflix.sigma.st/#/rs/en12xeNDPE/ryJDz2KDge";
 
     public static final String DEFAULT_SUPPORT_GROUP_LINK =
             "https://chat.whatsapp.com/IWHogXDJTem2VgJTJhsTA0?s=cl&p=a&mlu=0&ilr=1";
 
     public static final String DEFAULT_STV_SIGNUP_LINK =
-            "https://stvmais.sigma.vin/#/rs/kaL4rJVWgr/ANKWP35DPR";
+            "https://stvmais.sigma.st/#/rs/kaL4rJVWgr/ANKWP35DPR";
 
     public static final String DEFAULT_STV_SUPPORT_GROUP_LINK =
             "https://chat.whatsapp.com/IWHogXDJTem2VgJTJhsTA0?s=cl&p=a&mlu=0&ilr=1";
