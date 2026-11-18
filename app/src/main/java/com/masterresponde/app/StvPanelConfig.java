@@ -18,7 +18,7 @@ public final class StvPanelConfig {
         }
         return normalizeBaseUrl(value);
     }
-    public static String loginUrl(Context c) { return getBaseUrl(c) + "/#/sign-in?redirect=/dashboard"; }
+    public static String loginUrl(Context c) { return getBaseUrl(c) + "/#/sign-in"; }
     public static String dashboardUrl(Context c) { return getBaseUrl(c) + "/#/dashboard"; }
     public static String resellersUrl(Context c) { return getBaseUrl(c) + "/#/resellers"; }
     public static String getPreferredTest(Context c) { return "adult".equals(getMode(c)) ? "TESTE + ADULTO" : "TESTE SEM ADULTO"; }
