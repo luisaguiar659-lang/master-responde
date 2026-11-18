@@ -848,16 +848,51 @@ public class MasterflixActivity extends Activity {
 
     private void openLogin() {
         String url = SigmaPanelConfig.loginUrl(this);
-        showNetworkStatus("URL solicitada: " + url, Color.rgb(0, 184, 255));
+        showNetworkStatus("URL solicitada: " + url + "\\nTestando conexão nativa...", Color.rgb(0, 184, 255));
         Log.i("MasterFlixWebView", "Abrindo login: " + url);
+        runNativeNetworkProbe(url);
         webView.loadUrl(url);
     }
 
     private void openDashboard() {
         String url = SigmaPanelConfig.dashboardUrl(this);
-        showNetworkStatus("URL solicitada: " + url, Color.rgb(0, 184, 255));
+        showNetworkStatus("URL solicitada: " + url + "\\nTestando conexão nativa...", Color.rgb(0, 184, 255));
         Log.i("MasterFlixWebView", "Abrindo painel: " + url);
+        runNativeNetworkProbe(url);
         webView.loadUrl(url);
+    }
+
+    // Compara a conexão HTTPS feita pelo Android (fora do WebView) com a falha do Chromium.
+    private void runNativeNetworkProbe(String targetUrl) {
+        new Thread(() -> {
+            java.net.HttpsURLConnection connection = null;
+            try {
+                java.net.URL parsed = new java.net.URL(targetUrl);
+                java.net.InetAddress[] addresses = java.net.InetAddress.getAllByName(parsed.getHost());
+                StringBuilder ips = new StringBuilder();
+                for (java.net.InetAddress address : addresses) {
+                    if (ips.length() > 0) ips.append(", ");
+                    ips.append(address.getHostAddress());
+                }
+                connection = (java.net.HttpsURLConnection) new java.net.URL(
+                        parsed.getProtocol() + "://" + parsed.getHost() + "/"
+                ).openConnection();
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+                connection.setRequestMethod("GET");
+                connection.setInstanceFollowRedirects(false);
+                int status = connection.getResponseCode();
+                showNetworkStatus("TESTE NATIVO: conexão OK (HTTP " + status + ")\\nDNS: " + ips
+                        + "\\nWebView: verifique o erro abaixo.", Color.rgb(0, 214, 143));
+                Log.i("MasterFlixWebView", "Probe nativo OK. DNS=" + ips + " HTTP=" + status);
+            } catch (Exception e) {
+                String detail = e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage());
+                showNetworkStatus("TESTE NATIVO FALHOU: " + detail, Color.rgb(255, 100, 100));
+                Log.e("MasterFlixWebView", "Probe nativo falhou para " + targetUrl, e);
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        }, "MasterFlixNetworkProbe").start();
     }
 
     private void showNetworkStatus(String message, int color) {
