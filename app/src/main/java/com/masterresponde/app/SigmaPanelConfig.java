@@ -92,7 +92,7 @@ public final class SigmaPanelConfig {
             Context context
     ) {
         return getBaseUrl(context)
-                + "/#/sign-in";
+                + "/#/sign-in?redirect=/dashboard";
     }
 
     public static String dashboardUrl(
