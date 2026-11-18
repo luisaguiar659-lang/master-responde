@@ -2,6 +2,9 @@ package com.masterresponde.app;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.PowerManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -343,6 +346,44 @@ public class AppSettingsActivity extends Activity {
                 engine
         );
 
+        gap(14);
+
+        section("SEGUNDO PLANO");
+
+        LinearLayout background = card();
+        background.addView(text(
+                "Manter o MASTER RESPONDE ativo",
+                15,
+                primaryTextColor(),
+                true
+        ));
+        TextView backgroundHelp = text(
+                "O Android/MIUI pode suspender o aplicativo e interromper a leitura de notificações. Libere a restrição de bateria e habilite a inicialização automática nas configurações da Xiaomi.",
+                11,
+                secondaryTextColor(),
+                false
+        );
+        backgroundHelp.setPadding(0, dp(5), 0, dp(10));
+        background.addView(backgroundHelp);
+
+        Button batteryButton = darkButton("LIBERAR RESTRIÇÃO DE BATERIA");
+        batteryButton.setOnClickListener(v -> requestBackgroundExemption());
+        background.addView(batteryButton);
+
+        Button appInfoButton = darkButton("ABRIR CONFIGURAÇÕES DO APLICATIVO");
+        appInfoButton.setOnClickListener(v -> openAppSystemSettings());
+        background.addView(appInfoButton);
+
+        TextView xiaomiHelp = text(
+                "Na Xiaomi, confira também: Inicialização automática = ativada; Economia de bateria = Sem restrições; e mantenha o MASTER RESPONDE bloqueado na tela de aplicativos recentes.",
+                11,
+                secondaryTextColor(),
+                false
+        );
+        xiaomiHelp.setPadding(0, dp(8), 0, 0);
+        background.addView(xiaomiHelp);
+        content.addView(background);
+
         gap(
                 14
         );
@@ -482,6 +523,41 @@ public class AppSettingsActivity extends Activity {
         content.addView(
                 about
         );
+    }
+
+    private void requestBackgroundExemption() {
+        if (android.os.Build.VERSION.SDK_INT < 23) {
+            Toast.makeText(this, "Esta opção não é necessária nesta versão do Android.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+            if (powerManager != null && powerManager.isIgnoringBatteryOptimizations(getPackageName())) {
+                Toast.makeText(this, "O sistema já está sem restrição de bateria para o MASTER RESPONDE.", Toast.LENGTH_LONG).show();
+                openAppSystemSettings();
+                return;
+            }
+            Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        } catch (Exception e) {
+            try {
+                startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+            } catch (Exception ignored) {
+                openAppSystemSettings();
+            }
+        }
+    }
+
+    private void openAppSystemSettings() {
+        try {
+            Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "Não foi possível abrir as configurações do aplicativo.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private LinearLayout settingRow(
