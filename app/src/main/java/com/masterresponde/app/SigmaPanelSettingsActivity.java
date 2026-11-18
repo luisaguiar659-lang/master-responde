@@ -482,10 +482,6 @@ public class SigmaPanelSettingsActivity extends Activity {
                         url
                 )
                 .putString(
-                        "stv_base_url",
-                        stvUrl
-                )
-                .putString(
                         SigmaPanelConfig.KEY_PREFERRED_TEST,
                         testField.getText()
                                 .toString()
@@ -507,6 +503,10 @@ public class SigmaPanelSettingsActivity extends Activity {
                         "masterflix_session_active",
                         false
                 )
+                .apply();
+
+        StvPanelConfig.prefs(this).edit()
+                .putString("base_url", stvUrl)
                 .apply();
 
         if (!user.isEmpty()
