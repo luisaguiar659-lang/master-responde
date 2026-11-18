@@ -20,6 +20,7 @@ public class SigmaPanelSettingsActivity extends Activity {
 
     private EditText nameField;
     private EditText urlField;
+    private EditText stvUrlField;
     private EditText userField;
     private EditText passField;
     private EditText testField;
@@ -216,9 +217,16 @@ public class SigmaPanelSettingsActivity extends Activity {
 
         panel.addView(
                 note(
-                        "Exemplo: https://seudominio.sigma.st. As rotas de Login, Dashboard e Revendas são preenchidas automaticamente."
+                        "MASTERFLIX — URL base. O aplicativo acrescenta automaticamente as rotas de Login, Dashboard e Revendas."
                 )
         );
+
+        stvUrlField = field("URL base do painel STV+");
+        stvUrlField.setText(StvPanelConfig.getBaseUrl(this));
+        panel.addView(stvUrlField);
+        panel.addView(note(
+                "STV+ — URL base independente. Exemplo: https://stvmais.sigma.st. As rotas são acrescentadas automaticamente."
+        ));
 
         content.addView(
                 panel
@@ -432,6 +440,10 @@ public class SigmaPanelSettingsActivity extends Activity {
                                 .toString()
                 );
 
+        String stvUrl = StvPanelConfig.normalizeBaseUrl(
+                stvUrlField.getText().toString()
+        );
+
         String user =
                 userField.getText()
                         .toString()
@@ -455,6 +467,11 @@ public class SigmaPanelSettingsActivity extends Activity {
             return;
         }
 
+        if (stvUrl.isEmpty()) {
+            stvUrlField.setError("Informe a URL do painel STV+.");
+            return;
+        }
+
         prefs.edit()
                 .putString(
                         SigmaPanelConfig.KEY_PANEL_NAME,
@@ -463,6 +480,10 @@ public class SigmaPanelSettingsActivity extends Activity {
                 .putString(
                         SigmaPanelConfig.KEY_BASE_URL,
                         url
+                )
+                .putString(
+                        "stv_base_url",
+                        stvUrl
                 )
                 .putString(
                         SigmaPanelConfig.KEY_PREFERRED_TEST,
