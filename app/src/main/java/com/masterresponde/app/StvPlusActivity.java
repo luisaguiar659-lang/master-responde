@@ -559,7 +559,7 @@ public class StvPlusActivity extends Activity {
 
         setContentView(root);
 
-        openDashboard();
+        openLogin();
     }
 
     private void configureWebView() {
