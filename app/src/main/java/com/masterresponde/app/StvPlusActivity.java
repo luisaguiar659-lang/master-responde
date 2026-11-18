@@ -228,6 +228,15 @@ public class StvPlusActivity extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        try {
+            CookieManager.getInstance().flush();
+        } catch (Exception ignored) {
+        }
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
         if (autoResellerRequested
                 || visibleResellerRunning) {
@@ -598,7 +607,8 @@ public class StvPlusActivity extends Activity {
 
         setContentView(root);
 
-        openLogin();
+        // Tenta restaurar a sessão existente; se expirou, o painel redireciona ao login.
+        openDashboard();
     }
 
     private void configureWebView() {
@@ -691,6 +701,7 @@ public class StvPlusActivity extends Activity {
                                 url
                         );
 
+                        CookieManager.getInstance().flush();
                         inspectCurrentLocation();
                         maybeStartAutomation();
                     }
@@ -761,6 +772,9 @@ public class StvPlusActivity extends Activity {
         if (url.contains("#/dashboard")
                 || url.contains("#/resellers")) {
 
+            loginAssistScheduled = false;
+            loginAssistAttempts = 0;
+
             prefs.edit()
                     .putBoolean(
                             "stvplus_session_active",
@@ -814,26 +828,12 @@ public class StvPlusActivity extends Activity {
                     )
                     .apply();
 
-            runOnUiThread(
-                    () -> {
-                        updateSessionStatus();
-
-                        if (prefs.getBoolean(
-                                "stvplus_credentials_saved",
-                                false
-                        )
-                                && !loginAssistAttempted) {
-
-                            loginAssistAttempted =
-                                    true;
-
-                            automationHandler.postDelayed(
-                                    this::fillSavedLogin,
-                                    450L
-                            );
-                        }
-                    }
-            );
+            runOnUiThread(() -> {
+                updateSessionStatus();
+                if (prefs.getBoolean("stvplus_credentials_saved", false)) {
+                    scheduleSavedLoginFill();
+                }
+            });
         }
     }
 
@@ -2443,74 +2443,67 @@ public class StvPlusActivity extends Activity {
         passField.setText(pass);
     }
 
+    private boolean loginAssistScheduled = false;
+    private int loginAssistAttempts = 0;
+
     private void fillSavedLogin() {
-        final String user =
-                secureStore.get(
-                        "stv_user"
-                );
+        scheduleSavedLoginFill();
+    }
 
-        final String pass =
-                secureStore.get(
-                        "stv_pass"
-                );
+    private void scheduleSavedLoginFill() {
+        if (loginAssistScheduled || webView == null) return;
+        loginAssistScheduled = true;
+        loginAssistAttempts = 0;
+        automationHandler.postDelayed(this::attemptSavedLoginFill, 500L);
+    }
 
-        if (user.isEmpty()
-                || pass.isEmpty()) {
-
-            Toast.makeText(
-                    this,
-                    "Salve primeiro o usuário e a senha.",
-                    Toast.LENGTH_LONG
-            ).show();
-
+    private void attemptSavedLoginFill() {
+        if (webView == null || isFinishing()) {
+            loginAssistScheduled = false;
             return;
         }
 
-        if (webView.getUrl() == null
-                || !webView.getUrl()
-                .startsWith(
-                        StvPanelConfig.getBaseUrl(
-                                this
-                        )
-                )) {
-
-            openLogin();
+        final String user = secureStore.get("stv_user");
+        final String pass = secureStore.get("stv_pass");
+        if (user.isEmpty() || pass.isEmpty()) {
+            loginAssistScheduled = false;
+            return;
         }
 
-        final String userJson =
-                JSONObject.quote(user);
+        String currentUrl = webView.getUrl();
+        if (currentUrl == null || !currentUrl.startsWith(StvPanelConfig.getBaseUrl(this))) {
+            openLogin();
+            automationHandler.postDelayed(this::attemptSavedLoginFill, 700L);
+            return;
+        }
 
-        final String passJson =
-                JSONObject.quote(pass);
-
+        final String userJson = JSONObject.quote(user);
+        final String passJson = JSONObject.quote(pass);
         String script =
                 "(function(){" +
-                        "var inputs=document.querySelectorAll('input');" +
-                        "var user=null,pass=null;" +
-                        "for(var i=0;i<inputs.length;i++){" +
-                        "var t=(inputs[i].type||'').toLowerCase();" +
-                        "if(t==='password'&&!pass){pass=inputs[i];}" +
-                        "else if((t==='text'||t==='email'||!t)&&!user){user=inputs[i];}" +
-                        "}" +
-                        "function set(el,v){" +
-                        "if(!el)return false;" +
-                        "var setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;" +
-                        "setter.call(el,v);" +
-                        "el.dispatchEvent(new Event('input',{bubbles:true}));" +
-                        "el.dispatchEvent(new Event('change',{bubbles:true}));" +
-                        "return true;" +
-                        "}" +
-                        "return set(user," + userJson + ")&&set(pass," + passJson + ");" +
-                        "})();";
+                "var inputs=Array.prototype.slice.call(document.querySelectorAll('input'));" +
+                "var pass=inputs.find(function(e){return (e.type||'').toLowerCase()==='password';});" +
+                "var user=inputs.find(function(e){var t=(e.type||'').toLowerCase();return t==='email'||t==='text'||e.autocomplete==='username'||/email|usuario|user|login/i.test((e.name||'')+' '+(e.placeholder||''));});" +
+                "function set(el,v){if(!el)return false;var d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');if(d&&d.set)d.set.call(el,v);else el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;}" +
+                "return !!(set(user," + userJson + ")&&set(pass," + passJson + "));" +
+                "})();";
 
-        webView.evaluateJavascript(
-                script,
-                value -> Toast.makeText(
-                        this,
-                        "Campos preenchidos. Conclua “Verificado” e toque em Continuar.",
-                        Toast.LENGTH_LONG
-                ).show()
-        );
+        webView.evaluateJavascript(script, value -> {
+            if ("true".equals(value)) {
+                loginAssistScheduled = false;
+                loginAssistAttempts = 0;
+                Log.i("STV+WebView", "Credenciais salvas preenchidas automaticamente; envio permanece manual.");
+                return;
+            }
+
+            loginAssistAttempts++;
+            if (loginAssistAttempts < 12 && webView != null) {
+                automationHandler.postDelayed(this::attemptSavedLoginFill, 600L);
+            } else {
+                loginAssistScheduled = false;
+                Log.w("STV+WebView", "Formulário de login não ficou disponível para preenchimento automático.");
+            }
+        });
     }
 
     private void confirmClearSession() {
