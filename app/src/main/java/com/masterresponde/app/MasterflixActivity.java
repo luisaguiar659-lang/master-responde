@@ -865,7 +865,7 @@ public class MasterflixActivity extends Activity {
     // Compara a conexão HTTPS feita pelo Android (fora do WebView) com a falha do Chromium.
     private void runNativeNetworkProbe(String targetUrl) {
         new Thread(() -> {
-            java.net.HttpsURLConnection connection = null;
+            javax.net.ssl.HttpsURLConnection connection = null;
             try {
                 java.net.URL parsed = new java.net.URL(targetUrl);
                 java.net.InetAddress[] addresses = java.net.InetAddress.getAllByName(parsed.getHost());
