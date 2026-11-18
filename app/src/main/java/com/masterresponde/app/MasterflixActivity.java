@@ -493,14 +493,36 @@ public class MasterflixActivity extends Activity {
 
         browserCard.addView(generationStatus);
 
-        networkStatus = text(
-                "Rede do painel: aguardando carregamento",
+        TextView networkTitle = text(
+                "DIAGNÓSTICO DE CONEXÃO",
                 11,
-                Color.rgb(150, 160, 170),
+                Color.rgb(0, 184, 255),
+                true
+        );
+        networkTitle.setPadding(0, dp(10), 0, dp(4));
+        browserCard.addView(networkTitle);
+
+        networkStatus = text(
+                "Aguardando teste. Toque em TESTAR CONEXÃO para verificar DNS e HTTPS.",
+                11,
+                Color.rgb(220, 230, 240),
                 false
         );
-        networkStatus.setPadding(0, dp(4), 0, dp(8));
+        networkStatus.setPadding(dp(10), dp(10), dp(10), dp(10));
+        networkStatus.setMinLines(3);
+        networkStatus.setBackgroundColor(Color.rgb(7, 22, 42));
         browserCard.addView(networkStatus);
+
+        Button networkTestButton = actionButton(
+                "TESTAR CONEXÃO",
+                false
+        );
+        networkTestButton.setOnClickListener(v -> {
+            String target = SigmaPanelConfig.getBaseUrl(this);
+            showNetworkStatus("TESTANDO DNS E HTTPS de " + target + "...", Color.rgb(0, 184, 255));
+            runNativeNetworkProbe(target);
+        });
+        browserCard.addView(networkTestButton);
 
         Button generateButton = actionButton(
                 "GERAR TESTE",
@@ -611,8 +633,11 @@ public class MasterflixActivity extends Activity {
             @Override
             public boolean onConsoleMessage(ConsoleMessage message) {
                 if (message != null && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
-                    Log.e("MasterFlixWebView", "Console: " + message.message()
-                            + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
+                    String detail = "ERRO JAVASCRIPT: " + message.message()
+                            + "\\nOrigem: " + message.sourceId()
+                            + ":" + message.lineNumber();
+                    Log.e("MasterFlixWebView", detail);
+                    showNetworkStatus(detail, Color.rgb(255, 170, 70));
                 }
                 return true;
             }
@@ -630,17 +655,21 @@ public class MasterflixActivity extends Activity {
                     @Override
                     public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                         super.onReceivedError(view, request, error);
-                        if (request != null && request.isForMainFrame() && error != null) {
-                            reportNetworkFailure("ERRO DE REDE", error.getErrorCode()
-                                    + " - " + error.getDescription(), request.getUrl().toString());
+                        if (request != null && error != null) {
+                            String scope = request.isForMainFrame() ? "PÁGINA PRINCIPAL" : "RECURSO DO PAINEL";
+                            reportNetworkFailure("ERRO DE REDE (" + scope + ")",
+                                    error.getErrorCode() + " - " + error.getDescription(),
+                                    request.getUrl().toString());
                         }
                     }
 
                     @Override
                     public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse response) {
                         super.onReceivedHttpError(view, request, response);
-                        if (request != null && request.isForMainFrame() && response != null) {
-                            reportNetworkFailure("ERRO HTTP", "Status " + response.getStatusCode(), request.getUrl().toString());
+                        if (request != null && response != null && response.getStatusCode() >= 400) {
+                            String scope = request.isForMainFrame() ? "PÁGINA PRINCIPAL" : "RECURSO DO PAINEL";
+                            reportNetworkFailure("ERRO HTTP (" + scope + ")",
+                                    "Status " + response.getStatusCode(), request.getUrl().toString());
                         }
                     }
 
@@ -882,12 +911,18 @@ public class MasterflixActivity extends Activity {
                 connection.setRequestMethod("GET");
                 connection.setInstanceFollowRedirects(false);
                 int status = connection.getResponseCode();
-                showNetworkStatus("TESTE NATIVO: conexão OK (HTTP " + status + ")\\nDNS: " + ips
-                        + "\\nWebView: verifique o erro abaixo.", Color.rgb(0, 214, 143));
+                showNetworkStatus("TESTE NATIVO: CONEXÃO OK"
+                        + "\\nHTTP: " + status
+                        + "\\nDNS/IP: " + ips
+                        + "\\nAgora confira se o WebView carrega o painel. Se o site mostrar erro, envie esta tela.",
+                        Color.rgb(0, 214, 143));
                 Log.i("MasterFlixWebView", "Probe nativo OK. DNS=" + ips + " HTTP=" + status);
             } catch (Exception e) {
                 String detail = e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage());
-                showNetworkStatus("TESTE NATIVO FALHOU: " + detail, Color.rgb(255, 100, 100));
+                showNetworkStatus("TESTE NATIVO FALHOU"
+                        + "\\n" + detail
+                        + "\\nURL: " + targetUrl,
+                        Color.rgb(255, 100, 100));
                 Log.e("MasterFlixWebView", "Probe nativo falhou para " + targetUrl, e);
             } finally {
                 if (connection != null) connection.disconnect();
