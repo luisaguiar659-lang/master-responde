@@ -874,7 +874,7 @@ public class StvPlusActivity extends Activity {
                     if (ips.length() > 0) ips.append(", ");
                     ips.append(address.getHostAddress());
                 }
-                connection = (java.net.HttpsURLConnection) new java.net.URL(
+                connection = (javax.net.ssl.HttpsURLConnection) new java.net.URL(
                         parsed.getProtocol() + "://" + parsed.getHost() + "/"
                 ).openConnection();
                 connection.setConnectTimeout(10000);
