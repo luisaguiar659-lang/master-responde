@@ -13,7 +13,7 @@ import java.util.Locale;
 /** Armazenamento local e isolado do histórico de atendimentos. */
 public final class ConversationStore extends SQLiteOpenHelper {
     private static final String DB_NAME = "master_conversations.db";
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
     private static final Object LOCK = new Object();
 
     public ConversationStore(Context context) {
@@ -24,7 +24,8 @@ public final class ConversationStore extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE conversations (" +
                 "id TEXT PRIMARY KEY, kind TEXT NOT NULL, display_name TEXT NOT NULL, " +
                 "last_message TEXT NOT NULL, updated_at INTEGER NOT NULL, " +
-                "status TEXT NOT NULL DEFAULT 'OPEN', unread_count INTEGER NOT NULL DEFAULT 0, " +
+                "status TEXT NOT NULL DEFAULT 'OPEN', priority TEXT NOT NULL DEFAULT 'NORMAL', " +
+                "unread_count INTEGER NOT NULL DEFAULT 0, " +
                 "labels TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE messages (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT NOT NULL, " +
@@ -40,6 +41,9 @@ public final class ConversationStore extends SQLiteOpenHelper {
         if (oldVersion < 2) {
             db.execSQL("ALTER TABLE conversations ADD COLUMN labels TEXT NOT NULL DEFAULT ''");
             db.execSQL("ALTER TABLE conversations ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+        }
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE conversations ADD COLUMN priority TEXT NOT NULL DEFAULT 'NORMAL'");
         }
     }
 
@@ -142,7 +146,7 @@ public final class ConversationStore extends SQLiteOpenHelper {
         String selectedStatus = status == null ? "ALL" : status;
         String term = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         StringBuilder sql = new StringBuilder(
-                "SELECT id,kind,display_name,last_message,updated_at,status,unread_count,labels " +
+                "SELECT id,kind,display_name,last_message,updated_at,status,unread_count,labels,priority " +
                 "FROM conversations WHERE 1=1");
         java.util.ArrayList<String> args = new java.util.ArrayList<>();
         if (!"ALL".equals(selectedStatus)) {
@@ -158,7 +162,7 @@ public final class ConversationStore extends SQLiteOpenHelper {
             args.add(like);
             args.add(like);
         }
-        sql.append(" ORDER BY updated_at DESC");
+        sql.append(" ORDER BY CASE priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 ELSE 2 END, updated_at DESC");
         return getReadableDatabase().rawQuery(sql.toString(), args.toArray(new String[0]));
     }
 
@@ -196,6 +200,27 @@ public final class ConversationStore extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
         values.put("notes", notes == null ? "" : notes.trim());
         getWritableDatabase().update("conversations", values, "id=?", new String[]{id});
+    }
+
+    public String priority(String id) {
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT priority FROM conversations WHERE id=?", new String[]{id});
+        try { return c.moveToFirst() ? c.getString(0) : "NORMAL"; }
+        finally { c.close(); }
+    }
+
+    public void updatePriority(String id, String priority) {
+        if (!"NORMAL".equals(priority) && !"HIGH".equals(priority) &&
+                !"URGENT".equals(priority)) return;
+        ContentValues values = new ContentValues();
+        values.put("priority", priority);
+        getWritableDatabase().update("conversations", values, "id=?", new String[]{id});
+    }
+
+    public static String priorityLabel(String priority) {
+        if ("URGENT".equals(priority)) return "Urgente";
+        if ("HIGH".equals(priority)) return "Alta";
+        return "Normal";
     }
 
     public void updateStatus(String id, String status) {
