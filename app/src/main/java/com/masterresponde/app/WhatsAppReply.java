@@ -19,6 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class WhatsAppReply {
 
+    public static final String KEY_LAST_SEND_DIAGNOSTIC = "last_send_diagnostic";
+    public static final String KEY_LAST_SEND_DIAGNOSTIC_TIME = "last_send_diagnostic_time";
+
     private static final Object LOCK =
             new Object();
 
@@ -35,18 +38,26 @@ public class WhatsAppReply {
             Notification notification,
             String message
     ) {
-        if (context == null
-                || notification == null
-                || message == null
-                || message.trim().isEmpty()) {
+        if (context == null) return false;
+
+        if (notification == null) {
+            recordDiagnostic(context, "FALHA: notificação original ausente");
+            return false;
+        }
+        if (message == null || message.trim().isEmpty()) {
+            recordDiagnostic(context, "FALHA: texto da resposta vazio");
             return false;
         }
 
-        if (!hasReplyAction(
-                notification
-        )) {
+        ReplyActionInfo actionInfo = inspectReplyActions(notification);
+        if (actionInfo.freeFormInputs == 0) {
+            recordDiagnostic(context, "FALHA: sem RemoteInput de texto livre; ações="
+                    + actionInfo.actions + ", RemoteInputs=" + actionInfo.remoteInputs);
             return false;
         }
+        recordDiagnostic(context, "RESPOSTA AGENDADA: ação=" + actionInfo.actions
+                + ", RemoteInputs=" + actionInfo.remoteInputs
+                + ", texto livre=" + actionInfo.freeFormInputs);
 
         Context appContext =
                 context.getApplicationContext();
@@ -162,40 +173,41 @@ public class WhatsAppReply {
         return true;
     }
 
-    private static boolean hasReplyAction(
-            Notification notification
-    ) {
-        if (notification == null
-                || notification.actions == null) {
-            return false;
-        }
+    private static final class ReplyActionInfo {
+        int actions;
+        int actionsWithIntent;
+        int remoteInputs;
+        int freeFormInputs;
+    }
 
-        for (Notification.Action action
-                : notification.actions) {
-
-            if (action == null
-                    || action.actionIntent == null) {
-                continue;
-            }
-
-            RemoteInput[] inputs =
-                    action.getRemoteInputs();
-
-            if (inputs == null) {
-                continue;
-            }
-
-            for (RemoteInput input
-                    : inputs) {
-
-                if (input != null
-                        && input.getAllowFreeFormInput()) {
-                    return true;
-                }
+    private static ReplyActionInfo inspectReplyActions(Notification notification) {
+        ReplyActionInfo info = new ReplyActionInfo();
+        Notification.Action[] actions = notification == null ? null : notification.actions;
+        if (actions == null) return info;
+        info.actions = actions.length;
+        for (Notification.Action action : actions) {
+            if (action == null || action.actionIntent == null) continue;
+            info.actionsWithIntent++;
+            RemoteInput[] inputs = action.getRemoteInputs();
+            if (inputs == null) continue;
+            for (RemoteInput input : inputs) {
+                if (input == null) continue;
+                info.remoteInputs++;
+                if (input.getAllowFreeFormInput()) info.freeFormInputs++;
             }
         }
+        return info;
+    }
 
-        return false;
+    private static void recordDiagnostic(Context context, String value) {
+        if (context == null) return;
+        try {
+            context.getApplicationContext().getSharedPreferences(
+                    "master_responde", Context.MODE_PRIVATE).edit()
+                    .putString(KEY_LAST_SEND_DIAGNOSTIC, value)
+                    .putLong(KEY_LAST_SEND_DIAGNOSTIC_TIME, System.currentTimeMillis())
+                    .apply();
+        } catch (Exception ignored) { }
     }
 
     private static boolean sendNow(
@@ -203,10 +215,10 @@ public class WhatsAppReply {
             Notification notification,
             String message
     ) {
-        Notification.Action[] actions =
-                notification.actions;
+        Notification.Action[] actions = notification == null ? null : notification.actions;
 
         if (actions == null) {
+            recordDiagnostic(context, "FALHA NO ENVIO: ações da notificação indisponíveis no momento do envio");
             return false;
         }
 
@@ -259,23 +271,22 @@ public class WhatsAppReply {
                     );
 
                     try {
-                        action.actionIntent.send(
-                                context,
-                                0,
-                                intent
-                        );
+                        action.actionIntent.send(context, 0, intent);
                         ConversationStore.recordOutgoing(context, notification, message);
+                        recordDiagnostic(context, "ENVIO ACEITO pelo Android: PendingIntent executado");
                     } catch (PendingIntent.CanceledException e) {
-                        forgetSent(
-                                context,
-                                notification
-                        );
+                        forgetSent(context, notification);
+                        recordDiagnostic(context, "FALHA NO ENVIO: PendingIntent cancelado antes da execução");
+                        return false;
+                    } catch (SecurityException e) {
+                        forgetSent(context, notification);
+                        recordDiagnostic(context, "FALHA NO ENVIO: bloqueio de segurança ao executar PendingIntent");
                         return false;
                     }
-
                     return true;
-
                 } catch (Exception e) {
+                    forgetSent(context, notification);
+                    recordDiagnostic(context, "FALHA NO ENVIO: exceção " + e.getClass().getSimpleName());
                     return false;
                 }
             }
