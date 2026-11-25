@@ -23,6 +23,18 @@ public final class BackgroundRuntime {
     public static final String KEY_LAST_EVENT_TIME =
             "background_last_event_time";
 
+    public static final String KEY_LAST_CALLBACK_TIME =
+            "background_last_callback_time";
+
+    public static final String KEY_LAST_CALLBACK_PACKAGE =
+            "background_last_callback_package";
+
+    public static final String KEY_CALLBACK_COUNT =
+            "background_callback_count";
+
+    public static final String KEY_WHATSAPP_CALLBACK_COUNT =
+            "background_whatsapp_callback_count";
+
     public static final String KEY_TEST_PENDING =
             "background_test_pending";
 
@@ -143,6 +155,27 @@ public final class BackgroundRuntime {
             );
         }
 
+        editor.apply();
+    }
+
+    /** Registra somente metadados do callback, inclusive eventos filtrados. */
+    public static void markNotificationCallback(
+            Context context,
+            String packageName,
+            boolean whatsappBusiness
+    ) {
+        SharedPreferences prefs = prefs(context);
+        SharedPreferences.Editor editor = prefs.edit()
+                .putLong(KEY_LAST_CALLBACK_TIME, System.currentTimeMillis())
+                .putString(KEY_LAST_CALLBACK_PACKAGE,
+                        packageName == null ? "(pacote desconhecido)" : packageName)
+                .putLong(KEY_CALLBACK_COUNT,
+                        prefs.getLong(KEY_CALLBACK_COUNT, 0L) + 1L);
+
+        if (whatsappBusiness) {
+            editor.putLong(KEY_WHATSAPP_CALLBACK_COUNT,
+                    prefs.getLong(KEY_WHATSAPP_CALLBACK_COUNT, 0L) + 1L);
+        }
         editor.apply();
     }
 
