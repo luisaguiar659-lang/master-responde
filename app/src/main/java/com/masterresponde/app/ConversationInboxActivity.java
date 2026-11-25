@@ -5,8 +5,12 @@ import android.app.AlertDialog;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -19,6 +23,8 @@ public class ConversationInboxActivity extends Activity {
     private ConversationStore store;
     private LinearLayout list;
     private String selectedId;
+    private String filterStatus = "ALL";
+    private String searchText = "";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -39,6 +45,45 @@ public class ConversationInboxActivity extends Activity {
         history.setOnClickListener(v -> startActivity(
                 new android.content.Intent(this, EventHistoryActivity.class)));
         root.addView(history);
+
+        EditText search = new EditText(this);
+        search.setSingleLine(true);
+        search.setHint("Buscar nome, mensagem ou etiqueta");
+        search.setTextColor(Color.WHITE);
+        search.setHintTextColor(Color.LTGRAY);
+        search.setInputType(InputType.TYPE_CLASS_TEXT);
+        search.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchText = s == null ? "" : s.toString();
+                renderInbox();
+            }
+            @Override public void afterTextChanged(Editable e) {}
+        });
+        root.addView(search);
+
+        LinearLayout filters = new LinearLayout(this);
+        filters.setOrientation(LinearLayout.HORIZONTAL);
+        filters.setGravity(Gravity.CENTER);
+        String[] labels = {"Todas", "Em andamento", "Aguardando", "Resolvido", "Pausado"};
+        String[] values = {"ALL", "OPEN", "WAITING", "RESOLVED", "PAUSED"};
+        for (int i = 0; i < labels.length; i++) {
+            final String value = values[i];
+            Button filter = new Button(this);
+            filter.setText(labels[i]);
+            filter.setTextSize(10);
+            filter.setPadding(dp(4), 0, dp(4), 0);
+            filter.setOnClickListener(v -> {
+                filterStatus = value;
+                renderInbox();
+            });
+            filters.addView(filter, new LinearLayout.LayoutParams(0, dp(48), 1f));
+        }
+        ScrollView filterScroll = new ScrollView(this);
+        filterScroll.setFillViewport(true);
+        filterScroll.addView(filters);
+        root.addView(filterScroll, new LinearLayout.LayoutParams(-1, dp(54)));
+
         ScrollView scroll = new ScrollView(this);
         list = column();
         scroll.addView(list);
@@ -49,13 +94,15 @@ public class ConversationInboxActivity extends Activity {
     }
 
     private void renderInbox() {
+        if (list == null) return;
         list.removeAllViews();
-        Cursor c = store.conversations(this);
+        Cursor c = store.conversations(this, filterStatus, searchText);
         try {
             if (c.getCount() == 0) {
                 list.addView(NeonUi.statusCard(this, "chat", Color.rgb(0, 200, 255),
-                        "Nenhum atendimento", "As novas conversas aparecerão aqui",
-                        "O acesso às notificações do WhatsApp Business precisa estar ativo."));
+                        "Nenhum atendimento encontrado",
+                        "Altere a busca ou o filtro para ver outras conversas",
+                        "As novas conversas aparecerão aqui quando chegarem."));
                 return;
             }
             while (c.moveToNext()) {
@@ -66,6 +113,7 @@ public class ConversationInboxActivity extends Activity {
                 long time = c.getLong(4);
                 String status = c.getString(5);
                 int unread = c.getInt(6);
+                String labels = c.getString(7);
                 LinearLayout card = new LinearLayout(this);
                 card.setOrientation(LinearLayout.VERTICAL);
                 card.setPadding(dp(14), dp(12), dp(14), dp(12));
@@ -80,6 +128,10 @@ public class ConversationInboxActivity extends Activity {
                 card.addView(title);
                 card.addView(preview);
                 card.addView(meta);
+                if (labels != null && !labels.trim().isEmpty()) {
+                    card.addView(text("Etiquetas: " + labels, 11,
+                            Color.rgb(255, 205, 90), true));
+                }
                 card.setClickable(true);
                 card.setFocusable(true);
                 card.setOnClickListener(v -> {
@@ -100,6 +152,7 @@ public class ConversationInboxActivity extends Activity {
     private void buildDetails() {
         store.markRead(selectedId);
         LinearLayout root = column();
+
         Button status = new Button(this);
         status.setText("ALTERAR STATUS DO ATENDIMENTO");
         status.setOnClickListener(v -> new AlertDialog.Builder(this)
@@ -111,13 +164,72 @@ public class ConversationInboxActivity extends Activity {
                             renderMessages();
                         }).show());
         root.addView(status);
+
+        Button labels = new Button(this);
+        labels.setText("EDITAR ETIQUETAS");
+        labels.setOnClickListener(v -> editField("Etiquetas",
+                "Separe as etiquetas por vírgula", store.labels(selectedId), false));
+        root.addView(labels);
+
+        Button notes = new Button(this);
+        notes.setText("OBSERVAÇÕES INTERNAS");
+        notes.setOnClickListener(v -> editField("Observações",
+                "Informações internas deste atendimento", store.notes(selectedId), true));
+        root.addView(notes);
+
+        TextView currentLabels = text("", 12, Color.rgb(255, 205, 90), true);
+        currentLabels.setTag("current_labels");
+        root.addView(currentLabels);
+        TextView currentNotes = text("", 12, Color.rgb(190, 210, 225), false);
+        currentNotes.setTag("current_notes");
+        root.addView(currentNotes);
+
         ScrollView scroll = new ScrollView(this);
         list = column();
         scroll.addView(list);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
         setContentView(NeonUi.wrap(this, "CONVERSA",
                 "Histórico local deste atendimento", root));
+        refreshConversationInfo(root);
         renderMessages();
+    }
+
+    private void editField(String title, String hint, String current, boolean multiline) {
+        EditText input = new EditText(this);
+        input.setText(current == null ? "" : current);
+        input.setHint(hint);
+        input.setTextColor(Color.WHITE);
+        input.setHintTextColor(Color.LTGRAY);
+        input.setMinLines(multiline ? 4 : 2);
+        input.setGravity(Gravity.TOP | Gravity.START);
+        input.setInputType(multiline
+                ? InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                : InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(input)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Salvar", (dialog, which) -> {
+                    if (multiline) store.updateNotes(selectedId, input.getText().toString());
+                    else store.updateLabels(selectedId, input.getText().toString());
+                    refreshConversationInfo((LinearLayout) input.getParent().getParent());
+                }).show();
+    }
+
+    private void refreshConversationInfo(LinearLayout root) {
+        TextView labels = root.findViewWithTag("current_labels");
+        TextView notes = root.findViewWithTag("current_notes");
+        if (labels != null) {
+            String value = store.labels(selectedId);
+            labels.setText(value == null || value.trim().isEmpty()
+                    ? "Etiquetas: nenhuma" : "Etiquetas: " + value);
+        }
+        if (notes != null) {
+            String value = store.notes(selectedId);
+            notes.setText(value == null || value.trim().isEmpty()
+                    ? "Observações: nenhuma" : "Observações: " + value);
+            notes.setMaxLines(3);
+        }
     }
 
     private void renderMessages() {
