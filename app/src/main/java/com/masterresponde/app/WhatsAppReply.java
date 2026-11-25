@@ -222,25 +222,16 @@ public class WhatsAppReply {
             return false;
         }
 
+        boolean foundFreeFormInput = false;
         for (Notification.Action action : actions) {
-            if (action == null
-                    || action.actionIntent == null) {
-                continue;
-            }
+            if (action == null || action.actionIntent == null) continue;
 
-            RemoteInput[] inputs =
-                    action.getRemoteInputs();
-
-            if (inputs == null
-                    || inputs.length == 0) {
-                continue;
-            }
+            RemoteInput[] inputs = action.getRemoteInputs();
+            if (inputs == null || inputs.length == 0) continue;
 
             for (RemoteInput input : inputs) {
-                if (input == null
-                        || !input.getAllowFreeFormInput()) {
-                    continue;
-                }
+                if (input == null || !input.getAllowFreeFormInput()) continue;
+                foundFreeFormInput = true;
 
                 try {
                     Intent intent =
@@ -292,6 +283,9 @@ public class WhatsAppReply {
             }
         }
 
+        recordDiagnostic(context, foundFreeFormInput
+                ? "FALHA NO ENVIO: ação de resposta sem PendingIntent utilizável"
+                : "FALHA NO ENVIO: RemoteInput de texto livre desapareceu antes do envio");
         return false;
     }
 
