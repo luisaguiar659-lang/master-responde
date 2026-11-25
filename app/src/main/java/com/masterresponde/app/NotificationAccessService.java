@@ -1001,6 +1001,13 @@ public class NotificationAccessService extends NotificationListenerService {
                 return true;
             }
 
+            // Persistência por evento: a proteção continua válida mesmo se o
+            // Android recriar o serviço ou o cache em memória for renovado.
+            if (hasOrReservePersistentEvent(prefs, "dedup_group_event_",
+                    fingerprint, now, duplicateWindow)) {
+                return true;
+            }
+
             // v1.16: o WhatsApp pode criar eventos diferentes para o mesmo
             // comando repetido rapidamente. Além do eventId, seguramos o
             // conteúdo por grupo durante a janela configurada.
@@ -1749,6 +1756,13 @@ public class NotificationAccessService extends NotificationListenerService {
 
             if (eventSeen != null
                     && now - eventSeen < eventWindow) {
+                return true;
+            }
+
+            // Reserva durável e sem texto identificável: sobrevive à recriação
+            // do serviço e ao descarte dos caches em memória.
+            if (hasOrReservePersistentEvent(prefs, "dedup_private_event_",
+                    eventFingerprint, now, eventWindow)) {
                 return true;
             }
 
@@ -3544,6 +3558,48 @@ public class NotificationAccessService extends NotificationListenerService {
 
             return true;
         }
+    }
+
+    /**
+     * Reserva um evento de forma durável antes de executar qualquer resposta.
+     * A chave é um hash do fingerprint; o conteúdo original não é persistido.
+     */
+    private boolean hasOrReservePersistentEvent(
+            SharedPreferences prefs,
+            String prefix,
+            String fingerprint,
+            long now,
+            long ttl
+    ) {
+        if (prefs == null || fingerprint == null || fingerprint.isEmpty()) {
+            return false;
+        }
+
+        String key = prefix + ConversationStore.hash(fingerprint);
+        long previous = prefs.getLong(key, 0L);
+        if (previous > 0L && now - previous < ttl) {
+            return true;
+        }
+
+        // commit() garante que a reserva esteja persistida antes do roteamento.
+        boolean saved = prefs.edit().putLong(key, now).commit();
+
+        // Limpeza limitada: evita crescimento indefinido sem percorrer as
+        // preferências em cada notificação.
+        if (prefs.getAll().size() > 800) {
+            SharedPreferences.Editor cleanup = prefs.edit();
+            boolean changed = false;
+            for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+                if (!entry.getKey().startsWith(prefix)) continue;
+                Object value = entry.getValue();
+                if (value instanceof Long && now - (Long) value >= ttl) {
+                    cleanup.remove(entry.getKey());
+                    changed = true;
+                }
+            }
+            if (changed) cleanup.apply();
+        }
+        return false;
     }
 
     private void updateStatus(String value) {
