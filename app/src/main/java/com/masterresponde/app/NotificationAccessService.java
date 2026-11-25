@@ -1001,13 +1001,6 @@ public class NotificationAccessService extends NotificationListenerService {
                 return true;
             }
 
-            // Persistência por evento: a proteção continua válida mesmo se o
-            // Android recriar o serviço ou o cache em memória for renovado.
-            if (hasOrReservePersistentEvent(prefs, "dedup_group_event_",
-                    fingerprint, now, duplicateWindow)) {
-                return true;
-            }
-
             // v1.16: o WhatsApp pode criar eventos diferentes para o mesmo
             // comando repetido rapidamente. Além do eventId, seguramos o
             // conteúdo por grupo durante a janela configurada.
@@ -1759,13 +1752,6 @@ public class NotificationAccessService extends NotificationListenerService {
                 return true;
             }
 
-            // Reserva durável e sem texto identificável: sobrevive à recriação
-            // do serviço e ao descarte dos caches em memória.
-            if (hasOrReservePersistentEvent(prefs, "dedup_private_event_",
-                    eventFingerprint, now, eventWindow)) {
-                return true;
-            }
-
             // Segunda proteção para atualizações rápidas da mesma
             // notificação onde o WhatsApp troca key/when.
             String privateContentKey =
@@ -2161,26 +2147,14 @@ public class NotificationAccessService extends NotificationListenerService {
             String incoming,
             SharedPreferences prefs
     ) {
-        android.content.SharedPreferences stvPrefs =
-                getSharedPreferences("master_responde_stv", MODE_PRIVATE);
-        stvPrefs.edit().putString(
-                "last_stv_status",
-                "STV+: pedido de teste recebido; verificando configurações"
-        ).apply();
-
         String contactKey = privateContactKey(notification);
         String guardKey = "stvplus_test_24h_" + contactKey;
         long now = System.currentTimeMillis();
         if (isTestCooldownActive(notification, prefs, guardKey, now, "STV+")) {
-            stvPrefs.edit().putString(
-                    "last_stv_status",
-                    "STV+: pedido bloqueado pelo intervalo configurado"
-            ).apply();
-            EventLog.add(this, "BLOQUEIO", "STV+",
-                    "Pedido bloqueado pelo intervalo", "Aguardar o intervalo configurado");
             return;
         }
-
+        android.content.SharedPreferences stvPrefs =
+                getSharedPreferences("master_responde_stv", MODE_PRIVATE);
         boolean credentialsSaved =
                 stvPrefs.getBoolean(
                         "stvplus_credentials_saved",
@@ -2190,15 +2164,7 @@ public class NotificationAccessService extends NotificationListenerService {
         String stvPass = StvPanelConfig.getPass(this);
         if (!credentialsSaved || stvUser == null || stvUser.trim().isEmpty()
                 || stvPass == null || stvPass.isEmpty()) {
-            stvPrefs.edit().putString(
-                    "last_stv_status",
-                    "STV+: painel não configurado; faltam URL, usuário ou senha"
-            ).apply();
-            EventLog.add(this, "FALHA", "STV+",
-                    "Pedido de teste não iniciado", "Painel STV+ sem credenciais configuradas");
-            MessageSettings.send(this, notification, prefs,
-                    MessageSettings.MSG_STV_NOT_CONFIGURED,
-                    MessageSettings.DEFAULT_STV_NOT_CONFIGURED);
+            MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_NOT_CONFIGURED, MessageSettings.DEFAULT_STV_NOT_CONFIGURED);
             return;
         }
 
@@ -2207,28 +2173,11 @@ public class NotificationAccessService extends NotificationListenerService {
         boolean queued = TestAutomationQueue.enqueueStv(
                 this, notification, prefs, requestKey);
         if (!queued) {
-            stvPrefs.edit().putString(
-                    "last_stv_status",
-                    "STV+: falha ao registrar pedido na fila"
-            ).apply();
-            EventLog.add(this, "FALHA", "STV+",
-                    "Falha ao registrar pedido", "A fila de testes não aceitou a solicitação");
-            MessageSettings.send(this, notification, prefs,
-                    MessageSettings.MSG_STV_QUEUE_ERROR,
-                    MessageSettings.DEFAULT_STV_QUEUE_ERROR);
+            MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_QUEUE_ERROR, MessageSettings.DEFAULT_STV_QUEUE_ERROR);
             return;
         }
-
         prefs.edit().putLong(guardKey, now).apply();
-        stvPrefs.edit().putString(
-                "last_stv_status",
-                "STV+: pedido recebido e aguardando processamento na fila"
-        ).apply();
-        EventLog.add(this, "SOLICITAÇÃO", "STV+",
-                "Pedido de teste recebido", "Solicitação adicionada à fila de geração");
-        MessageSettings.send(this, notification, prefs,
-                MessageSettings.MSG_STV_QUEUED,
-                MessageSettings.DEFAULT_STV_QUEUED);
+        MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_QUEUED, MessageSettings.DEFAULT_STV_QUEUED);
     }
 
     /**
@@ -3615,87 +3564,5 @@ public class NotificationAccessService extends NotificationListenerService {
         }
     }
 
-    /**
-     * Reserva um evento de forma durável antes de executar qualquer resposta.
-     * A chave é um hash do fingerprint; o conteúdo original não é persistido.
-     */
-    private boolean hasOrReservePersistentEvent(
-            SharedPreferences prefs,
-            String prefix,
-            String fingerprint,
-            long now,
-            long ttl
-    ) {
-        if (prefs == null || fingerprint == null || fingerprint.isEmpty()) {
-            return false;
-        }
 
-        String key = prefix + ConversationStore.hash(fingerprint);
-        long previous = prefs.getLong(key, 0L);
-        if (previous > 0L && now - previous < ttl) {
-            return true;
-        }
-
-        // commit() garante que a reserva esteja persistida antes do roteamento.
-        boolean saved = prefs.edit().putLong(key, now).commit();
-        if (!saved) {
-            // Sem reserva durável, não dispara uma resposta que poderia se
-            // repetir após reinício ou falha do processo.
-            return true;
-        }
-
-        // Limpeza limitada: evita crescimento indefinido sem percorrer as
-        // preferências em cada notificação.
-        if (prefs.getAll().size() > 800) {
-            SharedPreferences.Editor cleanup = prefs.edit();
-            boolean changed = false;
-            for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
-                if (!entry.getKey().startsWith(prefix)) continue;
-                Object value = entry.getValue();
-                if (value instanceof Long && now - (Long) value >= ttl) {
-                    cleanup.remove(entry.getKey());
-                    changed = true;
-                }
-            }
-            if (changed) cleanup.apply();
-        }
-        return false;
-    }
-
-    private void updateStatus(String value) {
-        getSharedPreferences(
-                "master_responde",
-                MODE_PRIVATE
-        )
-                .edit()
-                .putString(
-                        "last_test_status",
-                        value
-                )
-                .apply();
-    }
-
-    private boolean reply(
-            Notification notification,
-            String message
-    ) {
-        return WhatsAppReply.send(
-                this,
-                notification,
-                message
-        );
-    }
-
-    private String normalize(String value) {
-        if (value == null) return "";
-
-        return Normalizer
-                .normalize(
-                        value,
-                        Normalizer.Form.NFD
-                )
-                .replaceAll("\\p{M}", "")
-                .toLowerCase(Locale.ROOT)
-                .trim();
-    }
 }
