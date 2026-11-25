@@ -79,59 +79,63 @@ public final class ConversationStore extends SQLiteOpenHelper {
                 : eventId.trim();
         long now = System.currentTimeMillis();
 
-        synchronized (LOCK) {
-            ConversationStore helper = new ConversationStore(context);
-            SQLiteDatabase db = helper.getWritableDatabase();
-            db.beginTransaction();
-            try {
-                ContentValues message = new ContentValues();
-                message.put("conversation_id", id);
-                message.put("event_id", event);
-                message.put("body", body.trim());
-                message.put("direction", direction);
-                message.put("created_at", now);
-                long inserted = db.insertWithOnConflict("messages", null, message,
-                        SQLiteDatabase.CONFLICT_IGNORE);
-                if (inserted != -1L) {
-                    ContentValues conversation = new ContentValues();
-                    conversation.put("id", id);
-                    conversation.put("kind", kind == null ? "private" : kind);
-                    conversation.put("display_name", name);
-                    conversation.put("last_message", body.trim());
-                    conversation.put("updated_at", now);
-                    ContentValues existing = new ContentValues();
-                    existing.put("display_name", name);
-                    existing.put("last_message", body.trim());
-                    existing.put("updated_at", now);
-                    if (incrementUnread) {
-                        db.execSQL("UPDATE conversations SET display_name=?,last_message=?,updated_at=?," +
-                                "unread_count=unread_count+1 WHERE id=?",
-                                new Object[]{name, body.trim(), now, id});
-                    } else {
-                        db.execSQL("UPDATE conversations SET display_name=?,last_message=?,updated_at=? WHERE id=?",
-                                new Object[]{name, body.trim(), now, id});
+        try {
+            synchronized (LOCK) {
+                ConversationStore helper = new ConversationStore(context);
+                SQLiteDatabase db = helper.getWritableDatabase();
+                db.beginTransaction();
+                try {
+                    ContentValues message = new ContentValues();
+                    message.put("conversation_id", id);
+                    message.put("event_id", event);
+                    message.put("body", body.trim());
+                    message.put("direction", direction);
+                    message.put("created_at", now);
+                    long inserted = db.insertWithOnConflict("messages", null, message,
+                            SQLiteDatabase.CONFLICT_IGNORE);
+                    if (inserted != -1L) {
+                        ContentValues conversation = new ContentValues();
+                        conversation.put("id", id);
+                        conversation.put("kind", kind == null ? "private" : kind);
+                        conversation.put("display_name", name);
+                        conversation.put("last_message", body.trim());
+                        conversation.put("updated_at", now);
+                        ContentValues existing = new ContentValues();
+                        existing.put("display_name", name);
+                        existing.put("last_message", body.trim());
+                        existing.put("updated_at", now);
+                        if (incrementUnread) {
+                            db.execSQL("UPDATE conversations SET display_name=?,last_message=?,updated_at=?," +
+                                    "unread_count=unread_count+1 WHERE id=?",
+                                    new Object[]{name, body.trim(), now, id});
+                        } else {
+                            db.execSQL("UPDATE conversations SET display_name=?,last_message=?,updated_at=? WHERE id=?",
+                                    new Object[]{name, body.trim(), now, id});
+                        }
+                        Cursor exists = db.rawQuery("SELECT 1 FROM conversations WHERE id=?",
+                                new String[]{id});
+                        boolean found;
+                        try { found = exists.moveToFirst(); } finally { exists.close(); }
+                        if (!found) {
+                            ContentValues first = new ContentValues();
+                            first.put("id", id);
+                            first.put("kind", kind == null ? "private" : kind);
+                            first.put("display_name", name);
+                            first.put("last_message", body.trim());
+                            first.put("updated_at", now);
+                            first.put("status", "OPEN");
+                            first.put("unread_count", incrementUnread ? 1 : 0);
+                            db.insertOrThrow("conversations", null, first);
+                        }
                     }
-                    Cursor exists = db.rawQuery("SELECT 1 FROM conversations WHERE id=?",
-                            new String[]{id});
-                    boolean found;
-                    try { found = exists.moveToFirst(); } finally { exists.close(); }
-                    if (!found) {
-                        ContentValues first = new ContentValues();
-                        first.put("id", id);
-                        first.put("kind", kind == null ? "private" : kind);
-                        first.put("display_name", name);
-                        first.put("last_message", body.trim());
-                        first.put("updated_at", now);
-                        first.put("status", "OPEN");
-                        first.put("unread_count", incrementUnread ? 1 : 0);
-                        db.insertOrThrow("conversations", null, first);
-                    }
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                    helper.close();
                 }
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
-                helper.close();
             }
+        } catch (Exception ignored) {
+            // O histórico é complementar: nunca pode interromper uma automação.
         }
     }
 
