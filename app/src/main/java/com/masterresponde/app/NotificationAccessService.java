@@ -748,6 +748,16 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
+        CharSequence groupTitleValue = notification != null && notification.extras != null
+                ? notification.extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)
+                : null;
+        String groupTitle = groupTitleValue == null || groupTitleValue.length() == 0
+                ? "Grupo"
+                : groupTitleValue.toString();
+        ConversationStore.recordIncoming(
+                this, "group", groupKey, groupTitle, incoming, eventId, true
+        );
+
         String groupTrigger =
                 MessageSettings.normalizedSingleTrigger(
                         prefs,
@@ -1506,6 +1516,14 @@ public class NotificationAccessService extends NotificationListenerService {
         )) {
             return;
         }
+
+        String privateTitle = notification != null && notification.extras != null
+                ? String.valueOf(notification.extras.getCharSequence(Notification.EXTRA_TITLE))
+                : "Contato";
+        ConversationStore.recordIncoming(
+                this, "private", privateContactKey(notification), privateTitle,
+                incoming, eventId, false
+        );
 
         // Auditoria passiva: registra apenas o evento, sem armazenar o texto
         // recebido nem interferir no roteamento das automações.
