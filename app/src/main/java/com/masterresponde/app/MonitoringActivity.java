@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -21,6 +23,15 @@ public class MonitoringActivity extends Activity {
     private static final int ORANGE = Color.rgb(255, 145, 20);
 
     private LinearLayout content;
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private final Runnable refreshTask = new Runnable() {
+        @Override public void run() {
+            if (!isFinishing()) {
+                render();
+                refreshHandler.postDelayed(this, 20000L);
+            }
+        }
+    };
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -38,7 +49,16 @@ public class MonitoringActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        if (content != null) render();
+        if (content != null) {
+            render();
+            refreshHandler.removeCallbacks(refreshTask);
+            refreshHandler.postDelayed(refreshTask, 20000L);
+        }
+    }
+
+    @Override protected void onPause() {
+        refreshHandler.removeCallbacks(refreshTask);
+        super.onPause();
     }
 
     private void render() {
@@ -47,6 +67,14 @@ public class MonitoringActivity extends Activity {
         SharedPreferences stv = getSharedPreferences("master_responde_stv", MODE_PRIVATE);
         boolean bot = prefs.getBoolean("bot_enabled", false);
         boolean listener = BackgroundRuntime.hasNotificationAccess(this);
+        boolean serviceConnected = prefs.getBoolean(
+                BackgroundRuntime.KEY_LISTENER_CONNECTED,
+                false
+        );
+        long lastEventTime = prefs.getLong(
+                BackgroundRuntime.KEY_LAST_EVENT_TIME,
+                0L
+        );
 
         EventLog.Stats st = EventLog.stats(this);
         int received = st.total[0];
@@ -77,6 +105,12 @@ public class MonitoringActivity extends Activity {
                 bot ? "ATIVADO" : "DESATIVADO", "Controle principal do aplicativo"));
         content.addView(NeonUi.statusCard(this, "whatsapp", listener ? GREEN : AMBER, "Acesso ao WhatsApp",
                 listener ? "PERMISSÃO LIBERADA" : "VERIFICAR PERMISSÃO", "Acesso às notificações do WhatsApp Business"));
+        content.addView(NeonUi.statusCard(this, "activity", serviceConnected ? GREEN : AMBER,
+                "Serviço de notificações", serviceConnected ? "CONECTADO" : "AGUARDANDO CONEXÃO",
+                "Estado real informado pelo Android; atualização automática a cada 20 segundos"));
+        content.addView(NeonUi.statusCard(this, "clock", CYAN, "Último evento recebido",
+                lastEventTime <= 0L ? "Nenhum evento registrado" : EventLog.date(lastEventTime),
+                "Horário do último evento de notificação processado"));
 
         content.addView(section("MÓDULOS"));
         content.addView(NeonUi.statusCard(this, "play", ORANGE, "MasterFlix",
