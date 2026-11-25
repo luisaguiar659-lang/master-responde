@@ -94,16 +94,6 @@ public final class ConversationStore extends SQLiteOpenHelper {
                     long inserted = db.insertWithOnConflict("messages", null, message,
                             SQLiteDatabase.CONFLICT_IGNORE);
                     if (inserted != -1L) {
-                        ContentValues conversation = new ContentValues();
-                        conversation.put("id", id);
-                        conversation.put("kind", kind == null ? "private" : kind);
-                        conversation.put("display_name", name);
-                        conversation.put("last_message", body.trim());
-                        conversation.put("updated_at", now);
-                        ContentValues existing = new ContentValues();
-                        existing.put("display_name", name);
-                        existing.put("last_message", body.trim());
-                        existing.put("updated_at", now);
                         if (incrementUnread) {
                             db.execSQL("UPDATE conversations SET display_name=?,last_message=?,updated_at=?," +
                                     "unread_count=unread_count+1 WHERE id=?",
