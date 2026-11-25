@@ -2206,7 +2206,21 @@ public class NotificationAccessService extends NotificationListenerService {
             String module
     ) {
         long lastTest = prefs.getLong(cooldownKey, 0L);
-        long cooldown = 24L * 60L * 60L * 1000L;
+        String settingKey = "STV+".equals(module)
+                ? MessageSettings.KEY_STV_TEST_COOLDOWN_HOURS
+                : MessageSettings.KEY_MASTERFLIX_TEST_COOLDOWN_HOURS;
+        int limitHours = prefs.getInt(
+                settingKey,
+                MessageSettings.DEFAULT_TEST_COOLDOWN_HOURS
+        );
+        limitHours = Math.max(0, Math.min(
+                MessageSettings.MAX_TEST_COOLDOWN_HOURS,
+                limitHours
+        ));
+        // Zero desativa o intervalo para este módulo.
+        if (limitHours == 0) return false;
+
+        long cooldown = limitHours * 60L * 60L * 1000L;
         long elapsed = now - lastTest;
         if (lastTest <= 0L || elapsed >= cooldown || elapsed < 0L) {
             return false;
@@ -2222,7 +2236,11 @@ public class NotificationAccessService extends NotificationListenerService {
 
         MessageSettings.send(this, notification, prefs, MessageSettings.MSG_TEST_COOLDOWN,
                 MessageSettings.DEFAULT_TEST_COOLDOWN,
-                MessageSettings.variables("MODULO", module, "TEMPO", wait));
+                MessageSettings.variables(
+                        "MODULO", module,
+                        "TEMPO", wait,
+                        "LIMITE", String.valueOf(limitHours)
+                ));
         return true;
     }
 
