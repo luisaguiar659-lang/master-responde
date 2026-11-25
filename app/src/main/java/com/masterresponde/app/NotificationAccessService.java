@@ -3583,6 +3583,11 @@ public class NotificationAccessService extends NotificationListenerService {
 
         // commit() garante que a reserva esteja persistida antes do roteamento.
         boolean saved = prefs.edit().putLong(key, now).commit();
+        if (!saved) {
+            // Sem reserva durável, não dispara uma resposta que poderia se
+            // repetir após reinício ou falha do processo.
+            return true;
+        }
 
         // Limpeza limitada: evita crescimento indefinido sem percorrer as
         // preferências em cada notificação.
