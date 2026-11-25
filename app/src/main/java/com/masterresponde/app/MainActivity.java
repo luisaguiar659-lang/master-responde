@@ -1004,7 +1004,7 @@ public class MainActivity extends Activity {
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 radii(20, 20, 20, 20), Color.rgb(4, 16, 34), Color.rgb(3, 10, 24), 2));
         addNavItem(nav, "home", "Dashboard", true, null);
-        addNavItem(nav, "robot", "Atendimentos", false, () -> startActivity(new Intent(this, EventHistoryActivity.class)));
+        addNavItem(nav, "robot", "Atendimentos", false, () -> startActivity(new Intent(this, ConversationInboxActivity.class)));
         addNavItem(nav, "layers", "Módulos", false, this::openMenu);
         addNavItem(nav, "people", "Revendas", false, () -> startActivity(new Intent(this, ResellersActivity.class)));
         addNavItem(nav, "bars", "Relatórios", false, () -> startActivity(new Intent(this, MonitoringActivity.class)));
