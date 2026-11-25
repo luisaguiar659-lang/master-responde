@@ -17,6 +17,15 @@ public class MessageSettings {
     public static final String KEY_TEST_MATCH_EXACT =
             "cfg_test_match_exact";
 
+    public static final String KEY_MASTERFLIX_TEST_COOLDOWN_HOURS =
+            "cfg_masterflix_test_cooldown_hours";
+
+    public static final String KEY_STV_TEST_COOLDOWN_HOURS =
+            "cfg_stv_test_cooldown_hours";
+
+    public static final int DEFAULT_TEST_COOLDOWN_HOURS = 24;
+    public static final int MAX_TEST_COOLDOWN_HOURS = 720;
+
     public static final String KEY_RESELLER_TRIGGERS =
             "cfg_reseller_triggers";
 
@@ -311,7 +320,7 @@ public class MessageSettings {
     public static final String DEFAULT_STV_QUEUED =
             "Recebi seu pedido de teste STV+. Ele entrou na fila e será gerado assim que o painel estiver disponível.";
     public static final String DEFAULT_TEST_COOLDOWN =
-            "Você já solicitou um teste {MODULO} nas últimas 24 horas. Para solicitar outro, aguarde mais {TEMPO}.";
+            "Você já solicitou um teste {MODULO} dentro do intervalo de {LIMITE} horas. Para solicitar outro, aguarde mais {TEMPO}.";
     public static final String DEFAULT_MASTERFLIX_QUEUE_ERROR =
             "Não consegui registrar seu pedido MASTERFLIX. Tente novamente em instantes.";
     public static final String DEFAULT_MASTERFLIX_QUEUED =
