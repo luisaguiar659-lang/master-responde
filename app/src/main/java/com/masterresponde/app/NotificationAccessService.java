@@ -2161,14 +2161,26 @@ public class NotificationAccessService extends NotificationListenerService {
             String incoming,
             SharedPreferences prefs
     ) {
+        android.content.SharedPreferences stvPrefs =
+                getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+        stvPrefs.edit().putString(
+                "last_stv_status",
+                "STV+: pedido de teste recebido; verificando configurações"
+        ).apply();
+
         String contactKey = privateContactKey(notification);
         String guardKey = "stvplus_test_24h_" + contactKey;
         long now = System.currentTimeMillis();
         if (isTestCooldownActive(notification, prefs, guardKey, now, "STV+")) {
+            stvPrefs.edit().putString(
+                    "last_stv_status",
+                    "STV+: pedido bloqueado pelo intervalo configurado"
+            ).apply();
+            EventLog.add(this, "BLOQUEIO", "STV+",
+                    "Pedido bloqueado pelo intervalo", "Aguardar o intervalo configurado");
             return;
         }
-        android.content.SharedPreferences stvPrefs =
-                getSharedPreferences("master_responde_stv", MODE_PRIVATE);
+
         boolean credentialsSaved =
                 stvPrefs.getBoolean(
                         "stvplus_credentials_saved",
@@ -2178,7 +2190,15 @@ public class NotificationAccessService extends NotificationListenerService {
         String stvPass = StvPanelConfig.getPass(this);
         if (!credentialsSaved || stvUser == null || stvUser.trim().isEmpty()
                 || stvPass == null || stvPass.isEmpty()) {
-            MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_NOT_CONFIGURED, MessageSettings.DEFAULT_STV_NOT_CONFIGURED);
+            stvPrefs.edit().putString(
+                    "last_stv_status",
+                    "STV+: painel não configurado; faltam URL, usuário ou senha"
+            ).apply();
+            EventLog.add(this, "FALHA", "STV+",
+                    "Pedido de teste não iniciado", "Painel STV+ sem credenciais configuradas");
+            MessageSettings.send(this, notification, prefs,
+                    MessageSettings.MSG_STV_NOT_CONFIGURED,
+                    MessageSettings.DEFAULT_STV_NOT_CONFIGURED);
             return;
         }
 
@@ -2187,11 +2207,28 @@ public class NotificationAccessService extends NotificationListenerService {
         boolean queued = TestAutomationQueue.enqueueStv(
                 this, notification, prefs, requestKey);
         if (!queued) {
-            MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_QUEUE_ERROR, MessageSettings.DEFAULT_STV_QUEUE_ERROR);
+            stvPrefs.edit().putString(
+                    "last_stv_status",
+                    "STV+: falha ao registrar pedido na fila"
+            ).apply();
+            EventLog.add(this, "FALHA", "STV+",
+                    "Falha ao registrar pedido", "A fila de testes não aceitou a solicitação");
+            MessageSettings.send(this, notification, prefs,
+                    MessageSettings.MSG_STV_QUEUE_ERROR,
+                    MessageSettings.DEFAULT_STV_QUEUE_ERROR);
             return;
         }
+
         prefs.edit().putLong(guardKey, now).apply();
-        MessageSettings.send(this, notification, prefs, MessageSettings.MSG_STV_QUEUED, MessageSettings.DEFAULT_STV_QUEUED);
+        stvPrefs.edit().putString(
+                "last_stv_status",
+                "STV+: pedido recebido e aguardando processamento na fila"
+        ).apply();
+        EventLog.add(this, "SOLICITAÇÃO", "STV+",
+                "Pedido de teste recebido", "Solicitação adicionada à fila de geração");
+        MessageSettings.send(this, notification, prefs,
+                MessageSettings.MSG_STV_QUEUED,
+                MessageSettings.DEFAULT_STV_QUEUED);
     }
 
     /**
