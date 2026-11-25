@@ -48,6 +48,12 @@ public class ConversationInboxActivity extends Activity {
                 new android.content.Intent(this, EventHistoryActivity.class)));
         root.addView(history);
 
+        Button reports = new Button(this);
+        reports.setText("RELATÓRIOS E EXPORTAR CSV");
+        reports.setOnClickListener(v -> startActivity(
+                new android.content.Intent(this, AttendanceReportsActivity.class)));
+        root.addView(reports);
+
         EditText search = new EditText(this);
         search.setSingleLine(true);
         search.setHint("Buscar nome, mensagem ou etiqueta");
