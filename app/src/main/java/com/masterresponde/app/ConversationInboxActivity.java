@@ -10,6 +10,7 @@ import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.HorizontalScrollView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -25,6 +26,7 @@ public class ConversationInboxActivity extends Activity {
     private String selectedId;
     private String filterStatus = "ALL";
     private String searchText = "";
+    private LinearLayout detailsRoot;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -79,8 +81,9 @@ public class ConversationInboxActivity extends Activity {
             });
             filters.addView(filter, new LinearLayout.LayoutParams(0, dp(48), 1f));
         }
-        ScrollView filterScroll = new ScrollView(this);
+        HorizontalScrollView filterScroll = new HorizontalScrollView(this);
         filterScroll.setFillViewport(true);
+        filterScroll.setHorizontalScrollBarEnabled(false);
         filterScroll.addView(filters);
         root.addView(filterScroll, new LinearLayout.LayoutParams(-1, dp(54)));
 
@@ -152,6 +155,7 @@ public class ConversationInboxActivity extends Activity {
     private void buildDetails() {
         store.markRead(selectedId);
         LinearLayout root = column();
+        detailsRoot = root;
 
         Button status = new Button(this);
         status.setText("ALTERAR STATUS DO ATENDIMENTO");
@@ -212,7 +216,7 @@ public class ConversationInboxActivity extends Activity {
                 .setPositiveButton("Salvar", (dialog, which) -> {
                     if (multiline) store.updateNotes(selectedId, input.getText().toString());
                     else store.updateLabels(selectedId, input.getText().toString());
-                    refreshConversationInfo((LinearLayout) input.getParent().getParent());
+                    if (detailsRoot != null) refreshConversationInfo(detailsRoot);
                 }).show();
     }
 
