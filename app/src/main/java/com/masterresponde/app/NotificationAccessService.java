@@ -3564,5 +3564,40 @@ public class NotificationAccessService extends NotificationListenerService {
         }
     }
 
+    private void updateStatus(String value) {
+        getSharedPreferences(
+                "master_responde",
+                MODE_PRIVATE
+        )
+                .edit()
+                .putString(
+                        "last_test_status",
+                        value
+                )
+                .apply();
+    }
 
+    private boolean reply(
+            Notification notification,
+            String message
+    ) {
+        return WhatsAppReply.send(
+                this,
+                notification,
+                message
+        );
+    }
+
+    private String normalize(String value) {
+        if (value == null) return "";
+
+        return Normalizer
+                .normalize(
+                        value,
+                        Normalizer.Form.NFD
+                )
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .trim();
+    }
 }
