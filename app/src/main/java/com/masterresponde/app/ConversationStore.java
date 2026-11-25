@@ -99,18 +99,32 @@ public final class ConversationStore extends SQLiteOpenHelper {
                     conversation.put("display_name", name);
                     conversation.put("last_message", body.trim());
                     conversation.put("updated_at", now);
+                    ContentValues existing = new ContentValues();
+                    existing.put("display_name", name);
+                    existing.put("last_message", body.trim());
+                    existing.put("updated_at", now);
                     if (incrementUnread) {
-                        db.execSQL("INSERT INTO conversations(id,kind,display_name,last_message,updated_at,status,unread_count) " +
-                                "VALUES(?,?,?,?,?,'OPEN',1) ON CONFLICT(id) DO UPDATE SET " +
-                                "display_name=excluded.display_name,last_message=excluded.last_message," +
-                                "updated_at=excluded.updated_at,unread_count=conversations.unread_count+1",
-                                new Object[]{id, kind == null ? "private" : kind, name, body.trim(), now});
+                        db.execSQL("UPDATE conversations SET display_name=?,last_message=?,updated_at=?," +
+                                "unread_count=unread_count+1 WHERE id=?",
+                                new Object[]{name, body.trim(), now, id});
                     } else {
-                        db.execSQL("INSERT INTO conversations(id,kind,display_name,last_message,updated_at,status,unread_count) " +
-                                "VALUES(?,?,?,?,?,'OPEN',0) ON CONFLICT(id) DO UPDATE SET " +
-                                "display_name=excluded.display_name,last_message=excluded.last_message," +
-                                "updated_at=excluded.updated_at",
-                                new Object[]{id, kind == null ? "private" : kind, name, body.trim(), now});
+                        db.execSQL("UPDATE conversations SET display_name=?,last_message=?,updated_at=? WHERE id=?",
+                                new Object[]{name, body.trim(), now, id});
+                    }
+                    Cursor exists = db.rawQuery("SELECT 1 FROM conversations WHERE id=?",
+                            new String[]{id});
+                    boolean found;
+                    try { found = exists.moveToFirst(); } finally { exists.close(); }
+                    if (!found) {
+                        ContentValues first = new ContentValues();
+                        first.put("id", id);
+                        first.put("kind", kind == null ? "private" : kind);
+                        first.put("display_name", name);
+                        first.put("last_message", body.trim());
+                        first.put("updated_at", now);
+                        first.put("status", "OPEN");
+                        first.put("unread_count", incrementUnread ? 1 : 0);
+                        db.insertOrThrow("conversations", null, first);
                     }
                 }
                 db.setTransactionSuccessful();
