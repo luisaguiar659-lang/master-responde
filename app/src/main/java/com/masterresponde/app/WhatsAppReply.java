@@ -264,6 +264,7 @@ public class WhatsAppReply {
                                 0,
                                 intent
                         );
+                        ConversationStore.recordOutgoing(context, notification, message);
                     } catch (PendingIntent.CanceledException e) {
                         forgetSent(
                                 context,
