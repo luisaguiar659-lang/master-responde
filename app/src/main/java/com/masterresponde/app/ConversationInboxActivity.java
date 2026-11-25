@@ -117,6 +117,7 @@ public class ConversationInboxActivity extends Activity {
                 String status = c.getString(5);
                 int unread = c.getInt(6);
                 String labels = c.getString(7);
+                String priority = c.getString(8);
                 LinearLayout card = new LinearLayout(this);
                 card.setOrientation(LinearLayout.VERTICAL);
                 card.setPadding(dp(14), dp(12), dp(14), dp(12));
@@ -126,8 +127,10 @@ public class ConversationInboxActivity extends Activity {
                         (unread > 0 ? "  •  " + unread + " nova(s)" : ""), 16, Color.WHITE, true);
                 TextView preview = text(last, 13, Color.rgb(185, 205, 220), false);
                 preview.setMaxLines(2);
-                TextView meta = text(ConversationStore.statusLabel(status) + "  •  " +
-                        date(time), 11, Color.rgb(0, 205, 235), false);
+                TextView meta = text(ConversationStore.priorityLabel(priority).toUpperCase(Locale.ROOT) +
+                        "  •  " + ConversationStore.statusLabel(status) + "  •  " + date(time),
+                        11, "URGENT".equals(priority) ? Color.rgb(255, 90, 90) :
+                        ("HIGH".equals(priority) ? Color.rgb(255, 190, 70) : Color.rgb(0, 205, 235)), false);
                 card.addView(title);
                 card.addView(preview);
                 card.addView(meta);
@@ -168,6 +171,21 @@ public class ConversationInboxActivity extends Activity {
                             renderMessages();
                         }).show());
         root.addView(status);
+
+        Button priority = new Button(this);
+        priority.setText("DEFINIR PRIORIDADE");
+        priority.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle("Prioridade do atendimento")
+                .setItems(new String[]{"Normal", "Alta", "Urgente"}, (d, which) -> {
+                    String[] values = {"NORMAL", "HIGH", "URGENT"};
+                    store.updatePriority(selectedId, values[which]);
+                    refreshConversationInfo(detailsRoot);
+                }).show());
+        root.addView(priority);
+
+        TextView currentPriority = text("", 12, Color.rgb(255, 190, 70), true);
+        currentPriority.setTag("current_priority");
+        root.addView(currentPriority);
 
         Button labels = new Button(this);
         labels.setText("EDITAR ETIQUETAS");
@@ -221,8 +239,12 @@ public class ConversationInboxActivity extends Activity {
     }
 
     private void refreshConversationInfo(LinearLayout root) {
+        TextView priority = root.findViewWithTag("current_priority");
         TextView labels = root.findViewWithTag("current_labels");
         TextView notes = root.findViewWithTag("current_notes");
+        if (priority != null) {
+            priority.setText("Prioridade: " + ConversationStore.priorityLabel(store.priority(selectedId)));
+        }
         if (labels != null) {
             String value = store.labels(selectedId);
             labels.setText(value == null || value.trim().isEmpty()
