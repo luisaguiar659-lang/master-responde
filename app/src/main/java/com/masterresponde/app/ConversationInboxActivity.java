@@ -64,7 +64,7 @@ public class ConversationInboxActivity extends Activity {
                 LinearLayout card = new LinearLayout(this);
                 card.setOrientation(LinearLayout.VERTICAL);
                 card.setPadding(dp(14), dp(12), dp(14), dp(12));
-                card.setBackground(NeonUi.roundedBackground(Color.rgb(5, 24, 43),
+                card.setBackground(roundedBackground(Color.rgb(5, 24, 43),
                         Color.rgb(0, 160, 220), 12, 1));
                 TextView title = text((kind.equals("group") ? "👥 " : "💬 ") + name +
                         (unread > 0 ? "  •  " + unread + " nova(s)" : ""), 16, Color.WHITE, true);
@@ -132,7 +132,7 @@ public class ConversationInboxActivity extends Activity {
                 LinearLayout card = new LinearLayout(this);
                 card.setOrientation(LinearLayout.VERTICAL);
                 card.setPadding(dp(12), dp(10), dp(12), dp(10));
-                card.setBackground(NeonUi.roundedBackground(
+                card.setBackground(roundedBackground(
                         outgoing ? Color.rgb(8, 48, 55) : Color.rgb(7, 28, 48),
                         outgoing ? Color.rgb(0, 190, 150) : Color.rgb(0, 145, 210), 10, 1));
                 card.addView(text((outgoing ? "MASTER RESPONDE" : "CLIENTE") +
@@ -155,6 +155,15 @@ public class ConversationInboxActivity extends Activity {
         super.onDestroy();
     }
 
+    private android.graphics.drawable.GradientDrawable roundedBackground(
+            int fill, int stroke, int radius, int strokeWidth) {
+        android.graphics.drawable.GradientDrawable d =
+                new android.graphics.drawable.GradientDrawable();
+        d.setColor(fill);
+        d.setCornerRadius(dp(radius));
+        d.setStroke(dp(strokeWidth), stroke);
+        return d;
+    }
     private LinearLayout column() {
         LinearLayout v = new LinearLayout(this);
         v.setOrientation(LinearLayout.VERTICAL);
