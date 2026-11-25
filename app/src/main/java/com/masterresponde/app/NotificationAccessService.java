@@ -251,7 +251,18 @@ public class NotificationAccessService extends NotificationListenerService {
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         if (sbn == null) return;
-        if (!WHATSAPP_BUSINESS.equals(sbn.getPackageName())) return;
+
+        // Registra o callback antes de qualquer filtro. Não salva conteúdo,
+        // título ou remetente: somente pacote, horário e contadores.
+        String sourcePackage = sbn.getPackageName();
+        boolean isWhatsAppBusiness = WHATSAPP_BUSINESS.equals(sourcePackage);
+        BackgroundRuntime.markNotificationCallback(
+                this,
+                sourcePackage,
+                isWhatsAppBusiness
+        );
+
+        if (!isWhatsAppBusiness) return;
 
         BackgroundRuntime.markEvent(
                 this
