@@ -80,7 +80,7 @@ public class AttendanceReportsActivity extends Activity {
 
     private void addMetric(LinearLayout root, String label, long value, int color) {
         TextView item = new TextView(this);
-        item.setText(label + "\\n" + value);
+        item.setText(label + "\n" + value);
         item.setTextColor(Color.WHITE);
         item.setTextSize(15);
         item.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -119,7 +119,7 @@ public class AttendanceReportsActivity extends Activity {
 
     private void writeCsv(Uri uri) throws Exception {
         StringBuilder csv = new StringBuilder("\uFEFF");
-        csv.append("ID;Tipo;Nome;Última mensagem;Atualizado em;Status;Prioridade;Não lidas;Etiquetas;Observações;Quantidade de mensagens\\n");
+        csv.append("ID;Tipo;Nome;Última mensagem;Atualizado em;Status;Prioridade;Não lidas;Etiquetas;Observações;Quantidade de mensagens\n");
         Cursor c = store.getReadableDatabase().rawQuery(
                 "SELECT c.id,c.kind,c.display_name,c.last_message,c.updated_at,c.status," +
                 "c.priority,c.unread_count,c.labels,c.notes," +
@@ -131,7 +131,7 @@ public class AttendanceReportsActivity extends Activity {
                     if (i > 0) csv.append(';');
                     csv.append(csvCell(c.isNull(i) ? "" : c.getString(i)));
                 }
-                csv.append('\\n');
+                csv.append('\n');
             }
         } finally {
             c.close();
@@ -144,7 +144,7 @@ public class AttendanceReportsActivity extends Activity {
     }
 
     private String csvCell(String value) {
-        String safe = value == null ? "" : value.replace("\\r", " ").replace("\\n", " ");
+        String safe = value == null ? "" : value.replace("\r", " ").replace("\n", " ");
         return "\"" + safe.replace("\"", "\"\"") + "\"";
     }
 
