@@ -109,51 +109,23 @@ public final class TestAutomationQueue {
     private static void pumpStv() {
         final Task task;
         synchronized (LOCK) {
-            if (STV.isEmpty()) return;
-
-            long retryMs = AutomationTiming.getMilliseconds(
-                    STV.peekFirst().prefs,
-                    AutomationTiming.KEY_STV_QUEUE_RETRY_MS,
-                    AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS);
-
-            if (stvActive) {
-                if (StvPlusBackgroundAutomation.isRunning()) {
-                    // A execução anterior ainda está viva. Reagendar a conferência
-                    // evita deixar pedidos posteriores sem uma nova tentativa.
-                    HANDLER.postDelayed(TestAutomationQueue::pumpStv, retryMs);
-                    return;
-                }
-
-                // A automação terminou ou foi encerrada sem liberar o estado da fila.
-                // Recuperar o bloqueio órfão para que o próximo pedido possa avançar.
-                STV_KEYS.remove(activeStvKey);
-                activeStvKey = "";
-                stvActive = false;
-            }
-
+            if (stvActive || STV.isEmpty()) return;
             if (StvPlusBackgroundAutomation.isRunning()) {
-                HANDLER.postDelayed(TestAutomationQueue::pumpStv, retryMs);
+                HANDLER.postDelayed(TestAutomationQueue::pumpStv, AutomationTiming.getMilliseconds(STV.peekFirst().prefs, AutomationTiming.KEY_STV_QUEUE_RETRY_MS, AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS));
                 return;
             }
-
             task = STV.removeFirst();
             stvActive = true;
             activeStvKey = task.requestKey;
         }
-
         boolean started = StvPlusBackgroundAutomation.start(
                 task.context, task.notification, task.prefs, task.stvMode);
         if (!started) {
             synchronized (LOCK) {
                 STV.addFirst(task);
                 stvActive = false;
-                activeStvKey = "";
             }
-            HANDLER.postDelayed(TestAutomationQueue::pumpStv,
-                    AutomationTiming.getMilliseconds(
-                            task.prefs,
-                            AutomationTiming.KEY_STV_QUEUE_RETRY_MS,
-                            AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS));
+            HANDLER.postDelayed(TestAutomationQueue::pumpStv, AutomationTiming.getMilliseconds(task.prefs, AutomationTiming.KEY_STV_QUEUE_RETRY_MS, AutomationTiming.DEFAULT_STV_QUEUE_RETRY_MS));
         }
     }
 
