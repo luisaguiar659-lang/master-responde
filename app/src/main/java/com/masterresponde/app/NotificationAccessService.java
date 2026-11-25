@@ -1517,9 +1517,10 @@ public class NotificationAccessService extends NotificationListenerService {
             return;
         }
 
-        String privateTitle = notification != null && notification.extras != null
-                ? String.valueOf(notification.extras.getCharSequence(Notification.EXTRA_TITLE))
-                : "Contato";
+        CharSequence privateTitleValue = notification != null && notification.extras != null
+                ? notification.extras.getCharSequence(Notification.EXTRA_TITLE) : null;
+        String privateTitle = privateTitleValue == null || privateTitleValue.length() == 0
+                ? "Contato" : privateTitleValue.toString();
         ConversationStore.recordIncoming(
                 this, "private", privateContactKey(notification), privateTitle,
                 incoming, eventId, false
