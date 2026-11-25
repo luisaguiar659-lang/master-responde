@@ -55,6 +55,21 @@ public class DiagnosticsActivity extends Activity {
         item("Acesso às notificações", notification ? "PERMISSÃO LIBERADA" : "PERMISSÃO NECESSÁRIA", notification);
         item("Serviço em segundo plano", connected ? "CONECTADO" : "DESCONECTADO / AGUARDANDO RECONEXÃO", connected);
         item("Última notificação recebida", lastEvent > 0L ? EventLog.date(lastEvent) : "Nenhuma registrada", lastEvent > 0L);
+        long lastCallback = getSharedPreferences("master_responde", MODE_PRIVATE)
+                .getLong(BackgroundRuntime.KEY_LAST_CALLBACK_TIME, 0L);
+        String lastCallbackPackage = getSharedPreferences("master_responde", MODE_PRIVATE)
+                .getString(BackgroundRuntime.KEY_LAST_CALLBACK_PACKAGE, "Nenhum callback registrado");
+        long callbackCount = getSharedPreferences("master_responde", MODE_PRIVATE)
+                .getLong(BackgroundRuntime.KEY_CALLBACK_COUNT, 0L);
+        long whatsappCallbackCount = getSharedPreferences("master_responde", MODE_PRIVATE)
+                .getLong(BackgroundRuntime.KEY_WHATSAPP_CALLBACK_COUNT, 0L);
+        item("Último callback do Android",
+                lastCallback > 0L ? EventLog.date(lastCallback) : "Nenhum callback recebido",
+                lastCallback > 0L);
+        item("Pacote da última notificação", lastCallbackPackage, lastCallback > 0L);
+        item("Callbacks recebidos / WhatsApp Business",
+                callbackCount + " / " + whatsappCallbackCount,
+                callbackCount > 0L);
         item("Otimização de bateria", battery ? "SEM RESTRIÇÃO" : "PODE LIMITAR O SEGUNDO PLANO", battery);
         item("WhatsApp Business", installed("com.whatsapp.w4b") ? "INSTALADO" : "NÃO LOCALIZADO", installed("com.whatsapp.w4b"));
         item("Histórico de eventos", EventLog.read(this).length() + " registros locais", true);
