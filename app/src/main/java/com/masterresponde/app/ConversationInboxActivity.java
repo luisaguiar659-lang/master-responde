@@ -27,6 +27,11 @@ public class ConversationInboxActivity extends Activity {
         if (selectedId == null) buildInbox(); else buildDetails();
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        if (selectedId == null && list != null) renderInbox();
+    }
+
     private void buildInbox() {
         LinearLayout root = column();
         Button history = new Button(this);
