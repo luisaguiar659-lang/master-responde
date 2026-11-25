@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build-apk:
-    name: Compilar e publicar APK instalável
+    name: Compilar e publicar APK Release assinado
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -35,25 +35,43 @@ jobs:
         with:
           accept-android-sdk-licenses: true
           packages: platform-tools platforms;android-35 build-tools;35.0.0
+      - name: Preparar assinatura release original
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Secret ANDROID_KEYSTORE_BASE64 não configurado" && exit 1)
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "Secret ANDROID_KEYSTORE_PASSWORD não configurado" && exit 1)
+          test -n "$ANDROID_KEY_ALIAS" || (echo "Secret ANDROID_KEY_ALIAS não configurado" && exit 1)
+          test -n "$ANDROID_KEY_PASSWORD" || (echo "Secret ANDROID_KEY_PASSWORD não configurado" && exit 1)
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/release.keystore"
+          test -s "$GITHUB_WORKSPACE/release.keystore"
+          echo "ANDROID_KEYSTORE_PATH=$GITHUB_WORKSPACE/release.keystore" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> "$GITHUB_ENV"
       - name: Validar estrutura do projeto
         run: |
           test -f settings.gradle
           test -f build.gradle
           test -f app/build.gradle
           test -f app/src/main/AndroidManifest.xml
-      - name: Compilar APK de instalação (debug)
-        run: gradle :app:assembleDebug --stacktrace --no-daemon
-      - name: Validar APK gerado
+      - name: Compilar APK Release assinado
+        run: gradle :app:assembleRelease --stacktrace --no-daemon
+      - name: Validar APK e assinatura
         run: |
-          APK='app/build/outputs/apk/debug/app-debug.apk'
+          APK='app/build/outputs/apk/release/app-release.apk'
           test -s "$APK"
-          echo 'APK gerado com sucesso:'
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          echo 'APK Release assinado gerado com sucesso:'
           ls -lh "$APK"
           sha256sum "$APK"
       - name: Publicar APK para download na conversa
         uses: actions/upload-artifact@v4
         with:
-          name: MASTER-RESPONDE-APK-${{ github.run_number }}
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: MASTER-RESPONDE-APK-RELEASE-${{ github.run_number }}
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
