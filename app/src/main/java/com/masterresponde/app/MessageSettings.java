@@ -605,6 +605,19 @@ public class MessageSettings {
         return result;
     }
 
+    public static Map<String, String> variables(
+            String key1,
+            String value1,
+            String key2,
+            String value2,
+            String key3,
+            String value3
+    ) {
+        Map<String, String> result = variables(key1, value1, key2, value2);
+        result.put(key3, value3 == null ? "" : value3);
+        return result;
+    }
+
     public static String applyVariables(
             String value,
             Map<String, String> variables
