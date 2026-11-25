@@ -13,7 +13,7 @@ import java.util.Locale;
 /** Armazenamento local e isolado do histórico de atendimentos. */
 public final class ConversationStore extends SQLiteOpenHelper {
     private static final String DB_NAME = "master_conversations.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
     private static final Object LOCK = new Object();
 
     public ConversationStore(Context context) {
@@ -24,7 +24,8 @@ public final class ConversationStore extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE conversations (" +
                 "id TEXT PRIMARY KEY, kind TEXT NOT NULL, display_name TEXT NOT NULL, " +
                 "last_message TEXT NOT NULL, updated_at INTEGER NOT NULL, " +
-                "status TEXT NOT NULL DEFAULT 'OPEN', unread_count INTEGER NOT NULL DEFAULT 0)");
+                "status TEXT NOT NULL DEFAULT 'OPEN', unread_count INTEGER NOT NULL DEFAULT 0, " +
+                "labels TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE messages (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT NOT NULL, " +
                 "event_id TEXT NOT NULL, body TEXT NOT NULL, direction TEXT NOT NULL, " +
@@ -35,7 +36,11 @@ public final class ConversationStore extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Migrações futuras serão aditivas para preservar o histórico.
+        // Migração aditiva: mantém conversas e mensagens já armazenadas.
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE conversations ADD COLUMN labels TEXT NOT NULL DEFAULT ''");
+            db.execSQL("ALTER TABLE conversations ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+        }
     }
 
     public static void recordIncoming(Context context, String kind, String sourceKey,
@@ -130,9 +135,31 @@ public final class ConversationStore extends SQLiteOpenHelper {
     }
 
     public Cursor conversations(Context context) {
-        return getReadableDatabase().rawQuery(
-                "SELECT id,kind,display_name,last_message,updated_at,status,unread_count " +
-                "FROM conversations ORDER BY updated_at DESC", null);
+        return conversations(context, "ALL", "");
+    }
+
+    public Cursor conversations(Context context, String status, String query) {
+        String selectedStatus = status == null ? "ALL" : status;
+        String term = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        StringBuilder sql = new StringBuilder(
+                "SELECT id,kind,display_name,last_message,updated_at,status,unread_count,labels " +
+                "FROM conversations WHERE 1=1");
+        java.util.ArrayList<String> args = new java.util.ArrayList<>();
+        if (!"ALL".equals(selectedStatus)) {
+            sql.append(" AND status=?");
+            args.add(selectedStatus);
+        }
+        if (!term.isEmpty()) {
+            sql.append(" AND (LOWER(display_name) LIKE ? OR LOWER(last_message) LIKE ? " +
+                    "OR LOWER(labels) LIKE ? OR LOWER(notes) LIKE ?)");
+            String like = "%" + term + "%";
+            args.add(like);
+            args.add(like);
+            args.add(like);
+            args.add(like);
+        }
+        sql.append(" ORDER BY updated_at DESC");
+        return getReadableDatabase().rawQuery(sql.toString(), args.toArray(new String[0]));
     }
 
     public Cursor messages(Context context, String conversationId) {
@@ -140,6 +167,35 @@ public final class ConversationStore extends SQLiteOpenHelper {
                 "SELECT body,direction,created_at FROM messages " +
                 "WHERE conversation_id=? ORDER BY created_at ASC",
                 new String[]{conversationId});
+    }
+
+    public String labels(String id) {
+        return readConversationField(id, "labels");
+    }
+
+    public String notes(String id) {
+        return readConversationField(id, "notes");
+    }
+
+    private String readConversationField(String id, String field) {
+        if (!"labels".equals(field) && !"notes".equals(field)) return "";
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT " + field + " FROM conversations WHERE id=?",
+                new String[]{id});
+        try { return c.moveToFirst() ? c.getString(0) : ""; }
+        finally { c.close(); }
+    }
+
+    public void updateLabels(String id, String labels) {
+        ContentValues values = new ContentValues();
+        values.put("labels", labels == null ? "" : labels.trim());
+        getWritableDatabase().update("conversations", values, "id=?", new String[]{id});
+    }
+
+    public void updateNotes(String id, String notes) {
+        ContentValues values = new ContentValues();
+        values.put("notes", notes == null ? "" : notes.trim());
+        getWritableDatabase().update("conversations", values, "id=?", new String[]{id});
     }
 
     public void updateStatus(String id, String status) {
