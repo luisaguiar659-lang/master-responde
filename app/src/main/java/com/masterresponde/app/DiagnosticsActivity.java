@@ -73,6 +73,13 @@ public class DiagnosticsActivity extends Activity {
         item("Otimização de bateria", battery ? "SEM RESTRIÇÃO" : "PODE LIMITAR O SEGUNDO PLANO", battery);
         item("WhatsApp Business", installed("com.whatsapp.w4b") ? "INSTALADO" : "NÃO LOCALIZADO", installed("com.whatsapp.w4b"));
         item("Histórico de eventos", EventLog.read(this).length() + " registros locais", true);
+        String sendDiagnostic = getSharedPreferences("master_responde", MODE_PRIVATE)
+                .getString(WhatsAppReply.KEY_LAST_SEND_DIAGNOSTIC, "Nenhuma tentativa de envio diagnosticada");
+        long sendDiagnosticTime = getSharedPreferences("master_responde", MODE_PRIVATE)
+                .getLong(WhatsAppReply.KEY_LAST_SEND_DIAGNOSTIC_TIME, 0L);
+        item("Diagnóstico do último envio", sendDiagnosticTime > 0L
+                ? EventLog.date(sendDiagnosticTime) + " — " + sendDiagnostic
+                : sendDiagnostic, sendDiagnostic.startsWith("ENVIO ACEITO"));
 
         Button access = new Button(this);
         access.setText("ABRIR ACESSO ÀS NOTIFICAÇÕES");
