@@ -311,6 +311,16 @@ public class MessageSettingsActivity extends Activity {
                 "Tempo máximo para aceitar opções depois de abrir o menu.",
                 MessageSettings.DEFAULT_GROUP_MENU_SECONDS);
 
+        addSection(content, "LIMITE DE TESTES — HORAS");
+        addNumberSetting(content, MessageSettings.KEY_MASTERFLIX_TEST_COOLDOWN_HOURS,
+                "Intervalo entre testes MASTERFLIX",
+                "Horas de espera por contato. Use 0 para permitir novos pedidos sem intervalo. Máximo: 720 horas.",
+                MessageSettings.DEFAULT_TEST_COOLDOWN_HOURS);
+        addNumberSetting(content, MessageSettings.KEY_STV_TEST_COOLDOWN_HOURS,
+                "Intervalo entre testes STV+",
+                "Horas de espera por contato. Use 0 para permitir novos pedidos sem intervalo. Máximo: 720 horas.",
+                MessageSettings.DEFAULT_TEST_COOLDOWN_HOURS);
+
         addSection(content, "MENSAGENS ENVIADAS — GRUPOS");
         addTextSetting(content, MessageSettings.MSG_GROUP_MENU, "Menu principal dos grupos",
                 "Variáveis: {CATEGORIAS} e {COMANDO_MENU}.", MessageSettings.DEFAULT_GROUP_MENU, true, false);
@@ -1088,6 +1098,12 @@ public class MessageSettingsActivity extends Activity {
             if (millisecondFields.contains(entry.getKey())) {
                 if (seconds < 100 || seconds > 600000) {
                     entry.getValue().setError("Use um valor entre 100 e 600000 milissegundos.");
+                    return;
+                }
+            } else if (MessageSettings.KEY_MASTERFLIX_TEST_COOLDOWN_HOURS.equals(entry.getKey())
+                    || MessageSettings.KEY_STV_TEST_COOLDOWN_HOURS.equals(entry.getKey())) {
+                if (seconds < 0 || seconds > MessageSettings.MAX_TEST_COOLDOWN_HOURS) {
+                    entry.getValue().setError("Use um valor entre 0 e 720 horas.");
                     return;
                 }
             } else if (seconds < 0 || seconds > 3600) {
