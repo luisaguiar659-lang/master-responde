@@ -317,6 +317,15 @@ public class MasterflixBackgroundAutomation {
                         "return (v||'').replace(/\\s+/g,' ').trim().toUpperCase();" +
                         "}" +
                         "var target=n(" + wanted + ");" +
+                        "function compact(v){return n(v).replace(/[^A-Z0-9]/g,'');}" +
+                        "function wantedProduct(v){" +
+                        "var t=n(v),c=compact(v);" +
+                        "if(t.indexOf(target)!==-1)return true;" +
+                        "var hasTest=t.indexOf('TESTE')!==-1;" +
+                        "var hasComplete=t.indexOf('COMPLETO')!==-1;" +
+                        "var hasOneHour=c.indexOf('1H')!==-1||c.indexOf('1HORA')!==-1||c.indexOf('60MIN')!==-1;" +
+                        "return hasTest&&hasComplete&&hasOneHour;" +
+                        "}" +
                         "var all=document.querySelectorAll('body *');" +
                         "var best=null;" +
                         "var bestLen=999999;" +
@@ -325,8 +334,7 @@ public class MasterflixBackgroundAutomation {
                         "var el=all[i];" +
                         "var text=n(el.innerText||el.textContent);" +
 
-                        "if(text.indexOf(target)!==-1" +
-                        "&&text.length<bestLen){" +
+                        "if(wantedProduct(text)&&text.length<bestLen){" +
                         "best=el;" +
                         "bestLen=text.length;" +
                         "}" +
