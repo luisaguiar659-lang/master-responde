@@ -79,7 +79,7 @@ public class ConversationInboxActivity extends Activity {
                 filterStatus = value;
                 renderInbox();
             });
-            filters.addView(filter, new LinearLayout.LayoutParams(0, dp(48), 1f));
+            filters.addView(filter, new LinearLayout.LayoutParams(-2, dp(48)));
         }
         HorizontalScrollView filterScroll = new HorizontalScrollView(this);
         filterScroll.setFillViewport(true);
